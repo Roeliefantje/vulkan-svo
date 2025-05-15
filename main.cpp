@@ -21,9 +21,10 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <chrono>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 
-//Left at Vertex buffer creation
-//Staging buffer is next
+//Left at Loading an Image of https://vulkan-tutorial.com/Texture_mapping/Images
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
