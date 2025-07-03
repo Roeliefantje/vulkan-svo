@@ -21,7 +21,8 @@
 #include <array>
 #include <optional>
 #include <set>
-#include <random>
+
+#include "src/structures.h"
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
@@ -79,38 +80,6 @@ struct SwapChainSupportDetails {
     std::vector<VkPresentModeKHR> presentModes;
 };
 
-struct UniformBufferObject {
-    float deltaTime = 1.0f;
-};
-
-struct Vertex {
-    glm::vec2 position;
-    glm::vec2 texCoord;
-
-    static VkVertexInputBindingDescription getBindingDescription() {
-        VkVertexInputBindingDescription bindingDescription{};
-        bindingDescription.binding = 0;
-        bindingDescription.stride = sizeof(Vertex);
-        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-        return bindingDescription;
-    }
-
-    static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
-        std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
-        attributeDescriptions[0].binding = 0;
-        attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
-        attributeDescriptions[0].offset = offsetof(Vertex, position);
-
-        attributeDescriptions[1].binding = 0;
-        attributeDescriptions[1].location = 1;
-        attributeDescriptions[1].format = VK_FORMAT_R32G32_SFLOAT;
-        attributeDescriptions[1].offset = offsetof(Vertex, texCoord);
-
-        return attributeDescriptions;
-    }
-};
 
 const std::vector<Vertex> vertices = {
     {{-1.0f, -1.0f}, {1.0f, 0.0f}},
@@ -122,38 +91,6 @@ const std::vector<Vertex> vertices = {
 const std::vector<uint16_t> indices = {
     0, 2, 1, 2, 0, 3 // counter-clockwise
     // 0, 1, 2, 2, 3, 0
-};
-
-
-struct Particle {
-    glm::vec2 position;
-    glm::vec2 velocity;
-    glm::vec4 color;
-
-    static VkVertexInputBindingDescription getBindingDescription() {
-        VkVertexInputBindingDescription bindingDescription{};
-        bindingDescription.binding = 0;
-        bindingDescription.stride = sizeof(Particle);
-        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-        return bindingDescription;
-    }
-
-    static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
-        std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
-
-        attributeDescriptions[0].binding = 0;
-        attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
-        attributeDescriptions[0].offset = offsetof(Particle, position);
-
-        attributeDescriptions[1].binding = 0;
-        attributeDescriptions[1].location = 1;
-        attributeDescriptions[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-        attributeDescriptions[1].offset = offsetof(Particle, color);
-
-        return attributeDescriptions;
-    }
 };
 
 class ComputeShaderApplication {
@@ -229,6 +166,9 @@ private:
     std::vector<VkFence> inFlightFences;
     std::vector<VkFence> computeInFlightFences;
     uint32_t currentFrame = 0;
+
+
+    Grid grid = Grid(200, 200, 200);
 
     float lastFrameTime = 0.0f;
 
@@ -665,7 +605,7 @@ private:
     }
 
     void createComputeDescriptorSetLayout() {
-        std::array<VkDescriptorSetLayoutBinding, 4> layoutBindings{};
+        std::array<VkDescriptorSetLayoutBinding, 3> layoutBindings{};
         layoutBindings[0].binding = 0;
         layoutBindings[0].descriptorCount = 1;
         layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -680,19 +620,13 @@ private:
 
         layoutBindings[2].binding = 2;
         layoutBindings[2].descriptorCount = 1;
-        layoutBindings[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        layoutBindings[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
         layoutBindings[2].pImmutableSamplers = nullptr;
         layoutBindings[2].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-        layoutBindings[3].binding = 3;
-        layoutBindings[3].descriptorCount = 1;
-        layoutBindings[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-        layoutBindings[3].pImmutableSamplers = nullptr;
-        layoutBindings[3].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = 4;
+        layoutInfo.bindingCount = static_cast<uint32_t>(layoutBindings.size());
         layoutInfo.pBindings = layoutBindings.data();
 
         if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &computeDescriptorSetLayout) != VK_SUCCESS) {
@@ -897,23 +831,27 @@ private:
     }
 
     void createShaderStorageBuffers() {
-        // Initialize particles
-        std::default_random_engine rndEngine((unsigned) time(nullptr));
-        std::uniform_real_distribution<float> rndDist(0.0f, 1.0f);
+        // // Initialize particles
+        // std::default_random_engine rndEngine((unsigned) time(nullptr));
+        // std::uniform_real_distribution<float> rndDist(0.0f, 1.0f);
+        //
+        // // Initial particle positions on a circle
+        // std::vector<Particle> particles(PARTICLE_COUNT);
+        // for (auto &particle: particles) {
+        //     float r = 0.25f * sqrt(rndDist(rndEngine));
+        //     float theta = rndDist(rndEngine) * 2.0f * 3.14159265358979323846f;
+        //     float x = r * cos(theta) * HEIGHT / WIDTH;
+        //     float y = r * sin(theta);
+        //     particle.position = glm::vec2(x, y);
+        //     particle.velocity = glm::normalize(glm::vec2(x, y)) * 0.00025f;
+        //     particle.color = glm::vec4(rndDist(rndEngine), rndDist(rndEngine), rndDist(rndEngine), 1.0f);
+        // }
+        //
+        // VkDeviceSize bufferSize = sizeof(Particle) * PARTICLE_COUNT;
 
-        // Initial particle positions on a circle
-        std::vector<Particle> particles(PARTICLE_COUNT);
-        for (auto &particle: particles) {
-            float r = 0.25f * sqrt(rndDist(rndEngine));
-            float theta = rndDist(rndEngine) * 2.0f * 3.14159265358979323846f;
-            float x = r * cos(theta) * HEIGHT / WIDTH;
-            float y = r * sin(theta);
-            particle.position = glm::vec2(x, y);
-            particle.velocity = glm::normalize(glm::vec2(x, y)) * 0.00025f;
-            particle.color = glm::vec4(rndDist(rndEngine), rndDist(rndEngine), rndDist(rndEngine), 1.0f);
-        }
+        // grid = Grid(200, 200, 200);
 
-        VkDeviceSize bufferSize = sizeof(Particle) * PARTICLE_COUNT;
+        VkDeviceSize bufferSize = sizeof(int32_t) * grid.data.size();
 
         // Create a staging buffer used to upload data to the gpu
         VkBuffer stagingBuffer;
@@ -924,7 +862,7 @@ private:
 
         void *data;
         vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-        memcpy(data, particles.data(), (size_t) bufferSize);
+        memcpy(data, grid.data.data(), (size_t) bufferSize);
         vkUnmapMemory(device, stagingBufferMemory);
 
         shaderStorageBuffers.resize(MAX_FRAMES_IN_FLIGHT);
@@ -945,7 +883,7 @@ private:
     }
 
     void createUniformBuffers() {
-        VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+        VkDeviceSize bufferSize = sizeof(GridInfo);
 
         uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
         uniformBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
@@ -957,6 +895,8 @@ private:
                          uniformBuffersMemory[i]);
 
             vkMapMemory(device, uniformBuffersMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
+
+            memcpy(uniformBuffersMapped[i], &grid.gridInfo, sizeof(GridInfo));
         }
     }
 
@@ -985,7 +925,7 @@ private:
         poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
         poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT) * 2;
+        poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
         poolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
         poolSizes[2].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
@@ -1129,9 +1069,9 @@ private:
             VkDescriptorBufferInfo uniformBufferInfo{};
             uniformBufferInfo.buffer = uniformBuffers[i];
             uniformBufferInfo.offset = 0;
-            uniformBufferInfo.range = sizeof(UniformBufferObject);
+            uniformBufferInfo.range = sizeof(GridInfo);
 
-            std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
+            std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[0].dstSet = computeDescriptorSets[i];
             descriptorWrites[0].dstBinding = 0;
@@ -1140,10 +1080,10 @@ private:
             descriptorWrites[0].descriptorCount = 1;
             descriptorWrites[0].pBufferInfo = &uniformBufferInfo;
 
-            VkDescriptorBufferInfo storageBufferInfoLastFrame{};
-            storageBufferInfoLastFrame.buffer = shaderStorageBuffers[(i - 1) % MAX_FRAMES_IN_FLIGHT];
-            storageBufferInfoLastFrame.offset = 0;
-            storageBufferInfoLastFrame.range = sizeof(Particle) * PARTICLE_COUNT;
+            VkDescriptorBufferInfo storageBufferInfoCurrentFrame{};
+            storageBufferInfoCurrentFrame.buffer = shaderStorageBuffers[i];
+            storageBufferInfoCurrentFrame.offset = 0;
+            storageBufferInfoCurrentFrame.range = sizeof(int32_t) * grid.data.size();
 
             descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[1].dstSet = computeDescriptorSets[i];
@@ -1151,33 +1091,20 @@ private:
             descriptorWrites[1].dstArrayElement = 0;
             descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             descriptorWrites[1].descriptorCount = 1;
-            descriptorWrites[1].pBufferInfo = &storageBufferInfoLastFrame;
-
-            VkDescriptorBufferInfo storageBufferInfoCurrentFrame{};
-            storageBufferInfoCurrentFrame.buffer = shaderStorageBuffers[i];
-            storageBufferInfoCurrentFrame.offset = 0;
-            storageBufferInfoCurrentFrame.range = sizeof(Particle) * PARTICLE_COUNT;
-
-            descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[2].dstSet = computeDescriptorSets[i];
-            descriptorWrites[2].dstBinding = 2;
-            descriptorWrites[2].dstArrayElement = 0;
-            descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            descriptorWrites[2].descriptorCount = 1;
-            descriptorWrites[2].pBufferInfo = &storageBufferInfoCurrentFrame;
+            descriptorWrites[1].pBufferInfo = &storageBufferInfoCurrentFrame;
 
             VkDescriptorImageInfo storageImageInfo{};
             storageImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
             storageImageInfo.imageView = computeImageView; // the VkImageView you created
             storageImageInfo.sampler = VK_NULL_HANDLE;
 
-            descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[3].dstSet = computeDescriptorSets[i];
-            descriptorWrites[3].dstBinding = 3; // 💡 must match binding in your shader
-            descriptorWrites[3].dstArrayElement = 0;
-            descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-            descriptorWrites[3].descriptorCount = 1;
-            descriptorWrites[3].pImageInfo = &storageImageInfo;
+            descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[2].dstSet = computeDescriptorSets[i];
+            descriptorWrites[2].dstBinding = 2; // 💡 must match binding in your shader
+            descriptorWrites[2].dstArrayElement = 0;
+            descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+            descriptorWrites[2].descriptorCount = 1;
+            descriptorWrites[2].pImageInfo = &storageImageInfo;
 
             vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0,
                                    nullptr);
@@ -1432,12 +1359,17 @@ private:
         }
     }
 
-    void updateUniformBuffer(uint32_t currentImage) {
-        UniformBufferObject ubo{};
-        ubo.deltaTime = lastFrameTime * 2.0f;
+    // void initUniformBufferData() {
+    //     for ()
+    //     memcpy(uniformBuffersMapped[currentImage])
+    // }
 
-        memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
-    }
+    // void updateUniformBuffer(uint32_t currentImage) {
+    //     UniformBufferObject ubo{};
+    //     ubo.deltaTime = lastFrameTime * 2.0f;
+    //
+    //     memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+    // }
 
     void drawFrame() {
         VkSubmitInfo submitInfo{};
@@ -1446,7 +1378,7 @@ private:
         // Compute submission
         vkWaitForFences(device, 1, &computeInFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
-        updateUniformBuffer(currentFrame);
+        // updateUniformBuffer(currentFrame);
 
         vkResetFences(device, 1, &computeInFlightFences[currentFrame]);
 
