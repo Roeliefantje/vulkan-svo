@@ -1,6 +1,3 @@
-// Converting to just draw a square, but for some reason im not seeing anything...
-// Should fix indexed drawing and then look
-
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -141,6 +138,10 @@ private:
     std::vector<VkDeviceMemory> uniformBuffersMemory;
     std::vector<void *> uniformBuffersMapped;
 
+    std::vector<VkBuffer> uniformCameraBuffers;
+    std::vector<VkDeviceMemory> uniformCameraBuffersMemory;
+    std::vector<void *> uniformCameraBuffersMapped;
+
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
 
@@ -169,6 +170,7 @@ private:
 
 
     Grid grid = Grid(200, 200, 200);
+    Camera camera = Camera(glm::vec3(0, 0, 100), glm::vec3(0.5, 0.5, 0), WIDTH, HEIGHT, glm::radians(70.0f));
 
     float lastFrameTime = 0.0f;
 
@@ -605,7 +607,7 @@ private:
     }
 
     void createComputeDescriptorSetLayout() {
-        std::array<VkDescriptorSetLayoutBinding, 3> layoutBindings{};
+        std::array<VkDescriptorSetLayoutBinding, 4> layoutBindings{};
         layoutBindings[0].binding = 0;
         layoutBindings[0].descriptorCount = 1;
         layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -623,6 +625,12 @@ private:
         layoutBindings[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
         layoutBindings[2].pImmutableSamplers = nullptr;
         layoutBindings[2].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+        layoutBindings[3].binding = 3;
+        layoutBindings[3].descriptorCount = 1;
+        layoutBindings[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        layoutBindings[3].pImmutableSamplers = nullptr;
+        layoutBindings[3].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -884,12 +892,25 @@ private:
 
     void createUniformBuffers() {
         VkDeviceSize bufferSize = sizeof(GridInfo);
+        VkDeviceSize cBufferSize = sizeof(Camera);
 
         uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
         uniformBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
         uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
 
+        uniformCameraBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+        uniformCameraBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
+        uniformCameraBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
+
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i],
+                         uniformBuffersMemory[i]);
+
+            vkMapMemory(device, uniformBuffersMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
+
+            memcpy(uniformBuffersMapped[i], &grid.gridInfo, sizeof(GridInfo));
+
             createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i],
                          uniformBuffersMemory[i]);
@@ -920,7 +941,7 @@ private:
     }
 
     void createComputeDescriptorPool() {
-        std::array<VkDescriptorPoolSize, 3> poolSizes{};
+        std::array<VkDescriptorPoolSize, 4> poolSizes{};
         poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
@@ -929,6 +950,9 @@ private:
 
         poolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
         poolSizes[2].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+
+        poolSizes[3].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        poolSizes[3].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -1071,7 +1095,7 @@ private:
             uniformBufferInfo.offset = 0;
             uniformBufferInfo.range = sizeof(GridInfo);
 
-            std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
+            std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[0].dstSet = computeDescriptorSets[i];
             descriptorWrites[0].dstBinding = 0;
@@ -1105,6 +1129,19 @@ private:
             descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
             descriptorWrites[2].descriptorCount = 1;
             descriptorWrites[2].pImageInfo = &storageImageInfo;
+
+            VkDescriptorBufferInfo uniformCameraBufferInfo{};
+            uniformCameraBufferInfo.buffer = uniformCameraBuffers[i];
+            uniformCameraBufferInfo.offset = 0;
+            uniformCameraBufferInfo.range = sizeof(Camera);
+
+            descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[3].dstSet = computeDescriptorSets[i];
+            descriptorWrites[3].dstBinding = 3;
+            descriptorWrites[3].dstArrayElement = 0;
+            descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrites[3].descriptorCount = 1;
+            descriptorWrites[3].pBufferInfo = &uniformBufferInfo;
 
             vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0,
                                    nullptr);
