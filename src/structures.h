@@ -43,7 +43,7 @@ struct Vertex {
     }
 };
 
-const uint32_t VOXEL_COUNT = 5000;
+const uint32_t VOXEL_COUNT = 500000;
 
 struct GridInfo {
     alignas(4) uint32_t width;
@@ -62,18 +62,20 @@ struct Grid {
         //Do stuff with data
         std::default_random_engine rndEngine((unsigned) time(nullptr));
         // std::uniform_real_distribution<float> rndDist(0.0f, 1.0f);
-        std::uniform_int_distribution<int> rndWidth(0, w);
-        std::uniform_int_distribution<int> rndHeight(0, h);
-        std::uniform_int_distribution<int> rndDepth(0, d);
+        std::uniform_int_distribution<int> rndWidth(0, w - 1);
+        std::uniform_int_distribution<int> rndHeight(0, h - 1);
+        std::uniform_int_distribution<int> rndDepth(0, d - 1);
 
         for (size_t i = 0; i < VOXEL_COUNT; i++) {
             auto x = rndWidth(rndEngine);
             auto y = rndDepth(rndEngine);
-            // auto z = rndHeight(rndEngine);
-            auto z = 0;
+            auto z = rndHeight(rndEngine);
+            // auto z = 0;
             auto index = x + gridInfo.depth * y + gridInfo.height * gridInfo.depth * z;
             data[index] = 1;
         }
+
+        std::cout << "Finished making grid" << std::endl;
     }
 };
 
@@ -86,8 +88,8 @@ struct Camera {
 
     //Technically, adding fov to a vec3 would save some memory. (it could all fit in 3 vec4s)
     Camera(glm::vec3 pos, glm::vec3 lookAt, int screenWidth, int screenHeight, float fovRadian) : position(pos),
-        lookAt(lookAt) {
-        up = glm::vec3(0, 0, 1);
+        lookAt(lookAt), fov(fovRadian) {
+        up = glm::vec3(0, 1, 0);
         resolution = glm::vec2(screenWidth, screenHeight);
     }
 };

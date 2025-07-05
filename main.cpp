@@ -21,10 +21,8 @@
 
 #include "src/structures.h"
 
-const uint32_t WIDTH = 800;
-const uint32_t HEIGHT = 600;
-
-const uint32_t PARTICLE_COUNT = 8192;
+const uint32_t WIDTH = 1920;
+const uint32_t HEIGHT = 1080;
 
 const int MAX_FRAMES_IN_FLIGHT = 1;
 
@@ -170,7 +168,7 @@ private:
 
 
     Grid grid = Grid(200, 200, 200);
-    Camera camera = Camera(glm::vec3(0, 0, 100), glm::vec3(0.5, 0.5, 0), WIDTH, HEIGHT, glm::radians(70.0f));
+    Camera camera = Camera(glm::vec3(100, 100, 200), glm::vec3(100, 100, 0), WIDTH, HEIGHT, glm::radians(30.0f));
 
     float lastFrameTime = 0.0f;
 
@@ -911,13 +909,14 @@ private:
 
             memcpy(uniformBuffersMapped[i], &grid.gridInfo, sizeof(GridInfo));
 
-            createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i],
-                         uniformBuffersMemory[i]);
+            createBuffer(cBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                         uniformCameraBuffers[i],
+                         uniformCameraBuffersMemory[i]);
 
-            vkMapMemory(device, uniformBuffersMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
+            vkMapMemory(device, uniformCameraBuffersMemory[i], 0, cBufferSize, 0, &uniformCameraBuffersMapped[i]);
 
-            memcpy(uniformBuffersMapped[i], &grid.gridInfo, sizeof(GridInfo));
+            memcpy(uniformCameraBuffersMapped[i], &camera, sizeof(Camera));
         }
     }
 
@@ -1141,7 +1140,7 @@ private:
             descriptorWrites[3].dstArrayElement = 0;
             descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             descriptorWrites[3].descriptorCount = 1;
-            descriptorWrites[3].pBufferInfo = &uniformBufferInfo;
+            descriptorWrites[3].pBufferInfo = &uniformCameraBufferInfo;
 
             vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0,
                                    nullptr);
@@ -1454,8 +1453,9 @@ private:
             computeFinishedSemaphores[currentFrame], imageAvailableSemaphores[currentFrame]
         };
         VkPipelineStageFlags waitStages[] = {
-            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-            VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            // VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            // VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
         };
         submitInfo = {};
