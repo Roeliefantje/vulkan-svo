@@ -24,6 +24,8 @@
 
 const uint32_t WIDTH = 1920;
 const uint32_t HEIGHT = 1080;
+const float X_GROUPSIZE = 16;
+const float Y_GROUPSIZE = 16;
 
 const int MAX_FRAMES_IN_FLIGHT = 1;
 
@@ -168,7 +170,7 @@ private:
     uint32_t currentFrame = 0;
 
 
-    Grid grid = Grid(200, 200, 200);
+    Grid grid = Grid(300, 300, 300);
     Camera camera = Camera(glm::vec3(200, 100, 100), glm::vec3(0, 100, 100), WIDTH, HEIGHT, glm::radians(30.0f));
     float mouseX, mouseY;
 
@@ -1367,7 +1369,7 @@ private:
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout, 0, 1,
                                 &computeDescriptorSets[currentFrame], 0, nullptr);
 
-        vkCmdDispatch(commandBuffer, WIDTH, HEIGHT, 1);
+        vkCmdDispatch(commandBuffer, std::ceil(WIDTH / X_GROUPSIZE), std::ceil(HEIGHT / Y_GROUPSIZE), 1);
 
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
             throw std::runtime_error("failed to record compute command buffer!");

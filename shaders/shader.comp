@@ -29,7 +29,7 @@ layout(binding = 2, rgba8) uniform writeonly image2D outputImage;
 
 
 
-int MAX_RAY_STEPS = 1000;
+int MAX_RAY_STEPS = 5000;
 
 
 
