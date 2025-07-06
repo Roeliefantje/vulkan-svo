@@ -67,11 +67,11 @@ struct Grid {
         std::uniform_int_distribution<int> rndDepth(0, d - 1);
 
         for (size_t i = 0; i < VOXEL_COUNT; i++) {
-            auto x = rndWidth(rndEngine);
-            auto y = rndDepth(rndEngine);
+            auto x = rndDepth(rndEngine);
+            auto y = rndWidth(rndEngine);
             auto z = rndHeight(rndEngine);
             // auto z = 0;
-            auto index = x + gridInfo.depth * y + gridInfo.height * gridInfo.depth * z;
+            auto index = x + y * gridInfo.width + z * gridInfo.width * gridInfo.height;
             data[index] = 1;
         }
 
@@ -89,7 +89,7 @@ struct Camera {
     //Technically, adding fov to a vec3 would save some memory. (it could all fit in 3 vec4s)
     Camera(glm::vec3 pos, glm::vec3 lookAt, int screenWidth, int screenHeight, float fovRadian) : position(pos),
         lookAt(lookAt), fov(fovRadian) {
-        up = glm::vec3(0, 1, 0);
+        up = glm::vec3(0, 0, 1);
         resolution = glm::vec2(screenWidth, screenHeight);
     }
 };

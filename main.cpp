@@ -1,3 +1,4 @@
+//TODO!: Change LookAt camera uniform to look direction instead of lookAt, but creation should still be with lookAt.
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -168,7 +169,8 @@ private:
 
 
     Grid grid = Grid(200, 200, 200);
-    Camera camera = Camera(glm::vec3(100, 100, 200), glm::vec3(100, 100, 0), WIDTH, HEIGHT, glm::radians(30.0f));
+    Camera camera = Camera(glm::vec3(200, 100, 100), glm::vec3(0, 100, 100), WIDTH, HEIGHT, glm::radians(30.0f));
+    float mouseX, mouseY;
 
     float lastFrameTime = 0.0f;
 
@@ -186,6 +188,9 @@ private:
         glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 
         lastTime = glfwGetTime();
+        glfwSetWindowUserPointer(window, this);
+        glfwSetCursorPosCallback(window, mouseCallback);
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     }
 
     static void framebufferResizeCallback(GLFWwindow *window, int width, int height) {
@@ -231,6 +236,7 @@ private:
 
     void mainLoop() {
         while (!glfwWindowShouldClose(window)) {
+            processInput();
             glfwPollEvents();
             drawFrame();
             // We want to animate the particle system using the last frames time to get smooth, frame-rate independent animation
@@ -302,6 +308,72 @@ private:
         glfwDestroyWindow(window);
 
         glfwTerminate();
+    }
+
+    //Has to be static for Glfw
+    static void mouseCallback(GLFWwindow *window, double xpos, double ypos) {
+        auto *app = static_cast<ComputeShaderApplication *>(glfwGetWindowUserPointer(window));
+        if (app) {
+            if (app->lastFrameTime == 0.0f) {
+                app->mouseX = xpos;
+                app->mouseY = ypos;
+                return;
+            }
+
+            float xoffset = xpos - app->mouseX;
+            float yoffset = app->mouseY - ypos;
+            app->mouseX = xpos;
+            app->mouseY = ypos;
+
+            // if (xoffset != 0.0f || yoffset != 0.0f) {
+            //     std::cout << "X offset:" << xoffset << std::endl;
+            //     std::cout << "Y offset:" << yoffset << std::endl;
+            // }
+        }
+    }
+
+    void processInput() {
+        glm::vec3 direction = glm::normalize(camera.lookAt - camera.position);
+        glm::vec3 forward = glm::normalize(direction - glm::dot(direction, camera.up) * camera.up);
+        glm::vec3 left = glm::cross(forward, camera.up);
+
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+            glm::vec3 change = forward * 0.2f * lastFrameTime;
+            camera.position += change;
+            camera.lookAt += change;
+        }
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+            glm::vec3 change = forward * -0.2f * lastFrameTime;
+            camera.position += change;
+            camera.lookAt += change;
+        }
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+            glm::vec3 change = left * 0.2f * lastFrameTime;
+            camera.position += change;
+            camera.lookAt += change;
+        }
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+            glm::vec3 change = left * -0.2f * lastFrameTime;
+            camera.position += change;
+            camera.lookAt += change;
+        }
+        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+            glm::vec3 change = camera.up * -0.2f * lastFrameTime;
+            camera.position += change;
+            camera.lookAt += change;
+        }
+        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+            glm::vec3 change = camera.up * 0.2f * lastFrameTime;
+            camera.position += change;
+            camera.lookAt += change;
+        }
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        }
+    }
+
+    void updateUniformCameraBuffer() {
+        memcpy(uniformCameraBuffersMapped[currentFrame], &camera, sizeof(camera));
     }
 
     void recreateSwapChain() {
@@ -837,27 +909,9 @@ private:
     }
 
     void createShaderStorageBuffers() {
-        // // Initialize particles
-        // std::default_random_engine rndEngine((unsigned) time(nullptr));
-        // std::uniform_real_distribution<float> rndDist(0.0f, 1.0f);
-        //
-        // // Initial particle positions on a circle
-        // std::vector<Particle> particles(PARTICLE_COUNT);
-        // for (auto &particle: particles) {
-        //     float r = 0.25f * sqrt(rndDist(rndEngine));
-        //     float theta = rndDist(rndEngine) * 2.0f * 3.14159265358979323846f;
-        //     float x = r * cos(theta) * HEIGHT / WIDTH;
-        //     float y = r * sin(theta);
-        //     particle.position = glm::vec2(x, y);
-        //     particle.velocity = glm::normalize(glm::vec2(x, y)) * 0.00025f;
-        //     particle.color = glm::vec4(rndDist(rndEngine), rndDist(rndEngine), rndDist(rndEngine), 1.0f);
-        // }
-        //
-        // VkDeviceSize bufferSize = sizeof(Particle) * PARTICLE_COUNT;
-
-        // grid = Grid(200, 200, 200);
-
         VkDeviceSize bufferSize = sizeof(int32_t) * grid.data.size();
+        std::cout << "Grid data size: " << grid.data.size() << std::endl;
+        std::cout << "Buffer size: " << grid.data.size() * sizeof(int32_t) << std::endl;
 
         // Create a staging buffer used to upload data to the gpu
         VkBuffer stagingBuffer;
@@ -922,8 +976,6 @@ private:
 
     void createGraphicsDescriptorPool() {
         std::array<VkDescriptorPoolSize, 1> poolSizes{};
-        // poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        // poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
         poolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
@@ -1414,7 +1466,7 @@ private:
         // Compute submission
         vkWaitForFences(device, 1, &computeInFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
-        // updateUniformBuffer(currentFrame);
+        updateUniformCameraBuffer();
 
         vkResetFences(device, 1, &computeInFlightFences[currentFrame]);
 
