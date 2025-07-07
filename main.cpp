@@ -3,8 +3,10 @@
 #include <GLFW/glfw3.h>
 
 #define GLM_FORCE_RADIANS
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/rotate_vector.hpp>
 
 #include <iostream>
 #include <fstream>
@@ -173,6 +175,9 @@ private:
     Grid grid = Grid(300, 300, 300);
     Camera camera = Camera(glm::vec3(200, 100, 100), glm::vec3(0, 100, 100), WIDTH, HEIGHT, glm::radians(30.0f));
     float mouseX, mouseY;
+    float mouseSensitivity = 0.05f;
+    bool escPressed = false;
+    bool mouseFree = false;
 
     float lastFrameTime = 0.0f;
 
@@ -327,50 +332,75 @@ private:
             app->mouseX = xpos;
             app->mouseY = ypos;
 
-            // if (xoffset != 0.0f || yoffset != 0.0f) {
             //     std::cout << "X offset:" << xoffset << std::endl;
             //     std::cout << "Y offset:" << yoffset << std::endl;
-            // }
+
+            if (!app->mouseFree && (xoffset != 0.0f || yoffset != 0.0f)) {
+                glm::vec3 right = glm::cross(app->camera.direction, app->camera.up);
+                float angleR = glm::radians(-1 * yoffset * app->lastFrameTime * app->mouseSensitivity);
+                glm::vec3 rotated = glm::rotate(app->camera.direction, angleR, right);
+
+                // std::cout << "Original direction: X: " << app->camera.direction.x << " Y:" << app->camera.direction.y <<
+                //         " Z:" << app->camera.direction.z << std::endl;
+                // std::cout << "Rotated: X: " << rotated.x << " Y:" << rotated.y << " Z:" << rotated.z << std::endl;
+
+                if (rotated.z <= 0.9 && rotated.z >= -0.9) {
+                    app->camera.direction = rotated;
+                }
+
+                angleR = glm::radians(xoffset * app->lastFrameTime * app->mouseSensitivity);
+                app->camera.direction = glm::rotate(app->camera.direction, angleR, app->camera.up);
+            }
         }
     }
 
     void processInput() {
-        glm::vec3 direction = glm::normalize(camera.lookAt - camera.position);
-        glm::vec3 forward = glm::normalize(direction - glm::dot(direction, camera.up) * camera.up);
+        glm::vec3 forward = glm::normalize(camera.direction - glm::dot(camera.direction, camera.up) * camera.up);
         glm::vec3 left = glm::cross(forward, camera.up);
 
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
             glm::vec3 change = forward * 0.2f * lastFrameTime;
             camera.position += change;
-            camera.lookAt += change;
+            // camera.lookAt += change;
         }
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
             glm::vec3 change = forward * -0.2f * lastFrameTime;
             camera.position += change;
-            camera.lookAt += change;
+            // camera.lookAt += change;
         }
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
             glm::vec3 change = left * 0.2f * lastFrameTime;
             camera.position += change;
-            camera.lookAt += change;
+            // camera.lookAt += change;
         }
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
             glm::vec3 change = left * -0.2f * lastFrameTime;
             camera.position += change;
-            camera.lookAt += change;
+            // camera.lookAt += change;
         }
         if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
             glm::vec3 change = camera.up * -0.2f * lastFrameTime;
             camera.position += change;
-            camera.lookAt += change;
+            // camera.lookAt += change;
         }
         if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
             glm::vec3 change = camera.up * 0.2f * lastFrameTime;
             camera.position += change;
-            camera.lookAt += change;
+            // camera.lookAt += change;
         }
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            if (!escPressed) {
+                std::cout << "Escape pressed" << std::endl;
+                if (!mouseFree) {
+                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                } else {
+                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                }
+                mouseFree = !mouseFree;
+            }
+            escPressed = true;
+        } else if (escPressed) {
+            escPressed = false;
         }
     }
 

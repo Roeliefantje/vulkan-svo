@@ -81,16 +81,21 @@ struct Grid {
 
 struct Camera {
     alignas(16) glm::vec3 position;
-    alignas(16) glm::vec3 lookAt;
+    alignas(16) glm::vec3 direction;
     alignas(16) glm::vec3 up;
     alignas(8) glm::vec2 resolution;
     alignas(4) float fov;
 
     //Technically, adding fov to a vec3 would save some memory. (it could all fit in 3 vec4s)
     Camera(glm::vec3 pos, glm::vec3 lookAt, int screenWidth, int screenHeight, float fovRadian) : position(pos),
-        lookAt(lookAt), fov(fovRadian) {
+        fov(fovRadian) {
+        direction = glm::normalize(lookAt - pos);
         up = glm::vec3(0, 0, 1);
         resolution = glm::vec2(screenWidth, screenHeight);
+
+        if (direction == up) {
+            throw std::runtime_error("Camera up vector is the same as Camera direction!");
+        }
     }
 };
 
