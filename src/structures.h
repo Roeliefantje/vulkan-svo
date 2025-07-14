@@ -5,6 +5,8 @@
 
 #include <vector>
 #include <random>
+#include <unordered_map>
+#include <memory>
 
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
@@ -78,6 +80,144 @@ struct Grid {
         std::cout << "Finished making grid" << std::endl;
     }
 };
+
+//Key make thing for sparseGrid
+inline uint64_t make_key(uint16_t x, uint16_t y, uint16_t z) {
+    return (static_cast<uint64_t>(x) << 24) |
+           (static_cast<uint64_t>(y) << 12) |
+           (static_cast<uint64_t>(z));
+}
+
+struct OctreeNode {
+    // bool isLeafNode;
+    // glm::ivec3 pos;
+    // uint16_t size;
+    uint8_t childMask;
+    std::array<std::shared_ptr<OctreeNode>, 8> children;
+
+    OctreeNode() {
+        childMask = 0;
+    }
+
+    OctreeNode(uint8_t childMask, std::array<std::shared_ptr<OctreeNode>, 8> &children) : childMask(childMask),
+        children(children) {
+    };
+};
+
+int constructLeafNodes(Grid *grid, std::unordered_map<uint64_t, std::shared_ptr<OctreeNode> > *sparseGrid) {
+    int count = 0;
+    auto leafNode = std::make_shared<OctreeNode>();
+    sparseGrid->reserve(VOXEL_COUNT);
+    for (size_t z = 0; z < grid->gridInfo.height; z++) {
+        for (size_t y = 0; y < grid->gridInfo.width; y++) {
+            for (size_t x = 0; x < grid->gridInfo.width; x++) {
+                auto index = x + y * grid->gridInfo.width + z * grid->gridInfo.width * grid->gridInfo.height;
+                if (grid->data[index] == 1) {
+                    count++;
+                    (*sparseGrid)[make_key(x, y, z)] = leafNode;
+                }
+            }
+        }
+    }
+
+    std::cout << "Made " << count << "leafnodes for first level sparseGrid" << std::endl;
+    return count;
+}
+
+void checkChildren(uint8_t *childMask, std::array<std::shared_ptr<OctreeNode>, 8> *children,
+                   std::unordered_map<uint64_t, std::shared_ptr<OctreeNode> > *sparseGrid,
+                   size_t x, size_t y, size_t z) {
+    //Top left front
+    auto key = make_key(x, y, z);
+    if (sparseGrid->contains(key)) {
+        *childMask |= 0b10000000;
+        (*children)[0] = (*sparseGrid)[key];
+    }
+    //Top right front
+    key = make_key(x + 1, y, z);
+    if (sparseGrid->contains(key)) {
+        *childMask |= 0b01000000;
+        (*children)[1] = (*sparseGrid)[key];
+    }
+    //Top left back
+    key = make_key(x, y + 1, z);
+    if (sparseGrid->contains(key)) {
+        *childMask |= 0b00100000;
+        (*children)[2] = (*sparseGrid)[key];
+    }
+    //Top right back
+    key = make_key(x + 1, y + 1, z);
+    if (sparseGrid->contains(key)) {
+        *childMask |= 0b00010000;
+        (*children)[3] = (*sparseGrid)[key];
+    }
+
+    //Bottom left front
+    key = make_key(x, y, z + 1);
+    if (sparseGrid->contains(key)) {
+        *childMask |= 0b00001000;
+        (*children)[4] = (*sparseGrid)[key];
+    }
+    //Bottom right front
+    key = make_key(x + 1, y, z + 1);
+    if (sparseGrid->contains(key)) {
+        *childMask |= 0b00000100;
+        (*children)[5] = (*sparseGrid)[key];
+    }
+    //Bottom left back
+    key = make_key(x, y + 1, z + 1);
+    if (sparseGrid->contains(key)) {
+        *childMask |= 0b00000010;
+        (*children)[6] = (*sparseGrid)[key];
+    }
+    //Bottom right back
+    key = make_key(x + 1, y + 1, z + 1);
+    if (sparseGrid->contains(key)) {
+        *childMask |= 0b00000001;
+        (*children)[7] = (*sparseGrid)[key];
+    }
+}
+
+OctreeNode constructOctree(Grid *grid) {
+    if (grid->gridInfo.depth != 1024 or grid->gridInfo.height != 1024 or grid->gridInfo.width != 1024) {
+        throw std::runtime_error("Grid for octree construction is not the right size!");
+    }
+    uint32_t grid_size = 1024;
+
+    std::unordered_map<uint64_t, std::shared_ptr<OctreeNode> > sparseGrid;
+    int count = constructLeafNodes(grid, &sparseGrid);
+    auto leafNode = std::make_shared<OctreeNode>();
+
+    while (grid_size > 1) {
+        std::unordered_map<uint64_t, std::shared_ptr<OctreeNode> > newSparseGrid;
+        newSparseGrid.reserve(sparseGrid.size() / 8);
+        for (size_t z = 0; z < grid_size; z += 2) {
+            std::cout << "Z: " << z << " Grid size: " << grid_size << std::endl;
+            for (size_t y = 0; y < grid_size; y += 2) {
+                for (size_t x = 0; x < grid_size; x += 2) {
+                    uint8_t childMask = 0;
+                    auto children = std::array<std::shared_ptr<OctreeNode>, 8>();
+                    checkChildren(&childMask, &children, &sparseGrid, x, y, z);
+                    auto key = make_key(x / 2, y / 2, z / 2);
+
+                    if (childMask != 0) {
+                        count++;
+                        newSparseGrid[key] = (childMask == 0b11111111)
+                                                 ? leafNode
+                                                 : std::make_shared<OctreeNode>(childMask, children);
+                    }
+                }
+            }
+        }
+
+        sparseGrid = newSparseGrid;
+        grid_size /= 2;
+        std::cout << "Made octree level with size: " << grid_size << std::endl;
+    }
+    std::cout << "Total nodes: " << count << std::endl;
+    return *sparseGrid[make_key(0, 0, 0)];
+}
+
 
 struct Camera {
     alignas(16) glm::vec3 position;

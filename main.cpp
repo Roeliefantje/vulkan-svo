@@ -172,7 +172,8 @@ private:
     uint32_t currentFrame = 0;
 
 
-    Grid grid = Grid(300, 300, 300);
+    Grid grid = Grid(1024, 1024, 1024);
+    OctreeNode octree = constructOctree(&grid);
     Camera camera = Camera(glm::vec3(200, 100, 100), glm::vec3(0, 100, 100), WIDTH, HEIGHT, glm::radians(30.0f));
     float mouseX, mouseY;
     float mouseSensitivity = 0.05f;
