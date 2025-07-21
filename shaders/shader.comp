@@ -38,14 +38,22 @@ struct Node {
     uint index;
 };
 
+struct StackInfo {
+    Node node;
+    vec3 sideDist;
+    ivec3 childCoord;
+};
+
 
 Node convertNode(uint value){
     Node node;
-    node.childMask = value >> 24;
-    node.index = value & 0xFFFFFFu;
+    node.childMask = (value >> 24) & 0xFFu;
+    node.index = value & 0x00FFFFFFu;
 
     return node;
 }
+
+
 
 bool intersectGrid(vec3 rayDir, vec3 rayPos, out vec3 collision) {
     vec3 invDir = 1.0 / rayDir;
@@ -89,52 +97,12 @@ void main()
 
     vec3 rayPos = camera.position;
     //  Distance per axis to travel to the next tile,
-    vec3 deltaDist = abs(1.0 / rayDir);
+    vec3 deltaDist = abs(vec3(length(rayDir)) / rayDir);
     ivec3 rayStep = ivec3(sign(rayDir));
-    ivec3 mapPos = ivec3(floor(rayPos));
 
     uint level = 0;
     Node stack[MAX_DEPTH];
     Node currentNode = convertNode(svo[0]);
-
-    for (int i = 0; i < MAX_RAY_STEPS; i++) {
-        if (currentNode.childMask == 0u) {
-            //Ray starts inside of a voxel
-            imageStore(outputImage, ivec2(pixelCoord), vec4(0.75));
-            return;
-        }
-
-        //Get the currentNodes Size
-        int nodeSize = max(1, ubo.width >> level);
-        vec3 localPos = fract(rayPos / float(nodeSize));
-        //Check if ray is outside of SVO
-        if (level == 0 && (any(greaterThan(rayPos / float(nodeSize), vec3(1.0))) || any(greaterThan(vec3(0.0), rayPos / float(nodeSize))))) {
-            //TODO: Check bounding box and then move the ray to the start
-            vec3 collision;
-            if (intersectGrid(rayDir, rayPos, collision)){
-                rayPos = collision;
-                break;
-            } else {
-                imageStore(outputImage, ivec2(pixelCoord), vec4(0.01));
-                return;
-            }
-        }
-        //Get the childCoord by getting the 0.6 * 2, 1.2 = 1, etc...
-        ivec3 childCoords = ivec3(localPos * 2.0);
-
-        //Convert to the flattened values
-        int childIndex = childCoords.z * 4 + childCoords.y * 2 + childCoords.x;
-
-        if (((currentNode.childMask >> (7 - childIndex)) & 1u) == 0u) {
-            break;
-        }
-
-        //Shift off everything past the child and the child so we know how many children came before
-        int childOffset = bitCount(currentNode.childMask >> (childIndex + 1));
-        stack[level] = currentNode;
-        currentNode = convertNode(svo[currentNode.index + childOffset]);
-        level += 1;
-    }
 
     vec3 color = vec3(0.1);
     bvec3 mask = bvec3(false, false, true);
@@ -144,7 +112,15 @@ void main()
     ivec3 childCoords = ivec3(localPos);
     vec3 sideDist = (sign(rayDir) * (vec3(childCoords) - localPos) + (sign(rayDir) * 0.5) + 0.5) * deltaDist;
 
-
+    if (any(greaterThan(rayPos / float(nodeSize), vec3(1.0))) || any(greaterThan(vec3(0.0), rayPos / float(nodeSize)))) {
+        vec3 collision;
+        if (intersectGrid(rayDir, rayPos, collision)){
+            rayPos = collision + rayDir * 0.0001f;
+        } else {
+            imageStore(outputImage, ivec2(pixelCoord), vec4(0.01));
+            return;
+        }
+    }
 
 
     for (int i = 0; i < MAX_RAY_STEPS; i++){
@@ -162,7 +138,6 @@ void main()
             int childOffset = bitCount(currentNode.childMask >> (childIndex + 1));
             currentNode = convertNode(svo[currentNode.index + childOffset]);
 
-
             nodeSize = max(1, ubo.width >> level);
             localPos = fract(rayPos / float(nodeSize)) * 2.0;
             childCoords = ivec3(localPos);
@@ -170,12 +145,12 @@ void main()
         } else {
             //DDA to next child
             mask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
-            sideDist += vec3(mask) * deltaDist;
             childCoords += ivec3(vec3(mask)) * rayStep;
 
             if (any(lessThan(childCoords, ivec3(0))) || any(greaterThan(childCoords, ivec3(1)))) {
                 //Ascend
-                rayPos += dot(vec3(mask), deltaDist) * rayDir * (nodeSize / 2);
+                rayPos += dot(vec3(mask), sideDist) * rayDir * (nodeSize / 2);
+                rayPos += rayDir * 0.001f;
                 level -= 1;
                 if (level < 0) {
                     break;
@@ -187,8 +162,9 @@ void main()
                 localPos = fract(rayPos / float(nodeSize)) * 2.0;
                 childCoords = ivec3(localPos);
                 sideDist = (sign(rayDir) * (vec3(childCoords) - localPos) + (sign(rayDir) * 0.5) + 0.5) * deltaDist;
-
             }
+
+            sideDist += vec3(mask) * deltaDist;
 
         }
 

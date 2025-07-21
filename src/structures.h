@@ -46,7 +46,7 @@ struct Vertex {
     }
 };
 
-const uint32_t VOXEL_COUNT = 5;
+const uint32_t VOXEL_COUNT = 3000;
 
 struct GridInfo {
     alignas(4) uint32_t width;

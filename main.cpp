@@ -944,9 +944,9 @@ private:
     }
 
     void createShaderStorageBuffers() {
-        VkDeviceSize bufferSize = sizeof(int32_t) * octreeGPU.size();
+        VkDeviceSize bufferSize = sizeof(uint32_t) * octreeGPU.size();
         std::cout << "Grid data size: " << octreeGPU.size() << std::endl;
-        std::cout << "Buffer size: " << octreeGPU.size() * sizeof(int32_t) << std::endl;
+        std::cout << "Buffer size: " << octreeGPU.size() * sizeof(uint32_t) << std::endl;
 
         // Create a staging buffer used to upload data to the gpu
         VkBuffer stagingBuffer;
@@ -1193,7 +1193,7 @@ private:
             VkDescriptorBufferInfo storageBufferInfoCurrentFrame{};
             storageBufferInfoCurrentFrame.buffer = shaderStorageBuffers[i];
             storageBufferInfoCurrentFrame.offset = 0;
-            storageBufferInfoCurrentFrame.range = sizeof(int32_t) * octreeGPU.size();
+            storageBufferInfoCurrentFrame.range = sizeof(uint32_t) * octreeGPU.size();
 
             descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[1].dstSet = computeDescriptorSets[i];
