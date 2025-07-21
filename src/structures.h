@@ -7,6 +7,7 @@
 #include <random>
 #include <unordered_map>
 #include <memory>
+#include <bit>
 
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
@@ -89,9 +90,6 @@ inline uint64_t make_key(uint16_t x, uint16_t y, uint16_t z) {
 }
 
 struct OctreeNode {
-    // bool isLeafNode;
-    // glm::ivec3 pos;
-    // uint16_t size;
     uint8_t childMask;
     std::array<std::shared_ptr<OctreeNode>, 8> children;
 
@@ -104,8 +102,53 @@ struct OctreeNode {
     };
 };
 
+
+inline bool hasChildren(uint8_t childMask) {
+    return childMask != 0;
+}
+
+inline uint32_t amountChildren(uint8_t childMask) {
+    return std::popcount(childMask);
+}
+
+inline uint32_t createGPUData(uint8_t childMask, uint32_t index) {
+    return childMask << 24 | index;
+}
+
+uint32_t addChildren(std::shared_ptr<OctreeNode> node, std::vector<uint32_t> *data, uint32_t *startIndex) {
+    uint32_t index = *startIndex;
+    uint32_t childOffset = 0;
+    *startIndex += amountChildren(node->childMask);
+    for (int i = 0; i < 8; ++i) {
+        if ((node->childMask >> i) & 1) {
+            std::shared_ptr<OctreeNode> child = node->children[i];
+            (*data)[index + childOffset] = addChildren(child, data, startIndex);
+            childOffset += 1;
+        }
+    }
+
+    return createGPUData(node->childMask, index);
+}
+
+std::vector<uint32_t> getOctreeGPUdata(std::shared_ptr<OctreeNode> rootNode, uint32_t nodesAmount) {
+    std::cout << "Nodes amount: " << nodesAmount << std::endl;
+    auto data = std::vector<uint32_t>(nodesAmount);
+    uint32_t index = 1;
+    data[0] = createGPUData(rootNode->childMask, index);
+    addChildren(rootNode, &data, &index);
+
+    if (index > 0xFFFFFF) {
+        throw std::runtime_error("Index exceeds maximum allowed value!");
+    }
+
+    std::cout << "Total nodes: " << data.size() << std::endl;
+
+    return data;
+}
+
+
 int constructLeafNodes(Grid *grid, std::unordered_map<uint64_t, std::shared_ptr<OctreeNode> > *sparseGrid) {
-    int count = 0;
+    uint32_t count = 0;
     auto leafNode = std::make_shared<OctreeNode>();
     sparseGrid->reserve(VOXEL_COUNT);
     for (size_t z = 0; z < grid->gridInfo.height; z++) {
@@ -178,14 +221,19 @@ void checkChildren(uint8_t *childMask, std::array<std::shared_ptr<OctreeNode>, 8
     }
 }
 
-OctreeNode constructOctree(Grid *grid) {
-    if (grid->gridInfo.depth != 1024 or grid->gridInfo.height != 1024 or grid->gridInfo.width != 1024) {
-        throw std::runtime_error("Grid for octree construction is not the right size!");
+inline bool isPowerOfTwo(int n) {
+    return n > 0 && (n & (n - 1)) == 0;
+}
+
+std::shared_ptr<OctreeNode> constructOctree(Grid *grid, uint32_t &nodeCount) {
+    if (!isPowerOfTwo(grid->gridInfo.depth) or grid->gridInfo.height != grid->gridInfo.depth or grid->gridInfo.height !=
+        grid->gridInfo.width) {
+        throw std::runtime_error("Grid for octree construction is not a power of 2 or not square!");
     }
-    uint32_t grid_size = 1024;
+    uint32_t grid_size = grid->gridInfo.depth;
 
     std::unordered_map<uint64_t, std::shared_ptr<OctreeNode> > sparseGrid;
-    int count = constructLeafNodes(grid, &sparseGrid);
+    uint32_t count = constructLeafNodes(grid, &sparseGrid);
     auto leafNode = std::make_shared<OctreeNode>();
 
     while (grid_size > 1) {
@@ -215,7 +263,8 @@ OctreeNode constructOctree(Grid *grid) {
         std::cout << "Made octree level with size: " << grid_size << std::endl;
     }
     std::cout << "Total nodes: " << count << std::endl;
-    return *sparseGrid[make_key(0, 0, 0)];
+    nodeCount = count;
+    return sparseGrid[make_key(0, 0, 0)];
 }
 
 

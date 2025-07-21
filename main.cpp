@@ -173,7 +173,9 @@ private:
 
 
     Grid grid = Grid(1024, 1024, 1024);
-    OctreeNode octree = constructOctree(&grid);
+    uint32_t amountOfNodes;
+    std::shared_ptr<OctreeNode> root = constructOctree(&grid, amountOfNodes);
+    std::vector<uint32_t> octreeGPU = getOctreeGPUdata(root, amountOfNodes);
     Camera camera = Camera(glm::vec3(200, 100, 100), glm::vec3(0, 100, 100), WIDTH, HEIGHT, glm::radians(30.0f));
     float mouseX, mouseY;
     float mouseSensitivity = 0.05f;
@@ -942,9 +944,9 @@ private:
     }
 
     void createShaderStorageBuffers() {
-        VkDeviceSize bufferSize = sizeof(int32_t) * grid.data.size();
-        std::cout << "Grid data size: " << grid.data.size() << std::endl;
-        std::cout << "Buffer size: " << grid.data.size() * sizeof(int32_t) << std::endl;
+        VkDeviceSize bufferSize = sizeof(int32_t) * octreeGPU.size();
+        std::cout << "Grid data size: " << octreeGPU.size() << std::endl;
+        std::cout << "Buffer size: " << octreeGPU.size() * sizeof(int32_t) << std::endl;
 
         // Create a staging buffer used to upload data to the gpu
         VkBuffer stagingBuffer;
@@ -955,7 +957,7 @@ private:
 
         void *data;
         vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-        memcpy(data, grid.data.data(), (size_t) bufferSize);
+        memcpy(data, octreeGPU.data(), (size_t) bufferSize);
         vkUnmapMemory(device, stagingBufferMemory);
 
         shaderStorageBuffers.resize(MAX_FRAMES_IN_FLIGHT);
@@ -1191,7 +1193,7 @@ private:
             VkDescriptorBufferInfo storageBufferInfoCurrentFrame{};
             storageBufferInfoCurrentFrame.buffer = shaderStorageBuffers[i];
             storageBufferInfoCurrentFrame.offset = 0;
-            storageBufferInfoCurrentFrame.range = sizeof(int32_t) * grid.data.size();
+            storageBufferInfoCurrentFrame.range = sizeof(int32_t) * octreeGPU.size();
 
             descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[1].dstSet = computeDescriptorSets[i];
