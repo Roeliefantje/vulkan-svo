@@ -97,7 +97,7 @@ void main()
 
     vec3 rayPos = camera.position;
     //  Distance per axis to travel to the next tile,
-    vec3 deltaDist = abs(vec3(length(rayDir)) / rayDir);
+
     ivec3 rayStep = ivec3(sign(rayDir));
 
     int level = 0;
@@ -110,6 +110,7 @@ void main()
     int nodeSize = max(1, ubo.width >> level);
     vec3 localPos = fract(rayPos / float(nodeSize)) * 2.0;
     ivec3 childCoords = ivec3(localPos);
+    vec3 deltaDist = abs(vec3(float(nodeSize) * 0.5) / rayDir);
     vec3 sideDist = (sign(rayDir) * (vec3(childCoords) - localPos) + (sign(rayDir) * 0.5) + 0.5) * deltaDist;
 
     if (any(greaterThan(rayPos / float(nodeSize), vec3(1.0))) || any(greaterThan(vec3(0.0), rayPos / float(nodeSize)))) {
@@ -141,6 +142,7 @@ void main()
             nodeSize = max(1, ubo.width >> level);
             localPos = fract(rayPos / float(nodeSize)) * 2.0;
             childCoords = ivec3(localPos);
+            deltaDist = abs(vec3(float(nodeSize) * 0.5) / rayDir);
             sideDist = (sign(rayDir) * (vec3(childCoords) - localPos) + (sign(rayDir) * 0.5) + 0.5) * deltaDist;
         } else {
             //DDA to next child
@@ -149,9 +151,10 @@ void main()
 
             if (any(lessThan(childCoords, ivec3(0))) || any(greaterThan(childCoords, ivec3(1)))) {
                 //Ascend
-                rayPos += dot(vec3(mask), sideDist) * rayDir * (nodeSize / 2.0);
+                rayPos += dot(vec3(mask), sideDist) * rayDir;
                 level -= 1;
                 if (level < 0) {
+                    color = vec3(0.01);
                     break;
                 }
 
@@ -160,6 +163,7 @@ void main()
                 nodeSize = max(1, ubo.width >> level);
                 localPos = fract(rayPos / float(nodeSize)) * 2.0;
                 childCoords = ivec3(localPos);
+                deltaDist = abs(vec3(float(nodeSize) * 0.5) / rayDir);
                 sideDist = (sign(rayDir) * (vec3(childCoords) - localPos) + (sign(rayDir) * 0.5) + 0.5) * deltaDist;
                 break;
             }
