@@ -100,7 +100,7 @@ void main()
     vec3 deltaDist = abs(vec3(length(rayDir)) / rayDir);
     ivec3 rayStep = ivec3(sign(rayDir));
 
-    uint level = 0;
+    int level = 0;
     Node stack[MAX_DEPTH];
     Node currentNode = convertNode(svo[0]);
 
@@ -135,7 +135,7 @@ void main()
             //Descend
             stack[level] = currentNode;
             level += 1;
-            int childOffset = bitCount(currentNode.childMask >> (childIndex + 1));
+            int childOffset = bitCount(currentNode.childMask >> (8 - childIndex));
             currentNode = convertNode(svo[currentNode.index + childOffset]);
 
             nodeSize = max(1, ubo.width >> level);
@@ -149,8 +149,7 @@ void main()
 
             if (any(lessThan(childCoords, ivec3(0))) || any(greaterThan(childCoords, ivec3(1)))) {
                 //Ascend
-                rayPos += dot(vec3(mask), sideDist) * rayDir * (nodeSize / 2);
-                rayPos += rayDir * 0.001f;
+                rayPos += dot(vec3(mask), sideDist) * rayDir * (nodeSize / 2.0);
                 level -= 1;
                 if (level < 0) {
                     break;
@@ -162,10 +161,10 @@ void main()
                 localPos = fract(rayPos / float(nodeSize)) * 2.0;
                 childCoords = ivec3(localPos);
                 sideDist = (sign(rayDir) * (vec3(childCoords) - localPos) + (sign(rayDir) * 0.5) + 0.5) * deltaDist;
+                break;
             }
 
             sideDist += vec3(mask) * deltaDist;
-
         }
 
 
