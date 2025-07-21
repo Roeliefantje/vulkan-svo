@@ -172,11 +172,11 @@ private:
     uint32_t currentFrame = 0;
 
 
-    Grid grid = Grid(1024, 1024, 1024);
+    Grid grid = Grid(16, 16, 16);
     uint32_t amountOfNodes;
     std::shared_ptr<OctreeNode> root = constructOctree(&grid, amountOfNodes);
     std::vector<uint32_t> octreeGPU = getOctreeGPUdata(root, amountOfNodes);
-    Camera camera = Camera(glm::vec3(200, 100, 100), glm::vec3(0, 100, 100), WIDTH, HEIGHT, glm::radians(30.0f));
+    Camera camera = Camera(glm::vec3(32, 8, 8), glm::vec3(8, 8, 8), WIDTH, HEIGHT, glm::radians(30.0f));
     float mouseX, mouseY;
     float mouseSensitivity = 0.05f;
     bool escPressed = false;

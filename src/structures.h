@@ -46,7 +46,7 @@ struct Vertex {
     }
 };
 
-const uint32_t VOXEL_COUNT = 500000;
+const uint32_t VOXEL_COUNT = 5;
 
 struct GridInfo {
     alignas(4) uint32_t width;
@@ -84,8 +84,8 @@ struct Grid {
 
 //Key make thing for sparseGrid
 inline uint64_t make_key(uint16_t x, uint16_t y, uint16_t z) {
-    return (static_cast<uint64_t>(x) << 24) |
-           (static_cast<uint64_t>(y) << 12) |
+    return (static_cast<uint64_t>(x) << 32) |
+           (static_cast<uint64_t>(y) << 16) |
            (static_cast<uint64_t>(z));
 }
 
@@ -120,8 +120,14 @@ uint32_t addChildren(std::shared_ptr<OctreeNode> node, std::vector<uint32_t> *da
     uint32_t childOffset = 0;
     *startIndex += amountChildren(node->childMask);
     for (int i = 0; i < 8; ++i) {
-        if ((node->childMask >> i) & 1) {
+        int bitIndex = 7 - i;
+        if ((node->childMask >> bitIndex) & 1) {
             std::shared_ptr<OctreeNode> child = node->children[i];
+            if (!child) {
+                std::cerr << "❌ Null child pointer at index " << i << ", parent mask: " << +node->childMask <<
+                        std::endl;
+                throw std::runtime_error("Null child in octree");
+            }
             (*data)[index + childOffset] = addChildren(child, data, startIndex);
             childOffset += 1;
         }
@@ -157,7 +163,8 @@ int constructLeafNodes(Grid *grid, std::unordered_map<uint64_t, std::shared_ptr<
                 auto index = x + y * grid->gridInfo.width + z * grid->gridInfo.width * grid->gridInfo.height;
                 if (grid->data[index] == 1) {
                     count++;
-                    (*sparseGrid)[make_key(x, y, z)] = leafNode;
+                    // (*sparseGrid)[make_key(x, y, z)] = leafNode;
+                    (*sparseGrid)[make_key(x, y, z)] = std::make_shared<OctreeNode>();
                 }
             }
         }
@@ -225,6 +232,15 @@ inline bool isPowerOfTwo(int n) {
     return n > 0 && (n & (n - 1)) == 0;
 }
 
+inline bool childrenSolid(std::array<std::shared_ptr<OctreeNode>, 8> *children) {
+    for (int i = 0; i < 8; i++) {
+        if ((*children)[i]->childMask != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
 std::shared_ptr<OctreeNode> constructOctree(Grid *grid, uint32_t &nodeCount) {
     if (!isPowerOfTwo(grid->gridInfo.depth) or grid->gridInfo.height != grid->gridInfo.depth or grid->gridInfo.height !=
         grid->gridInfo.width) {
@@ -250,8 +266,9 @@ std::shared_ptr<OctreeNode> constructOctree(Grid *grid, uint32_t &nodeCount) {
 
                     if (childMask != 0) {
                         count++;
-                        newSparseGrid[key] = (childMask == 0b11111111)
-                                                 ? leafNode
+                        newSparseGrid[key] = (childMask == 0b11111111 && childrenSolid(&children))
+                                                 // ? leafNode
+                                                 ? std::make_shared<OctreeNode>()
                                                  : std::make_shared<OctreeNode>(childMask, children);
                     }
                 }
