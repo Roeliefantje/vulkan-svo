@@ -1,5 +1,7 @@
 #version 450
 
+//Look at: https://www.shadertoy.com/view/4sVfWw
+
 struct Particle {
     vec2 position;
     vec2 velocity;
@@ -31,6 +33,7 @@ layout(binding = 2, rgba8) uniform writeonly image2D outputImage;
 
 int MAX_RAY_STEPS = 5000;
 #define MAX_DEPTH 16
+#define MAX_DISTANCE 30.0
 
 
 struct Node {
@@ -59,7 +62,7 @@ bool intersectGrid(vec3 rayDir, vec3 rayPos, out vec3 collision) {
     vec3 invDir = 1.0 / rayDir;
 
     vec3 t1 = (vec3(0) - rayPos) * invDir;
-    vec3 t2 = (vec3(ubo.width, ubo.depth, ubo.height) - rayPos) * invDir;
+    vec3 t2 = (vec3(1.0) - rayPos) * invDir;
 
     vec3 tmin = min(t1, t2);
     vec3 tmax = max(t1, t2);
@@ -74,6 +77,22 @@ bool intersectGrid(vec3 rayDir, vec3 rayPos, out vec3 collision) {
 
     return false;
 }
+
+//ray-cube intersection, on the inside of the cube
+vec3 voxel(vec3 ro, vec3 rd, vec3 ird, float size)
+{
+    //Todo!: if weird infinite shit happens perhaps advance further than hit.
+    float childSize = size * 0.5;
+    vec3 childOffset = floor(ro / childSize) * childSize; // subtract the size of a child
+    vec3 localRo = ro - childOffset;
+
+    childSize *= 0.5;
+
+    vec3 hit = -(sign(rd)*(ro-childSize)-childSize)*ird;
+
+    return hit;
+}
+
 
 layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 void main()
@@ -95,83 +114,115 @@ void main()
         normalized_coord.y * fovScale * up
     );
 
-    vec3 rayPos = camera.position;
+    vec3 rayPos = camera.position / float(ubo.width); //Normalize rayPos to value between 0 and 1.
     //  Distance per axis to travel to the next tile,
-
     ivec3 rayStep = ivec3(sign(rayDir));
 
+    //Initialize stuffs
+    float size = 1.0;
     int level = 0;
     Node stack[MAX_DEPTH];
     Node currentNode = convertNode(svo[0]);
+    Node empty;
+    empty.index = 0;
 
-    vec3 color = vec3(0.1);
-    bvec3 mask = bvec3(false, false, true);
-    //at level 0, this will be 512, etc.
-    int nodeSize = max(1, ubo.width >> level);
-    vec3 localPos = fract(rayPos / float(nodeSize)) * 2.0;
-    ivec3 childCoords = ivec3(localPos);
-    vec3 deltaDist = abs(vec3(float(nodeSize) * 0.5) / rayDir);
-    vec3 sideDist = (sign(rayDir) * (vec3(childCoords) - localPos) + (sign(rayDir) * 0.5) + 0.5) * deltaDist;
-
-    if (any(greaterThan(rayPos / float(nodeSize), vec3(1.0))) || any(greaterThan(vec3(0.0), rayPos / float(nodeSize)))) {
+    //Check if the ray collides with the Ray at all, move it into the SVO if it is the case and return if not.
+    if (any(greaterThan(rayPos / float(size), vec3(1.0))) || any(greaterThan(vec3(0.0), rayPos / float(size)))) {
         vec3 collision;
         if (intersectGrid(rayDir, rayPos, collision)){
-            rayPos = collision + rayDir * 0.0001f;
+            rayPos = collision;
         } else {
             imageStore(outputImage, ivec2(pixelCoord), vec4(0.01));
             return;
         }
     }
 
+    vec3 color = vec3(0.1);
+    bvec3 mask = bvec3(false, false, true);
 
-    for (int i = 0; i < MAX_RAY_STEPS; i++){
-        if (currentNode.childMask == 0u || level == MAX_DEPTH) {
-            //Ray collided with voxel
-            color = vec3(dot(vec3(mask), vec3(0.5, 1.0, 0.75)));
-            break;
-        }
+    vec3 lro = mod(rayPos, size); // Local ray origin (Should always already be inside 1.0, but for sanity)
+    vec3 fro = rayPos - lro; //The global voxel position we are currently in (should always start as 0,0,0)
+    vec3 ird = 1.0/max(abs(rayDir), 0.001); //inv ray dir to calculate the distance to voxel boundaries and stuff
+    bool exitoct = false;
+    float dist = 0.0; //Total distance the ray traversed
+    float fdist = 0.0;
 
-        int childIndex = childCoords.z * 4 + childCoords.y * 2 + childCoords.x;
-        if (((currentNode.childMask >> (7 - childIndex)) & 1u) == 1u) {
-            //Descend
-            stack[level] = currentNode;
-            level += 1;
-            int childOffset = bitCount(currentNode.childMask >> (8 - childIndex));
-            currentNode = convertNode(svo[currentNode.index + childOffset]);
+    for(int i = 0; i < MAX_RAY_STEPS; i++) {
+        if(dist > MAX_DISTANCE) break;
 
-            nodeSize = max(1, ubo.width >> level);
-            localPos = fract(rayPos / float(nodeSize)) * 2.0;
-            childCoords = ivec3(localPos);
-            deltaDist = abs(vec3(float(nodeSize) * 0.5) / rayDir);
-            sideDist = (sign(rayDir) * (vec3(childCoords) - localPos) + (sign(rayDir) * 0.5) + 0.5) * deltaDist;
+        if (exitoct) {
+            //Todo!: Improve this to do it in one go
+            //Snap newfro to multiple of new size to get the global voxel position again
+            vec3 newfro = floor(fro/(size*2.0))*(size * 2.0);
+
+            lro += fro-newfro;
+            fro = newfro;
+            size *= 2.0;
+
+            level--;
+            if (level < 0) {
+                break;
+            }
+            currentNode = stack[level];
+
+            //Fetch the new voxCoord and see if it is still on a border
+            // +0.5 centers the voxel range so borders lie at half-integers.
+            vec3 voxCoord = fro / size + 0.5;
+            voxCoord = mod(voxCoord, 2.0) - 1.0; //Mod by 2, and shift by -1, if its on the border value should be 0.5, in the axis now
+            voxCoord += vec3(mask) * sign(rayDir) * 0.5; //Add 0.5 in the direction of the ray, so if its on the exiting border, it will be 0
+            float distanceBorder = dot(vec3(mask), voxCoord); //Only check whether the direction we just traversed in is on a border.
+
+            exitoct = abs(distanceBorder) < 0.1; //Error margin
         } else {
-            //DDA to next child
-            mask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
-            childCoords += ivec3(vec3(mask)) * rayStep;
-
-            if (any(lessThan(childCoords, ivec3(0))) || any(greaterThan(childCoords, ivec3(1)))) {
-                //Ascend
-                rayPos += dot(vec3(mask), sideDist) * rayDir;
-                level -= 1;
-                if (level < 0) {
-                    color = vec3(0.01);
-                    break;
-                }
-
-                currentNode = stack[level];
-
-                nodeSize = max(1, ubo.width >> level);
-                localPos = fract(rayPos / float(nodeSize)) * 2.0;
-                childCoords = ivec3(localPos);
-                deltaDist = abs(vec3(float(nodeSize) * 0.5) / rayDir);
-                sideDist = (sign(rayDir) * (vec3(childCoords) - localPos) + (sign(rayDir) * 0.5) + 0.5) * deltaDist;
+            if (currentNode.childMask == 0u) {
+                color = vec3(dot(vec3(mask), vec3(0.5, 1.0, 0.75)));
                 break;
             }
 
-            sideDist += vec3(mask) * deltaDist;
+            ivec3 childCoord = ivec3(floor((lro / size) * 2.0));
+            int childIndex = childCoord.z * 4 + childCoord.y * 2 + childCoord.x;
+            //If child exists, go down level
+            if (((currentNode.childMask >> (7 - childIndex)) & 1u) == 1u) {
+                stack[level] = currentNode;
+                int childOffset = bitCount(currentNode.childMask >> (8 - childIndex));
+                currentNode = convertNode(svo[currentNode.index + childOffset]);
+
+                level++;
+                size *= 0.5;
+
+                fro += vec3(childCoord) * size;
+                lro -= vec3(childCoord) * size;
+            } else {
+                //Move forward to next child
+
+                //Check if this only moves us by half a size, basically
+                vec3 hit = voxel(lro, rayDir, ird, size);
+                mask = lessThan(hit, min(hit.yzx, hit.zxy));
+                float len = dot(hit, vec3(mask)); //use something like size * invRayDir
+
+                dist += len;
+                fdist += len;
+                //Update lro by updating positions for the axis' we did not traverse too
+                //and reset the axis we traversed in to 0
+                lro += rayDir * len;
+                //If lro is now a multiple of size we need to exit the oct
+                //Todo: Change this condition to just be bigger or smaller than size for lro
+                float frac = fract(dot(vec3(mask), lro) / size);
+                exitoct = min(frac, 1.0 - frac) < 0.1;
+//                exitoct = dot(vec3(mask), lro) / size >= 0.99 || dot(vec3(mask), lro) / size <= 0.1;
+
+//                lro += rayDir * len - vec3(mask) * sign(rayDir) * size;
+//                vec3 newfro = fro + vec3(mask) * sign(rayDir) * size;
+//                exitoct = (floor(newfro/size*0.5+0.25)!=floor(fro/size*0.5+0.25));
+//                fro = newfro;
+            }
+
         }
 
-
     }
+
+
+
+
     imageStore(outputImage, ivec2(pixelCoord), vec4(color, 1.0));
 }
