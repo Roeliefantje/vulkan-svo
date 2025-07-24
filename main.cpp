@@ -172,7 +172,7 @@ private:
     uint32_t currentFrame = 0;
 
 
-    Grid grid = Grid(16, 16, 16);
+    Grid grid = Grid(128, 128, 128);
     uint32_t amountOfNodes;
     std::shared_ptr<OctreeNode> root = constructOctree(&grid, amountOfNodes);
     std::vector<uint32_t> octreeGPU = getOctreeGPUdata(root, amountOfNodes);

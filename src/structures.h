@@ -46,7 +46,7 @@ struct Vertex {
     }
 };
 
-const uint32_t VOXEL_COUNT = 3000;
+const uint32_t VOXEL_COUNT = 16000;
 
 struct GridInfo {
     alignas(4) uint32_t width;
@@ -120,15 +120,18 @@ uint32_t addChildren(std::shared_ptr<OctreeNode> node, std::vector<uint32_t> *da
     uint32_t childOffset = 0;
     *startIndex += amountChildren(node->childMask);
     for (int i = 0; i < 8; ++i) {
-        int bitIndex = 7 - i;
+        uint32_t bitIndex = 7 - i;
         if ((node->childMask >> bitIndex) & 1) {
             std::shared_ptr<OctreeNode> child = node->children[i];
             if (!child) {
-                std::cerr << "❌ Null child pointer at index " << i << ", parent mask: " << +node->childMask <<
-                        std::endl;
                 throw std::runtime_error("Null child in octree");
             }
             (*data)[index + childOffset] = addChildren(child, data, startIndex);
+            uint32_t offsetCalc = node->childMask >> (8 - i);
+            if (childOffset != std::popcount(offsetCalc)) {
+                // std::cerr << ""
+                throw std::runtime_error("Counting bits gives different value!");
+            }
             childOffset += 1;
         }
     }
@@ -140,8 +143,7 @@ std::vector<uint32_t> getOctreeGPUdata(std::shared_ptr<OctreeNode> rootNode, uin
     std::cout << "Nodes amount: " << nodesAmount << std::endl;
     auto data = std::vector<uint32_t>(nodesAmount);
     uint32_t index = 1;
-    data[0] = createGPUData(rootNode->childMask, index);
-    addChildren(rootNode, &data, &index);
+    data[0] = addChildren(rootNode, &data, &index);
 
     if (index > 0xFFFFFF) {
         throw std::runtime_error("Index exceeds maximum allowed value!");
@@ -296,7 +298,7 @@ struct Camera {
     Camera(glm::vec3 pos, glm::vec3 lookAt, int screenWidth, int screenHeight, float fovRadian) : position(pos),
         fov(fovRadian) {
         direction = glm::normalize(lookAt - pos);
-        up = glm::vec3(0, 0, 1);
+        up = glm::vec3(0.0, 0.0, 1.0);
         resolution = glm::vec2(screenWidth, screenHeight);
 
         if (direction == up) {
