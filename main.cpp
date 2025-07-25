@@ -172,11 +172,11 @@ private:
     uint32_t currentFrame = 0;
 
 
-    Grid grid = Grid(128, 128, 128);
+    Grid grid = Grid(512, 512, 512);
     uint32_t amountOfNodes;
     std::shared_ptr<OctreeNode> root = constructOctree(&grid, amountOfNodes);
     std::vector<uint32_t> octreeGPU = getOctreeGPUdata(root, amountOfNodes);
-    Camera camera = Camera(glm::vec3(32, 8, 8), glm::vec3(8, 8, 8), WIDTH, HEIGHT, glm::radians(30.0f));
+    Camera camera = Camera(glm::vec3(1, 1, 1), glm::vec3(1.5, 2, 1), WIDTH, HEIGHT, glm::radians(30.0f));
     float mouseX, mouseY;
     float mouseSensitivity = 0.05f;
     bool escPressed = false;
@@ -362,32 +362,32 @@ private:
         glm::vec3 left = glm::cross(forward, camera.up);
 
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-            glm::vec3 change = forward * 0.2f * lastFrameTime;
+            glm::vec3 change = forward * 0.002f * lastFrameTime;
             camera.position += change;
             // camera.lookAt += change;
         }
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-            glm::vec3 change = forward * -0.2f * lastFrameTime;
+            glm::vec3 change = forward * -0.002f * lastFrameTime;
             camera.position += change;
             // camera.lookAt += change;
         }
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-            glm::vec3 change = left * 0.2f * lastFrameTime;
+            glm::vec3 change = left * 0.002f * lastFrameTime;
             camera.position += change;
             // camera.lookAt += change;
         }
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-            glm::vec3 change = left * -0.2f * lastFrameTime;
+            glm::vec3 change = left * -0.002f * lastFrameTime;
             camera.position += change;
             // camera.lookAt += change;
         }
         if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-            glm::vec3 change = camera.up * -0.2f * lastFrameTime;
+            glm::vec3 change = camera.up * -0.002f * lastFrameTime;
             camera.position += change;
             // camera.lookAt += change;
         }
         if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-            glm::vec3 change = camera.up * 0.2f * lastFrameTime;
+            glm::vec3 change = camera.up * 0.002f * lastFrameTime;
             camera.position += change;
             // camera.lookAt += change;
         }

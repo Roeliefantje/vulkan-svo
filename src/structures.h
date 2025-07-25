@@ -46,7 +46,7 @@ struct Vertex {
     }
 };
 
-const uint32_t VOXEL_COUNT = 16000;
+const uint32_t VOXEL_COUNT = 8000;
 
 struct GridInfo {
     alignas(4) uint32_t width;
@@ -77,6 +77,19 @@ struct Grid {
             auto index = x + y * gridInfo.width + z * gridInfo.width * gridInfo.height;
             data[index] = 1;
         }
+
+        // data[0] = 1;
+        // int x_values[] = {0, 3};
+        // for (auto x: x_values) {
+        //     for (auto y: x_values) {
+        //         for (auto z: x_values) {
+        //             auto index = x + y * gridInfo.width + z * gridInfo.width * gridInfo.height;
+        //             data[index] = 1;
+        //         }
+        //     }
+        // }
+
+        // data[0] = 0;
 
         std::cout << "Finished making grid" << std::endl;
     }

@@ -134,7 +134,9 @@ void main()
     bvec3 mask = bvec3(false, false, false);
 
     vec3 lro = mod(rayPos, size); // Local ray origin (Should always already be inside 1.0, but for sanity)
-    vec3 fro = round(rayPos - lro); //The global voxel position we are currently in (should always start as 0,0,0)
+    ivec3 fro = ivec3(rayPos - lro); //The global voxel position we are currently in (should always start as 0,0,0)
+    vec3 rdsign = sign(rayDir);
+    ivec3 irdsign = ivec3(rdsign);
     vec3 ird = 1.0/max(abs(rayDir), 0.001); //inv ray dir to calculate the distance to voxel boundaries and stuff
     bool exitoct = false;
     float dist = 0.0; //Total distance the ray traversed
@@ -146,17 +148,27 @@ void main()
         if (exitoct) {
             //Todo!: Improve this to do it in one go
             //Snap newfro to multiple of new size to get the global voxel position again
-            vec3 newfro = floor(fro/(size*2.0))*(size * 2.0);
+            ivec3 newfro = ivec3(floor( vec3(fro) / (size * 2.0))) * (int(size) * 2);
 
-            lro += fro-newfro;
+
+            lro += fro - newfro;
             fro = newfro;
             size *= 2.0;
 
             level--;
-            if (level < 0) {
+            if (level <= 0) {
                 break;
             }
-            currentNode = stack[level];
+//            color += vec3(0.0, 0.0, 0.1);
+
+            ivec3 childCoord = (newfro / int(size)) % 2;
+            int childIndex = childCoord.z * 4 + childCoord.y * 2 + childCoord.x;
+            if (childIndex >= 8) {
+                color = vec3(1.0);
+                break;
+            }
+            int childOffset = bitCount(stack[level - 1].childMask >> (8 - childIndex));
+            currentNode = (stack[level - 1].childMask >> (7 - childIndex) & 1u) == 1u ? convertNode(svo[stack[level - 1].index + childOffset]) : empty;
 
             //Fetch the new voxCoord and see if it is still on a border
             // +0.5 centers the voxel range so borders lie at half-integers.
@@ -168,7 +180,8 @@ void main()
             exitoct = abs(distanceBorder) < 0.1; //Error margin
         } else {
             if (currentNode.index != 0u && currentNode.childMask == 0u) {
-                color = vec3(dot(vec3(mask), vec3(0.5, 1.0, 0.75)));
+                float red = dot(vec3(mask), vec3(0.5, 1.0, 0.75));
+                color += vec3(red, 0.0, 0.0);
                 break;
             }
 
@@ -179,38 +192,51 @@ void main()
                 size *= 0.5;
 
                 vec3 mask2 = step(vec3(size), lro);
-                int childIndex = int(round(mask2.z * 4 + mask2.y * 2 + mask2.x));
+                ivec3 imask2 = ivec3(mask2);
+                int childIndex = imask2.z * 4 + imask2.y * 2 + imask2.x;
+                if (childIndex >= 8) {
+                    color = vec3(1.0);
+                    break;
+                }
                 int childOffset = bitCount(currentNode.childMask >> (8 - childIndex));
-//                int childOffset = bitCount(currentNode.childMask & ((1u << childIndex) - 1u));
                 currentNode = (currentNode.childMask >> (7 - childIndex) & 1u) == 1u ? convertNode(svo[currentNode.index + childOffset]) : empty;
 
-                fro += mask2 * size;
+                fro += imask2 * int(size);
                 lro -= mask2 * size;
             } else {
                 if (level == 0) {
                     //moving while in the highest level, meaning we are out of the svo
                     break;
                 }
+//                color = level * vec3(0.0, 0.2, 0.0);
                 //Move forward to next child
                 vec3 hit = voxel(lro, rayDir, ird, size);
 
                 mask = lessThan(hit, min(hit.yzx, hit.zxy));
-                float len = dot(hit, vec3(mask)); //use something like size * invRayDir
+                float len = dot(hit, vec3(mask));
 
                 dist += len;
                 fdist += len;
                 //Update lro by updating positions for the axis' we did not traverse too
                 //and reset the axis we traversed in to 0
-                lro += rayDir*len-vec3(mask)*sign(rayDir)*size;
-                vec3 newfro = round(fro+vec3(mask)*sign(rayDir)*size);
+                lro += rayDir * len - (vec3(mask) * rdsign * size);
+                ivec3 newfro = fro + ivec3(mask) * irdsign * int(size);
 
                 //Get child coord for parent
-                ivec3 childCoord = ivec3(round(newfro / size));
+                ivec3 childCoord = (newfro / int(size)) % 2;
                 int childIndex = childCoord.z * 4 + childCoord.y * 2 + childCoord.x;
+
+                if (childIndex >= 8) {
+                    color = vec3(1.0);
+                    break;
+                }
+
                 int childOffset = bitCount(stack[level - 1].childMask >> (8 - childIndex));
                 currentNode = (stack[level - 1].childMask >> (7 - childIndex) & 1u) == 1u ? convertNode(svo[stack[level - 1].index + childOffset]) : empty;
 
-                exitoct = (floor(newfro/size*0.5+0.25)!=floor(fro/size*0.5+0.25));
+
+                exitoct = (floor(newfro / size * 0.5 + 0.25)!=floor(fro / size * 0.5 + 0.25));
+
                 fro = newfro;
             }
 
