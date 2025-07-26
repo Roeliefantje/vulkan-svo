@@ -9,7 +9,8 @@ find_package(glm CONFIG REQUIRED)
 
 
 add_executable(clion_vulkan main.cpp
-        src/structures.h)
+        src/structures.h
+        src/svo_generation.h)
 
 target_include_directories(clion_vulkan PRIVATE ${Vulkan_INCLUDE_DIRS})
 target_include_directories(clion_vulkan PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)

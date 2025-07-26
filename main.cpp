@@ -23,11 +23,14 @@
 #include <set>
 
 #include "src/structures.h"
+#include "src/svo_generation.h"
 
 const uint32_t WIDTH = 1920;
 const uint32_t HEIGHT = 1080;
 const float X_GROUPSIZE = 16;
 const float Y_GROUPSIZE = 16;
+
+const uint32_t SIZE = 4096;
 
 const int MAX_FRAMES_IN_FLIGHT = 1;
 
@@ -172,11 +175,15 @@ private:
     uint32_t currentFrame = 0;
 
 
-    Grid grid = Grid(512, 512, 512);
+    // Grid grid = Grid(2048, 2048, 2048);
+    int seed = 12345;
+    GridInfo gridInfo = GridInfo(SIZE, SIZE, SIZE);
     uint32_t amountOfNodes;
-    std::shared_ptr<OctreeNode> root = constructOctree(&grid, amountOfNodes);
+    // std::shared_ptr<OctreeNode> root = constructOctree(&grid, amountOfNodes);
+    std::shared_ptr<OctreeNode> root = std::make_shared<OctreeNode>(createOctree(SIZE, seed, amountOfNodes));
     std::vector<uint32_t> octreeGPU = getOctreeGPUdata(root, amountOfNodes);
-    Camera camera = Camera(glm::vec3(1, 1, 1), glm::vec3(1.5, 2, 1), WIDTH, HEIGHT, glm::radians(30.0f));
+    Camera camera = Camera(glm::vec3(256.5, 256.5, 512.5), glm::vec3(256, 250, 512.5), WIDTH, HEIGHT,
+                           glm::radians(30.0f));
     float mouseX, mouseY;
     float mouseSensitivity = 0.05f;
     bool escPressed = false;
@@ -187,6 +194,7 @@ private:
     bool framebufferResized = false;
 
     double lastTime = 0.0f;
+    int frameCounter = 0;
 
     void initWindow() {
         glfwInit();
@@ -245,14 +253,23 @@ private:
     }
 
     void mainLoop() {
+        double lastPrint = glfwGetTime();
         while (!glfwWindowShouldClose(window)) {
             processInput();
             glfwPollEvents();
             drawFrame();
             // We want to animate the particle system using the last frames time to get smooth, frame-rate independent animation
             double currentTime = glfwGetTime();
+            double elapsed = currentTime - lastPrint;
+            if (elapsed >= 1.0) {
+                std::cout << "FPS: " << (frameCounter / elapsed) << "\n";
+                frameCounter = 0;
+                lastPrint = currentTime;
+            }
+
             lastFrameTime = (currentTime - lastTime) * 1000.0;
             lastTime = currentTime;
+            frameCounter++;
         }
 
         vkDeviceWaitIdle(device);
@@ -362,32 +379,32 @@ private:
         glm::vec3 left = glm::cross(forward, camera.up);
 
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-            glm::vec3 change = forward * 0.002f * lastFrameTime;
+            glm::vec3 change = forward * 0.02f * lastFrameTime;
             camera.position += change;
             // camera.lookAt += change;
         }
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-            glm::vec3 change = forward * -0.002f * lastFrameTime;
+            glm::vec3 change = forward * -0.02f * lastFrameTime;
             camera.position += change;
             // camera.lookAt += change;
         }
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-            glm::vec3 change = left * 0.002f * lastFrameTime;
+            glm::vec3 change = left * 0.02f * lastFrameTime;
             camera.position += change;
             // camera.lookAt += change;
         }
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-            glm::vec3 change = left * -0.002f * lastFrameTime;
+            glm::vec3 change = left * -0.02f * lastFrameTime;
             camera.position += change;
             // camera.lookAt += change;
         }
         if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-            glm::vec3 change = camera.up * -0.002f * lastFrameTime;
+            glm::vec3 change = camera.up * -0.02f * lastFrameTime;
             camera.position += change;
             // camera.lookAt += change;
         }
         if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-            glm::vec3 change = camera.up * 0.002f * lastFrameTime;
+            glm::vec3 change = camera.up * 0.02f * lastFrameTime;
             camera.position += change;
             // camera.lookAt += change;
         }
@@ -996,7 +1013,7 @@ private:
 
             vkMapMemory(device, uniformBuffersMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
 
-            memcpy(uniformBuffersMapped[i], &grid.gridInfo, sizeof(GridInfo));
+            memcpy(uniformBuffersMapped[i], &gridInfo, sizeof(GridInfo));
 
             createBuffer(cBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
