@@ -27,7 +27,12 @@ layout(std430, binding = 1) buffer ParticleSSBOIn {
     uint svo[ ];
 };
 
+layout(std430, binding = 4) buffer FarValuesSSBO {
+    uint farValues[ ];
+};
+
 layout(binding = 2, rgba8) uniform writeonly image2D outputImage;
+
 
 
 
