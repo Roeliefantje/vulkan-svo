@@ -125,10 +125,15 @@ inline uint32_t amountChildren(uint8_t childMask) {
 }
 
 inline uint32_t createGPUData(uint8_t childMask, uint32_t index) {
+    //TODO!: Introduce far bit, use a seperate SSBO with far values.
+    if (index > 0xFFFFFF) {
+        throw std::runtime_error("Index exceeds maximum allowed value!");
+    }
     return childMask << 24 | index;
 }
 
-uint32_t addChildren(std::shared_ptr<OctreeNode> node, std::vector<uint32_t> *data, uint32_t *startIndex) {
+uint32_t addChildren(std::shared_ptr<OctreeNode> node, std::vector<uint32_t> *data, uint32_t *startIndex,
+                     uint32_t parentIndex) {
     uint32_t index = *startIndex;
     uint32_t childOffset = 0;
     *startIndex += amountChildren(node->childMask);
@@ -139,7 +144,7 @@ uint32_t addChildren(std::shared_ptr<OctreeNode> node, std::vector<uint32_t> *da
             if (!child) {
                 throw std::runtime_error("Null child in octree");
             }
-            (*data)[index + childOffset] = addChildren(child, data, startIndex);
+            (*data)[index + childOffset] = addChildren(child, data, startIndex, index + childOffset);
             uint32_t offsetCalc = node->childMask >> (8 - i);
             if (childOffset != std::popcount(offsetCalc)) {
                 // std::cerr << ""
@@ -149,22 +154,19 @@ uint32_t addChildren(std::shared_ptr<OctreeNode> node, std::vector<uint32_t> *da
         }
     }
 
-    return createGPUData(node->childMask, index);
+    return createGPUData(node->childMask, index - parentIndex);
 }
 
-std::vector<uint32_t> getOctreeGPUdata(std::shared_ptr<OctreeNode> rootNode, uint32_t nodesAmount) {
+std::vector<uint32_t> getOctreeGPUdata(std::shared_ptr<OctreeNode> rootNode, uint32_t nodesAmount,
+                                       std::vector<uint32_t> &farValues) {
     std::cout << "Nodes amount: " << nodesAmount << std::endl;
-    if (nodesAmount > 0xFFFFFF) {
-        std::cerr << nodesAmount << " exceeds maximum allowed nodes of " << 0xFFFFFF << std::endl;
-        throw std::runtime_error("Index exceeds maximum allowed value!");
-    }
+    // if (nodesAmount > 0xFFFFFF) {
+    //     std::cerr << nodesAmount << " exceeds maximum allowed nodes of " << 0xFFFFFF << std::endl;
+    //     throw std::runtime_error("Index exceeds maximum allowed value!");
+    // }
     auto data = std::vector<uint32_t>(nodesAmount);
     uint32_t index = 1;
-    data[0] = addChildren(rootNode, &data, &index);
-
-    if (index > 0xFFFFFF) {
-        throw std::runtime_error("Index exceeds maximum allowed value!");
-    }
+    data[0] = addChildren(rootNode, &data, &index, 0);
 
     std::cout << "Total nodes: " << data.size() << std::endl;
 

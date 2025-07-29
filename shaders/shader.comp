@@ -48,10 +48,10 @@ struct StackInfo {
 };
 
 
-Node convertNode(uint value){
+Node convertNode(uint value, uint parentIndex){
     Node node;
     node.childMask = (value >> 24) & 0xFFu;
-    node.index = value & 0x00FFFFFFu;
+    node.index = (value & 0x00FFFFFFu) + parentIndex;
 
     return node;
 }
@@ -115,7 +115,7 @@ void main()
     float size = ubo.width;
     int level = 0;
     Node stack[MAX_DEPTH];
-    Node currentNode = convertNode(svo[0]);
+    Node currentNode = convertNode(svo[0], 0);
     Node empty;
     empty.index = 0;
 
@@ -168,7 +168,8 @@ void main()
                 break;
             }
             int childOffset = bitCount(stack[level - 1].childMask >> (8 - childIndex));
-            currentNode = (stack[level - 1].childMask >> (7 - childIndex) & 1u) == 1u ? convertNode(svo[stack[level - 1].index + childOffset]) : empty;
+            uint parentIndex = stack[level - 1].index + childOffset;
+            currentNode = (stack[level - 1].childMask >> (7 - childIndex) & 1u) == 1u ? convertNode(svo[stack[level - 1].index + childOffset], parentIndex) : empty;
 
             //Fetch the new voxCoord and see if it is still on a border
             // +0.5 centers the voxel range so borders lie at half-integers.
@@ -199,7 +200,8 @@ void main()
                     break;
                 }
                 int childOffset = bitCount(currentNode.childMask >> (8 - childIndex));
-                currentNode = (currentNode.childMask >> (7 - childIndex) & 1u) == 1u ? convertNode(svo[currentNode.index + childOffset]) : empty;
+                uint parentIndex = currentNode.index + childOffset;
+                currentNode = (currentNode.childMask >> (7 - childIndex) & 1u) == 1u ? convertNode(svo[currentNode.index + childOffset], parentIndex) : empty;
 
                 fro += imask2 * int(size);
                 lro -= mask2 * size;
@@ -232,7 +234,8 @@ void main()
                 }
 
                 int childOffset = bitCount(stack[level - 1].childMask >> (8 - childIndex));
-                currentNode = (stack[level - 1].childMask >> (7 - childIndex) & 1u) == 1u ? convertNode(svo[stack[level - 1].index + childOffset]) : empty;
+                uint parentIndex = stack[level - 1].index + childOffset;
+                currentNode = (stack[level - 1].childMask >> (7 - childIndex) & 1u) == 1u ? convertNode(svo[stack[level - 1].index + childOffset], parentIndex) : empty;
 
 
                 exitoct = (floor(newfro / size * 0.5 + 0.25)!=floor(fro / size * 0.5 + 0.25));
