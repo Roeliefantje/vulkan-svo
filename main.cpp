@@ -138,7 +138,11 @@ private:
     VkCommandPool commandPool;
 
     std::vector<VkBuffer> shaderStorageBuffers;
+    std::vector<VkBuffer> farValuesSBuffers;
     std::vector<VkDeviceMemory> shaderStorageBuffersMemory;
+    std::vector<VkDeviceMemory> farValuesSBuffersMemory;
+    //Add the other stuff
+
 
     std::vector<VkBuffer> uniformBuffers;
     std::vector<VkDeviceMemory> uniformBuffersMemory;
@@ -181,7 +185,9 @@ private:
     uint32_t amountOfNodes;
     // std::shared_ptr<OctreeNode> root = constructOctree(&grid, amountOfNodes);
     std::shared_ptr<OctreeNode> root = std::make_shared<OctreeNode>(createOctree(SIZE, seed, amountOfNodes));
-    std::vector<uint32_t> octreeGPU = getOctreeGPUdata(root, amountOfNodes);
+    std::vector<uint32_t> farValues = std::vector<uint32_t>(0);
+    std::vector<uint32_t> octreeGPU = getOctreeGPUdata(root, amountOfNodes, farValues);
+
     Camera camera = Camera(glm::vec3(256.5, 256.5, 512.5), glm::vec3(256, 250, 512.5), WIDTH, HEIGHT,
                            glm::radians(30.0f));
     float mouseX, mouseY;
@@ -217,6 +223,11 @@ private:
     }
 
     void initVulkan() {
+        //Vulkan no likey size 0 buffers soo for now.
+        if (farValues.size() == 0) {
+            farValues.push_back(0u);
+        }
+
         createInstance();
         setupDebugMessenger();
         createSurface();
@@ -310,7 +321,9 @@ private:
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
             vkDestroyBuffer(device, shaderStorageBuffers[i], nullptr);
+            vkDestroyBuffer(device, farValuesSBuffers[i], nullptr);
             vkFreeMemory(device, shaderStorageBuffersMemory[i], nullptr);
+            vkFreeMemory(device, farValuesSBuffersMemory[i], nullptr);
         }
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
@@ -729,7 +742,7 @@ private:
     }
 
     void createComputeDescriptorSetLayout() {
-        std::array<VkDescriptorSetLayoutBinding, 4> layoutBindings{};
+        std::array<VkDescriptorSetLayoutBinding, 5> layoutBindings{};
         layoutBindings[0].binding = 0;
         layoutBindings[0].descriptorCount = 1;
         layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -753,6 +766,12 @@ private:
         layoutBindings[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         layoutBindings[3].pImmutableSamplers = nullptr;
         layoutBindings[3].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+        layoutBindings[4].binding = 4;
+        layoutBindings[4].descriptorCount = 1;
+        layoutBindings[4].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        layoutBindings[4].pImmutableSamplers = nullptr;
+        layoutBindings[4].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -960,12 +979,12 @@ private:
         }
     }
 
-    void createShaderStorageBuffers() {
-        VkDeviceSize bufferSize = sizeof(uint32_t) * octreeGPU.size();
-        std::cout << "Grid data size: " << octreeGPU.size() << std::endl;
-        std::cout << "Buffer size: " << octreeGPU.size() * sizeof(uint32_t) << std::endl;
+    void createShaderStorageBuffer(std::vector<uint32_t> &dataVec, std::vector<VkBuffer> &buffers,
+                                   std::vector<VkDeviceMemory> &buffersMemory) {
+        VkDeviceSize bufferSize = sizeof(uint32_t) * dataVec.size();
+        // std::cout << "Grid data size: " << octreeGPU.size() << std::endl;
+        std::cout << "Buffer size: " << dataVec.size() * sizeof(uint32_t) << std::endl;
 
-        // Create a staging buffer used to upload data to the gpu
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
         createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -977,21 +996,57 @@ private:
         memcpy(data, octreeGPU.data(), (size_t) bufferSize);
         vkUnmapMemory(device, stagingBufferMemory);
 
-        shaderStorageBuffers.resize(MAX_FRAMES_IN_FLIGHT);
-        shaderStorageBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
+        buffers.resize(MAX_FRAMES_IN_FLIGHT);
+        buffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
 
         // Copy initial particle data to all storage buffers
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
             createBuffer(
                 bufferSize,
                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, shaderStorageBuffers[i],
-                shaderStorageBuffersMemory[i]);
-            copyBuffer(stagingBuffer, shaderStorageBuffers[i], bufferSize);
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, buffers[i],
+                buffersMemory[i]);
+            copyBuffer(stagingBuffer, buffers[i], bufferSize);
         }
 
         vkDestroyBuffer(device, stagingBuffer, nullptr);
         vkFreeMemory(device, stagingBufferMemory, nullptr);
+    }
+
+    void createShaderStorageBuffers() {
+        createShaderStorageBuffer(octreeGPU, shaderStorageBuffers, shaderStorageBuffersMemory);
+        createShaderStorageBuffer(farValues, farValuesSBuffers, farValuesSBuffersMemory);
+        // VkDeviceSize bufferSize = sizeof(uint32_t) * octreeGPU.size();
+        // std::cout << "Grid data size: " << octreeGPU.size() << std::endl;
+        // std::cout << "Buffer size: " << octreeGPU.size() * sizeof(uint32_t) << std::endl;
+        //
+        // // Create a staging buffer used to upload data to the gpu
+        // VkBuffer stagingBuffer;
+        // VkDeviceMemory stagingBufferMemory;
+        // createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        //              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer,
+        //              stagingBufferMemory);
+        //
+        // void *data;
+        // vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
+        // memcpy(data, octreeGPU.data(), (size_t) bufferSize);
+        // vkUnmapMemory(device, stagingBufferMemory);
+        //
+        // shaderStorageBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+        // shaderStorageBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
+        //
+        // // Copy initial particle data to all storage buffers
+        // for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        //     createBuffer(
+        //         bufferSize,
+        //         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        //         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, shaderStorageBuffers[i],
+        //         shaderStorageBuffersMemory[i]);
+        //     copyBuffer(stagingBuffer, shaderStorageBuffers[i], bufferSize);
+        // }
+        //
+        // vkDestroyBuffer(device, stagingBuffer, nullptr);
+        // vkFreeMemory(device, stagingBufferMemory, nullptr);
     }
 
     void createUniformBuffers() {
@@ -1044,7 +1099,7 @@ private:
     }
 
     void createComputeDescriptorPool() {
-        std::array<VkDescriptorPoolSize, 4> poolSizes{};
+        std::array<VkDescriptorPoolSize, 5> poolSizes{};
         poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
@@ -1056,6 +1111,9 @@ private:
 
         poolSizes[3].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         poolSizes[3].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+
+        poolSizes[4].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        poolSizes[4].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -1198,7 +1256,7 @@ private:
             uniformBufferInfo.offset = 0;
             uniformBufferInfo.range = sizeof(GridInfo);
 
-            std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
+            std::array<VkWriteDescriptorSet, 5> descriptorWrites{};
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[0].dstSet = computeDescriptorSets[i];
             descriptorWrites[0].dstBinding = 0;
@@ -1245,6 +1303,19 @@ private:
             descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             descriptorWrites[3].descriptorCount = 1;
             descriptorWrites[3].pBufferInfo = &uniformCameraBufferInfo;
+
+            VkDescriptorBufferInfo farValuesSBufferInfo{};
+            farValuesSBufferInfo.buffer = farValuesSBuffers[i];
+            farValuesSBufferInfo.offset = 0;
+            farValuesSBufferInfo.range = sizeof(uint32_t) * farValues.size();
+
+            descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[4].dstSet = computeDescriptorSets[i];
+            descriptorWrites[4].dstBinding = 4;
+            descriptorWrites[4].dstArrayElement = 0;
+            descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            descriptorWrites[4].descriptorCount = 1;
+            descriptorWrites[4].pBufferInfo = &farValuesSBufferInfo;
 
             vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0,
                                    nullptr);
