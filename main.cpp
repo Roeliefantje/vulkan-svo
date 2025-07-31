@@ -33,6 +33,7 @@ const float Y_GROUPSIZE = 16;
 const uint32_t SIZE = 4096 / 2;
 
 const int MAX_FRAMES_IN_FLIGHT = 1;
+const int MAX_VOXEL_BUFFERS = 32;
 
 const std::vector<const char *> validationLayers = {
     "VK_LAYER_KHRONOS_validation"
@@ -588,7 +589,8 @@ private:
         createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
         createInfo.pQueueCreateInfos = queueCreateInfos.data();
 
-        createInfo.pEnabledFeatures = &deviceFeatures;
+        // createInfo.pEnabledFeatures = &deviceFeatures;
+        createInfo.pEnabledFeatures = nullptr;
 
         createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
         createInfo.ppEnabledExtensionNames = deviceExtensions.data();
@@ -782,15 +784,28 @@ private:
         layoutBindings[3].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
         layoutBindings[4].binding = 4;
-        layoutBindings[4].descriptorCount = 1;
+        layoutBindings[4].descriptorCount = MAX_VOXEL_BUFFERS;
         layoutBindings[4].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         layoutBindings[4].pImmutableSamplers = nullptr;
         layoutBindings[4].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
+
+        // Add per-binding flags
+        std::array<VkDescriptorBindingFlags, 5> bindingFlags{};
+        bindingFlags[4] = VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT |
+                          VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
+
+        VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsInfo{};
+        bindingFlagsInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+        bindingFlagsInfo.bindingCount = static_cast<uint32_t>(bindingFlags.size());
+        bindingFlagsInfo.pBindingFlags = bindingFlags.data();
+
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        layoutInfo.pNext = &bindingFlagsInfo;
         layoutInfo.bindingCount = static_cast<uint32_t>(layoutBindings.size());
         layoutInfo.pBindings = layoutBindings.data();
+        layoutInfo.flags = 0;
 
         if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &computeDescriptorSetLayout) != VK_SUCCESS) {
             throw std::runtime_error("failed to create compute descriptor set layout!");
@@ -1118,7 +1133,7 @@ private:
         poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
         poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+        poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT) * MAX_VOXEL_BUFFERS;
 
         poolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
         poolSizes[2].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
@@ -1252,9 +1267,20 @@ private:
     }
 
     void createComputeDescriptorSets() {
+        //TODO!: Have the actual count of buffers
+        const uint32_t variableDescriptorCount = static_cast<uint32_t>(1); // e.g., 32 chunks
+        std::vector<uint32_t> variableDescriptorCounts(MAX_FRAMES_IN_FLIGHT, variableDescriptorCount);
+
         std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, computeDescriptorSetLayout);
+
+        VkDescriptorSetVariableDescriptorCountAllocateInfo countAllocInfo{};
+        countAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO;
+        countAllocInfo.descriptorSetCount = MAX_FRAMES_IN_FLIGHT;
+        countAllocInfo.pDescriptorCounts = variableDescriptorCounts.data();
+
         VkDescriptorSetAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        allocInfo.pNext = &countAllocInfo;
         allocInfo.descriptorPool = computeDescriptorPool;
         allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
         allocInfo.pSetLayouts = layouts.data();
@@ -1279,10 +1305,15 @@ private:
             descriptorWrites[0].descriptorCount = 1;
             descriptorWrites[0].pBufferInfo = &uniformBufferInfo;
 
-            VkDescriptorBufferInfo storageBufferInfoCurrentFrame{};
-            storageBufferInfoCurrentFrame.buffer = shaderStorageBuffers[i];
-            storageBufferInfoCurrentFrame.offset = 0;
-            storageBufferInfoCurrentFrame.range = sizeof(uint32_t) * octreeGPU.size();
+            // VkDescriptorBufferInfo storageBufferInfoCurrentFrame{};
+            // storageBufferInfoCurrentFrame.buffer = shaderStorageBuffers[i];
+            // storageBufferInfoCurrentFrame.offset = 0;
+            // storageBufferInfoCurrentFrame.range = sizeof(uint32_t) * octreeGPU.size();
+
+            VkDescriptorBufferInfo farValuesSBufferInfo{};
+            farValuesSBufferInfo.buffer = farValuesSBuffers[i];
+            farValuesSBufferInfo.offset = 0;
+            farValuesSBufferInfo.range = sizeof(uint32_t) * farValues.size();
 
             descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[1].dstSet = computeDescriptorSets[i];
@@ -1290,7 +1321,7 @@ private:
             descriptorWrites[1].dstArrayElement = 0;
             descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             descriptorWrites[1].descriptorCount = 1;
-            descriptorWrites[1].pBufferInfo = &storageBufferInfoCurrentFrame;
+            descriptorWrites[1].pBufferInfo = &farValuesSBufferInfo;
 
             VkDescriptorImageInfo storageImageInfo{};
             storageImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -1318,18 +1349,28 @@ private:
             descriptorWrites[3].descriptorCount = 1;
             descriptorWrites[3].pBufferInfo = &uniformCameraBufferInfo;
 
-            VkDescriptorBufferInfo farValuesSBufferInfo{};
-            farValuesSBufferInfo.buffer = farValuesSBuffers[i];
-            farValuesSBufferInfo.offset = 0;
-            farValuesSBufferInfo.range = sizeof(uint32_t) * farValues.size();
+
+            std::vector<VkDescriptorBufferInfo> storageBufferInfos{};
+            //TODO!: Actually use the buffers: shaderStorageBuffers[i]
+            for (VkBuffer buffer: shaderStorageBuffers) {
+                VkDescriptorBufferInfo info{};
+                info.buffer = buffer;
+                info.offset = 0;
+                // info.range = VK_WHOLE_SIZE;
+                //TODO! Get the right size for each chunk, so max size for every but the last.
+                info.range = sizeof(uint32_t) * octreeGPU.size();
+                storageBufferInfos.push_back(info);
+            }
 
             descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[4].dstSet = computeDescriptorSets[i];
             descriptorWrites[4].dstBinding = 4;
             descriptorWrites[4].dstArrayElement = 0;
             descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            descriptorWrites[4].descriptorCount = 1;
-            descriptorWrites[4].pBufferInfo = &farValuesSBufferInfo;
+            descriptorWrites[4].descriptorCount = static_cast<uint32_t>(storageBufferInfos.size());
+            // descriptorWrites[4].pBufferInfo = &storageBufferInfoCurrentFrame;
+            descriptorWrites[4].pBufferInfo = storageBufferInfos.data();
+
 
             vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0,
                                    nullptr);
