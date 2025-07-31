@@ -19,7 +19,7 @@ std::vector<uint32_t> createNoise(int size, uint32_t seed_value) {
     for (int y = 0; y < size; y++) {
         for (int x = 0; x < size; x++) {
             //Get value between 0 and 2 and * 100
-            uint32_t val = (uint32_t) ((noise.GetNoise((float) x / 10.0, (float) y / 10.0) + 1.0) * 200);
+            uint32_t val = (uint32_t) ((noise.GetNoise((float) x / 20.0, (float) y / 20.0) + 1.0) * 200);
             // std::cout << "Noise Value: " << val << std::endl;
             noiseData[index++] = val;
         }

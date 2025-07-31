@@ -1,5 +1,5 @@
 #version 450
-
+#extension GL_EXT_nonuniform_qualifier : require
 //Look at: https://www.shadertoy.com/view/4sVfWw
 
 struct Particle {
@@ -9,9 +9,10 @@ struct Particle {
 };
 
 layout (binding = 0) uniform ParameterUBO {
-    int width;
-    int height;
-    int depth;
+    uint width;
+    uint height;
+    uint depth;
+    uint bufferSize;
 } ubo;
 
 layout (binding = 3) uniform CameraUBO {
@@ -60,6 +61,15 @@ Node convertNode(uint value, uint parentIndex){
 
     return node;
 }
+
+Node getNode(uint index) {
+    uint chunkIndex = index / ubo.bufferSize;
+    uint svoIndex = index % ubo.bufferSize;
+    uint value = voxelSSBOs[chunkIndex].svo[svoIndex];
+
+    return convertNode(value, index);
+}
+//Go change all the gets to this func!!!!!
 
 
 
@@ -120,7 +130,7 @@ void main()
     float size = ubo.width;
     int level = 0;
     Node stack[MAX_DEPTH];
-    Node currentNode = convertNode(voxelSSBOs[0].svo[0], 0);
+    Node currentNode = getNode(0);
     Node empty;
     empty.index = 0;
 
@@ -174,7 +184,8 @@ void main()
             }
             int childOffset = bitCount(stack[level - 1].childMask >> (8 - childIndex));
             uint parentIndex = stack[level - 1].index + childOffset;
-            currentNode = (stack[level - 1].childMask >> (7 - childIndex) & 1u) == 1u ? convertNode(voxelSSBOs[0].svo[stack[level - 1].index + childOffset], parentIndex) : empty;
+            currentNode = (stack[level - 1].childMask >> (7 - childIndex) & 1u) == 1u ? getNode(parentIndex) : empty;
+//            currentNode = (stack[level - 1].childMask >> (7 - childIndex) & 1u) == 1u ? convertNode(voxelSSBOs[0].svo[stack[level - 1].index + childOffset], parentIndex) : empty;
 
             //Fetch the new voxCoord and see if it is still on a border
             // +0.5 centers the voxel range so borders lie at half-integers.
@@ -206,7 +217,7 @@ void main()
                 }
                 int childOffset = bitCount(currentNode.childMask >> (8 - childIndex));
                 uint parentIndex = currentNode.index + childOffset;
-                currentNode = (currentNode.childMask >> (7 - childIndex) & 1u) == 1u ? convertNode(voxelSSBOs[0].svo[currentNode.index + childOffset], parentIndex) : empty;
+                currentNode = (currentNode.childMask >> (7 - childIndex) & 1u) == 1u ? getNode(parentIndex) : empty;
 
                 fro += imask2 * int(size);
                 lro -= mask2 * size;
@@ -240,7 +251,7 @@ void main()
 
                 int childOffset = bitCount(stack[level - 1].childMask >> (8 - childIndex));
                 uint parentIndex = stack[level - 1].index + childOffset;
-                currentNode = (stack[level - 1].childMask >> (7 - childIndex) & 1u) == 1u ? convertNode(voxelSSBOs[0].svo[stack[level - 1].index + childOffset], parentIndex) : empty;
+                currentNode = (stack[level - 1].childMask >> (7 - childIndex) & 1u) == 1u ? getNode(parentIndex) : empty;
 
 
                 exitoct = (floor(newfro / size * 0.5 + 0.25)!=floor(fro / size * 0.5 + 0.25));

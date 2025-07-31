@@ -52,8 +52,10 @@ struct GridInfo {
     alignas(4) uint32_t width;
     alignas(4) uint32_t height;
     alignas(4) uint32_t depth;
+    alignas(4) uint32_t bufferSize;
 
     GridInfo(uint32_t w, uint32_t h, uint32_t d) : width(w), height(h), depth(d) {
+        bufferSize = 0;
     }
 };
 
