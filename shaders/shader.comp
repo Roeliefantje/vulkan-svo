@@ -54,10 +54,14 @@ struct StackInfo {
 };
 
 
+//CHILD OFFSET IS MESSING WITH FAR VALUES, SHOULD DO IT DIFFERENTLY I SUPPOSE
+//Shouldnt be true ^^, I dont know anymore...
 Node convertNode(uint value, uint parentIndex){
     Node node;
     node.childMask = (value >> 24) & 0xFFu;
-    node.index = (value & 0x00FFFFFFu) + parentIndex;
+    bool isFar = (value & (1u << 23)) != 0u;
+    uint childIndex = value & 0x007FFFFFu;
+    node.index = (isFar ? farValues[childIndex] : childIndex) + parentIndex;
 
     return node;
 }
@@ -69,7 +73,6 @@ Node getNode(uint index) {
 
     return convertNode(value, index);
 }
-//Go change all the gets to this func!!!!!
 
 
 

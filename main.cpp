@@ -1056,7 +1056,7 @@ private:
 
             void *data;
             vkMapMemory(device, stagingBufferMemory, 0, chunkBufferSize, 0, &data);
-            memcpy(data, octreeGPU.data() + offset, (size_t) chunkBufferSize);
+            memcpy(data, dataVec.data() + offset, (size_t) chunkBufferSize);
             vkUnmapMemory(device, stagingBufferMemory);
 
             // Copy initial particle data to all storage buffers
@@ -1093,7 +1093,7 @@ private:
 
         void *data;
         vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-        memcpy(data, octreeGPU.data(), (size_t) bufferSize);
+        memcpy(data, dataVec.data(), (size_t) bufferSize);
         vkUnmapMemory(device, stagingBufferMemory);
 
         buffers.resize(MAX_FRAMES_IN_FLIGHT);

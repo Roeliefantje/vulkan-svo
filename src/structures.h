@@ -126,16 +126,26 @@ inline uint32_t amountChildren(uint8_t childMask) {
     return std::popcount(childMask);
 }
 
-inline uint32_t createGPUData(uint8_t childMask, uint32_t index) {
-    //TODO!: Introduce far bit, use a seperate SSBO with far values.
-    if (index > 0xFFFFFF) {
-        throw std::runtime_error("Index exceeds maximum allowed value!");
+inline uint32_t createGPUData(uint8_t childMask, uint32_t index, std::vector<uint32_t> &farValues) {
+    bool far = false;
+    uint32_t usedIndex = index;
+    if (index > (1 << 23) - 1) {
+        far = true;
+        usedIndex = farValues.size();
+        if (usedIndex > (1 << 23) - 1) {
+            throw std::runtime_error("Too many far values, exceeds pointer for far value!");
+        }
+        std::cout << "Used index: " << usedIndex << std::endl;
+        farValues.push_back(index);
     }
-    return childMask << 24 | index;
+    // return (childMask << 24) | (uint32_t(far) << 23) | (usedIndex);
+    return ((uint32_t(childMask) & 0xFFu) << 24) |
+           ((uint32_t(far) & 0x1u) << 23) |
+           (usedIndex & 0x007FFFFFu);
 }
 
 uint32_t addChildren(std::shared_ptr<OctreeNode> node, std::vector<uint32_t> *data, uint32_t *startIndex,
-                     uint32_t parentIndex) {
+                     uint32_t parentIndex, std::vector<uint32_t> &farValues) {
     uint32_t index = *startIndex;
     uint32_t childOffset = 0;
     *startIndex += amountChildren(node->childMask);
@@ -146,17 +156,16 @@ uint32_t addChildren(std::shared_ptr<OctreeNode> node, std::vector<uint32_t> *da
             if (!child) {
                 throw std::runtime_error("Null child in octree");
             }
-            (*data)[index + childOffset] = addChildren(child, data, startIndex, index + childOffset);
+            (*data)[index + childOffset] = addChildren(child, data, startIndex, index + childOffset, farValues);
             uint32_t offsetCalc = node->childMask >> (8 - i);
             if (childOffset != std::popcount(offsetCalc)) {
-                // std::cerr << ""
                 throw std::runtime_error("Counting bits gives different value!");
             }
             childOffset += 1;
         }
     }
 
-    return createGPUData(node->childMask, index - parentIndex);
+    return createGPUData(node->childMask, index - parentIndex, farValues);
 }
 
 std::vector<uint32_t> getOctreeGPUdata(std::shared_ptr<OctreeNode> rootNode, uint32_t nodesAmount,
@@ -168,7 +177,7 @@ std::vector<uint32_t> getOctreeGPUdata(std::shared_ptr<OctreeNode> rootNode, uin
     // }
     auto data = std::vector<uint32_t>(nodesAmount);
     uint32_t index = 1;
-    data[0] = addChildren(rootNode, &data, &index, 0);
+    data[0] = addChildren(rootNode, &data, &index, 0, farValues);
 
     std::cout << "Total nodes: " << data.size() << std::endl;
 
