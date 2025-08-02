@@ -30,7 +30,7 @@ const uint32_t HEIGHT = 1080;
 const float X_GROUPSIZE = 16;
 const float Y_GROUPSIZE = 16;
 
-const uint32_t SIZE = 4096 * 2;
+const uint32_t SIZE = 4096 / 2;
 const uint32_t SEED = 12345 * 5;
 
 const int MAX_FRAMES_IN_FLIGHT = 1;
@@ -185,7 +185,8 @@ private:
     GridInfo gridInfo = GridInfo(SIZE, SIZE, SIZE);
     uint32_t amountOfNodes;
     // std::shared_ptr<OctreeNode> root = constructOctree(&grid, amountOfNodes);
-    std::shared_ptr<OctreeNode> root = std::make_shared<OctreeNode>(createOctree(SIZE, SEED, amountOfNodes));
+    // std::shared_ptr<OctreeNode> root = std::make_shared<OctreeNode>(createOctree(SIZE, SEED, amountOfNodes));
+    std::shared_ptr<OctreeNode> root = std::make_shared<OctreeNode>(createHollowOctree(SIZE, SEED, amountOfNodes));
     std::vector<uint32_t> farValues = std::vector<uint32_t>(0);
     std::vector<uint32_t> octreeGPU = getOctreeGPUdata(root, amountOfNodes, farValues);
 

@@ -45,6 +45,7 @@ int MAX_RAY_STEPS = 5000;
 struct Node {
     uint childMask;
     uint index;
+    uint color;
 };
 
 struct StackInfo {
@@ -54,14 +55,13 @@ struct StackInfo {
 };
 
 
-//CHILD OFFSET IS MESSING WITH FAR VALUES, SHOULD DO IT DIFFERENTLY I SUPPOSE
-//Shouldnt be true ^^, I dont know anymore...
 Node convertNode(uint value, uint parentIndex){
     Node node;
     node.childMask = (value >> 24) & 0xFFu;
     bool isFar = (value & (1u << 23)) != 0u;
     uint childIndex = value & 0x007FFFFFu;
     node.index = (isFar ? farValues[childIndex] : childIndex) + parentIndex;
+    node.color = value & 0x00FFFFFFu;; //Todo! also use the far bit so red can have 16 values as well.
 
     return node;
 }
@@ -200,8 +200,13 @@ void main()
             exitoct = abs(distanceBorder) < 0.1; //Error margin
         } else {
             if (currentNode.index != 0u && currentNode.childMask == 0u) {
-                float red = dot(vec3(mask), vec3(0.5, 1.0, 0.75));
-                color += vec3(red, 0.0, 0.0);
+                float red = ((currentNode.color >> 16) & 0xFFu) / float(0xFF);
+                float green = ((currentNode.color >> 8) & 0xFFu) / float(0xFF);
+                float blue = (currentNode.color & 0xFFu) / float(0xFF);
+                color = vec3(red, green, blue);
+
+                float intensity = dot(vec3(mask), vec3(0.5, 1.0, 0.75));
+                color *= intensity;
                 break;
             }
 

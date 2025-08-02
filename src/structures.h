@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <memory>
 #include <bit>
+#include <iomanip> // for std::hex, std::setw, std::setfill
 
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
@@ -71,28 +72,6 @@ struct Grid {
         std::uniform_int_distribution<int> rndHeight(0, h - 1);
         std::uniform_int_distribution<int> rndDepth(0, d - 1);
 
-        // for (size_t i = 0; i < VOXEL_COUNT; i++) {
-        //     auto x = rndDepth(rndEngine);
-        //     auto y = rndWidth(rndEngine);
-        //     auto z = rndHeight(rndEngine);
-        //     // auto z = 0;
-        //     auto index = x + y * gridInfo.width + z * gridInfo.width * gridInfo.height;
-        //     data[index] = 1;
-        // }
-
-        // data[0] = 1;
-        // int x_values[] = {0, 3};
-        // for (auto x: x_values) {
-        //     for (auto y: x_values) {
-        //         for (auto z: x_values) {
-        //             auto index = x + y * gridInfo.width + z * gridInfo.width * gridInfo.height;
-        //             data[index] = 1;
-        //         }
-        //     }
-        // }
-
-        // data[0] = 0;
-
         std::cout << "Finished making grid" << std::endl;
     }
 };
@@ -107,13 +86,19 @@ inline uint64_t make_key(uint16_t x, uint16_t y, uint16_t z) {
 struct OctreeNode {
     uint8_t childMask;
     std::array<std::shared_ptr<OctreeNode>, 8> children;
+    uint32_t color;
 
     OctreeNode() {
         childMask = 0;
+        static std::default_random_engine rndEngine((unsigned) time(nullptr));
+        static std::uniform_int_distribution<int> dist(0, (1 << 24) - 1);
+        color = dist(rndEngine);
+        // std::cout << "Hex: 0x" << std::hex << color << std::endl;
     }
 
     OctreeNode(uint8_t childMask, std::array<std::shared_ptr<OctreeNode>, 8> &children) : childMask(childMask),
         children(children) {
+        color = 0;
     };
 };
 
@@ -126,7 +111,11 @@ inline uint32_t amountChildren(uint8_t childMask) {
     return std::popcount(childMask);
 }
 
-inline uint32_t createGPUData(uint8_t childMask, uint32_t index, std::vector<uint32_t> &farValues) {
+inline uint32_t createGPUData(uint8_t childMask, uint32_t color, uint32_t index, std::vector<uint32_t> &farValues) {
+    if (childMask == 0) {
+        return color & (1 << 24) - 1;
+    }
+
     bool far = false;
     uint32_t usedIndex = index;
     if (index > (1 << 23) - 1) {
@@ -165,7 +154,7 @@ uint32_t addChildren(std::shared_ptr<OctreeNode> node, std::vector<uint32_t> *da
         }
     }
 
-    return createGPUData(node->childMask, index - parentIndex, farValues);
+    return createGPUData(node->childMask, node->color, index - parentIndex, farValues);
 }
 
 std::vector<uint32_t> getOctreeGPUdata(std::shared_ptr<OctreeNode> rootNode, uint32_t nodesAmount,
