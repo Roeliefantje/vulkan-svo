@@ -90,9 +90,10 @@ struct OctreeNode {
 
     OctreeNode() {
         childMask = 0;
-        static std::default_random_engine rndEngine((unsigned) time(nullptr));
-        static std::uniform_int_distribution<int> dist(0, (1 << 24) - 1);
-        color = dist(rndEngine);
+        // static std::default_random_engine rndEngine((unsigned) time(nullptr));
+        // static std::uniform_int_distribution<int> dist(0, (1 << 24) - 1);
+        // color = dist(rndEngine);
+        color = 0x777777u;
         // std::cout << "Hex: 0x" << std::hex << color << std::endl;
     }
 

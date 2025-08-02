@@ -24,13 +24,14 @@
 
 #include "src/structures.h"
 #include "src/svo_generation.h"
+#include "src/voxelizer.h"
 
 const uint32_t WIDTH = 1920;
 const uint32_t HEIGHT = 1080;
 const float X_GROUPSIZE = 16;
 const float Y_GROUPSIZE = 16;
 
-const uint32_t SIZE = 4096 / 2;
+const uint32_t SIZE = 4096;
 const uint32_t SEED = 12345 * 5;
 
 const int MAX_FRAMES_IN_FLIGHT = 1;
@@ -186,7 +187,9 @@ private:
     uint32_t amountOfNodes;
     // std::shared_ptr<OctreeNode> root = constructOctree(&grid, amountOfNodes);
     // std::shared_ptr<OctreeNode> root = std::make_shared<OctreeNode>(createOctree(SIZE, SEED, amountOfNodes));
-    std::shared_ptr<OctreeNode> root = std::make_shared<OctreeNode>(createHollowOctree(SIZE, SEED, amountOfNodes));
+    std::shared_ptr<OctreeNode> root = std::make_shared<OctreeNode>(
+        voxelizeObj("./assets/san-miguel-low-poly.obj", "./assets/", SIZE, amountOfNodes));
+    // std::shared_ptr<OctreeNode> root = std::make_shared<OctreeNode>(createHollowOctree(SIZE, SEED, amountOfNodes));
     std::vector<uint32_t> farValues = std::vector<uint32_t>(0);
     std::vector<uint32_t> octreeGPU = getOctreeGPUdata(root, amountOfNodes, farValues);
 
@@ -396,36 +399,37 @@ private:
     void processInput() {
         glm::vec3 forward = glm::normalize(camera.direction - glm::dot(camera.direction, camera.up) * camera.up);
         glm::vec3 left = glm::cross(forward, camera.up);
-
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-            glm::vec3 change = forward * 0.02f * lastFrameTime;
-            camera.position += change;
-            // camera.lookAt += change;
-        }
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-            glm::vec3 change = forward * -0.02f * lastFrameTime;
-            camera.position += change;
-            // camera.lookAt += change;
-        }
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-            glm::vec3 change = left * 0.02f * lastFrameTime;
-            camera.position += change;
-            // camera.lookAt += change;
-        }
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-            glm::vec3 change = left * -0.02f * lastFrameTime;
-            camera.position += change;
-            // camera.lookAt += change;
-        }
-        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-            glm::vec3 change = camera.up * -0.02f * lastFrameTime;
-            camera.position += change;
-            // camera.lookAt += change;
-        }
-        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-            glm::vec3 change = camera.up * 0.02f * lastFrameTime;
-            camera.position += change;
-            // camera.lookAt += change;
+        if (!mouseFree) {
+            if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+                glm::vec3 change = forward * 0.2f * lastFrameTime;
+                camera.position += change;
+                // camera.lookAt += change;
+            }
+            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+                glm::vec3 change = forward * -0.2f * lastFrameTime;
+                camera.position += change;
+                // camera.lookAt += change;
+            }
+            if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+                glm::vec3 change = left * 0.2f * lastFrameTime;
+                camera.position += change;
+                // camera.lookAt += change;
+            }
+            if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+                glm::vec3 change = left * -0.2f * lastFrameTime;
+                camera.position += change;
+                // camera.lookAt += change;
+            }
+            if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+                glm::vec3 change = camera.up * -0.2f * lastFrameTime;
+                camera.position += change;
+                // camera.lookAt += change;
+            }
+            if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+                glm::vec3 change = camera.up * 0.2f * lastFrameTime;
+                camera.position += change;
+                // camera.lookAt += change;
+            }
         }
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
             if (!escPressed) {

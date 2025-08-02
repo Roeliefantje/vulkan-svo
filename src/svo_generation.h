@@ -30,11 +30,11 @@ inline uint32_t getColor(int height, int x, int y) {
         return 0xFFFFFF; // Snow
     } else if (h > 400) {
         return 0xD9D9D9; // Rock
-    } else if (h > 320) {
+    } else if (h > 220) {
         return 0x7F8386; // Gray rocky terrain
-    } else if (h > 240) {
+    } else if (h > 140) {
         return 0x3A5F0B; // Forest green
-    } else if (h > 160) {
+    } else if (h > 100) {
         return 0x6B8E23; // Olive green
     } else if (h > 80) {
         return 0x9ACD32; // Yellow-green
