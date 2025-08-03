@@ -3,11 +3,13 @@
 //
 #pragma once
 #define TINYOBJLOADER_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
 #include <iostream>
 
 #include "structures.h"
 #include "tiny_obj_loader.h"
 #include "tribox.h"
+#include "stb_image.h"
 
 #ifndef VOXELIZER_H
 #define VOXELIZER_H
@@ -16,6 +18,7 @@ struct TexturedTriangle {
     glm::vec3 v[3];
     glm::vec2 uv[3];
     std::string diffuse_texname; // empty if none
+    glm::vec3 diffuse;
 };
 
 
@@ -91,6 +94,10 @@ int loadObject(std::string inputFile, std::string path, int resolution,
             int matID = shapes[s].mesh.material_ids[f]; // -1 if no material
             if (matID >= 0 && matID < (int) materials.size()) {
                 tri.diffuse_texname = materials[matID].diffuse_texname;
+                tri.diffuse = glm::vec3(materials[matID].diffuse[0], materials[matID].diffuse[1],
+                                        materials[matID].diffuse[2]);
+            } else {
+                tri.diffuse = glm::vec3(0.8f);
             }
 
             // For each of the 3 vertices:
@@ -120,8 +127,27 @@ int loadObject(std::string inputFile, std::string path, int resolution,
     return 0;
 }
 
+struct LoadedTexture {
+    unsigned char *imageData;
+    int texWidth, texHeight, channels;
+};
+
+LoadedTexture &loadImage(std::string &tex_name, std::map<std::string, LoadedTexture> &loadedTextures) {
+    if (loadedTextures.contains(tex_name)) {
+        return loadedTextures[tex_name];
+    }
+
+    const std::string sub_folder = "./assets/";
+    int texWidth, texHeight, channels;
+    unsigned char *imageData = stbi_load((sub_folder + tex_name).c_str(), &texWidth, &texHeight, &channels, 3);
+
+    loadedTextures[tex_name] = LoadedTexture{imageData, texWidth, texHeight, channels};;
+    return loadedTextures[tex_name];
+}
+
 std::optional<OctreeNode> createNode(Aabb aabb, std::vector<std::shared_ptr<TexturedTriangle> > &parentTriangles,
-                                     uint32_t &nodeCount, uint32_t &maxDepth, uint32_t currentDepth) {
+                                     std::map<std::string, LoadedTexture> &loadedTextures, uint32_t &nodeCount,
+                                     uint32_t &maxDepth, uint32_t currentDepth) {
     auto node = OctreeNode();
 
     std::vector<std::shared_ptr<TexturedTriangle> > triangles;
@@ -173,7 +199,8 @@ std::optional<OctreeNode> createNode(Aabb aabb, std::vector<std::shared_ptr<Text
                     };
 
 
-                    auto child = createNode(childaabb, triangles, nodeCount, maxDepth, currentDepth + 1);
+                    auto child = createNode(childaabb, triangles, loadedTextures, nodeCount, maxDepth,
+                                            currentDepth + 1);
                     if (child) {
                         int childIndex = z * 4 + y * 2 + x;
                         node.childMask |= 1u << (7 - childIndex);
@@ -184,7 +211,28 @@ std::optional<OctreeNode> createNode(Aabb aabb, std::vector<std::shared_ptr<Text
         }
     } else {
         //Do color stuff
-        node.color = getColor(aabb.bb.z, aabb.bb.x, aabb.bb.y);
+        auto texture = loadImage(triangles[0]->diffuse_texname, loadedTextures);
+        if (!texture.imageData) {
+            uint8_t r = triangles[0]->diffuse.r * 255;
+            uint8_t g = triangles[0]->diffuse.g * 255;
+            uint8_t b = triangles[0]->diffuse.b * 255;
+            node.color = (r << 16) | (g << 8) | b;
+        } else {
+            glm::vec2 uv = triangles[0]->uv[0];
+
+            int px = static_cast<int>(uv.x * texture.texWidth);
+            int py = static_cast<int>((1.0f - uv.y) * texture.texHeight); // flip Y axis
+
+            px = std::clamp(px, 0, texture.texWidth - 1);
+            py = std::clamp(py, 0, texture.texHeight - 1);
+            // // triangles[0]->uv[0]
+            int pixelIndex = (py * texture.texWidth + px) * 3;
+            uint8_t r = texture.imageData[pixelIndex + 0];
+            uint8_t g = texture.imageData[pixelIndex + 1];
+            uint8_t b = texture.imageData[pixelIndex + 2];
+
+            node.color = (r << 16) | (g << 8) | b;
+        }
     }
 
     nodeCount++;
@@ -200,9 +248,15 @@ OctreeNode voxelizeObj(std::string inputFile, std::string path, uint32_t svo_res
     aabb.aa = glm::ivec3(0, 0, 0);
     aabb.bb = glm::ivec3(svo_resolution, svo_resolution, svo_resolution);
     uint32_t maxDepth = std::ceil(std::log2(svo_resolution));
+
+    std::map<std::string, LoadedTexture> textures;
     std::cout << "Creating nodes" << std::endl;
-    auto node = createNode(aabb, triangles, nodeCount, maxDepth, 0);
+    auto node = createNode(aabb, triangles, textures, nodeCount, maxDepth, 0);
     std::cout << "Finished creating nodes " << triangles.size() << std::endl;
+
+    for (const auto &[key, value]: textures) {
+        stbi_image_free(value.imageData);
+    }
 
     if (node) {
         return *node;
