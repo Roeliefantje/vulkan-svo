@@ -145,6 +145,25 @@ LoadedTexture &loadImage(std::string &tex_name, std::map<std::string, LoadedText
     return loadedTextures[tex_name];
 }
 
+glm::vec2 getTextureUV(glm::vec3 &midpoint, std::shared_ptr<TexturedTriangle> &triangle) {
+    auto v0 = triangle->v[1] - triangle->v[0];
+    auto v1 = triangle->v[2] - triangle->v[0];
+    auto v2 = midpoint - triangle->v[0];
+
+    float d00 = dot(v0, v0);
+    float d01 = dot(v0, v1);
+    float d11 = dot(v1, v1);
+    float d20 = dot(v2, v0);
+    float d21 = dot(v2, v1);
+
+    float denom = d00 * d11 - d01 * d01;
+    float v = (d11 * d20 - d01 * d21) / denom;
+    float w = (d00 * d21 - d01 * d20) / denom;
+    float u = 1.0f - v - w;
+
+    return triangle->uv[0] * u + triangle->uv[1] * v + triangle->uv[2] * w;
+}
+
 std::optional<OctreeNode> createNode(Aabb aabb, std::vector<std::shared_ptr<TexturedTriangle> > &parentTriangles,
                                      std::map<std::string, LoadedTexture> &loadedTextures, uint32_t &nodeCount,
                                      uint32_t &maxDepth, uint32_t currentDepth) {
@@ -218,7 +237,7 @@ std::optional<OctreeNode> createNode(Aabb aabb, std::vector<std::shared_ptr<Text
             uint8_t b = triangles[0]->diffuse.b * 255;
             node.color = (r << 16) | (g << 8) | b;
         } else {
-            glm::vec2 uv = triangles[0]->uv[0];
+            glm::vec2 uv = glm::mod(getTextureUV(midpoint, triangles[0]), glm::vec2(1.0f));
 
             int px = static_cast<int>(uv.x * texture.texWidth);
             int py = static_cast<int>((1.0f - uv.y) * texture.texHeight); // flip Y axis
