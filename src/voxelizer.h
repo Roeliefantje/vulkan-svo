@@ -2,6 +2,9 @@
 // Created by roeld on 02/08/2025.
 //
 #pragma once
+#include <filesystem>
+#include <fstream>
+
 #define TINYOBJLOADER_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #include <iostream>
@@ -282,6 +285,75 @@ OctreeNode voxelizeObj(std::string inputFile, std::string path, uint32_t svo_res
     }
 
     return OctreeNode();
+}
+
+bool saveObj(const std::string &inputFile, const std::string &path, uint32_t svo_resolution, uint32_t &nodeCount,
+             std::vector<uint32_t> &gpuData, std::vector<uint32_t> &farValues) {
+    try {
+        namespace fs = std::filesystem;
+
+        fs::path dirPath(path);
+        fs::path inputPath = dirPath / inputFile;
+        std::string fileName = inputPath.stem().string() + "_res" + std::to_string(svo_resolution) + ".svo";
+        fs::path outFilePath = inputPath.parent_path() / fileName;
+
+        std::ofstream outFile(outFilePath, std::ios::binary);
+        if (!outFile) return false;
+
+        // Write metadata
+        // outFile.write(reinterpret_cast<char *>(&svo_resolution), sizeof(svo_resolution));
+        outFile.write(reinterpret_cast<char *>(&nodeCount), sizeof(nodeCount));
+
+        // Write vector sizes
+        uint32_t gpuDataSize = gpuData.size();
+        uint32_t farValuesSize = farValues.size();
+        outFile.write(reinterpret_cast<char *>(&gpuDataSize), sizeof(gpuDataSize));
+        outFile.write(reinterpret_cast<char *>(&farValuesSize), sizeof(farValuesSize));
+
+        // Write vectors
+        outFile.write(reinterpret_cast<char *>(gpuData.data()), gpuDataSize * sizeof(uint32_t));
+        outFile.write(reinterpret_cast<char *>(farValues.data()), farValuesSize * sizeof(uint32_t));
+
+        outFile.close();
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+
+bool loadObj(const std::string &inputFile, const std::string &path, uint32_t svo_resolution, uint32_t &nodeCount,
+             std::vector<uint32_t> &gpuData, std::vector<uint32_t> &farValues) {
+    try {
+        namespace fs = std::filesystem;
+
+        fs::path dirPath(path);
+        fs::path inputPath = dirPath / inputFile;
+        std::string fileName = inputPath.stem().string() + "_res" + std::to_string(svo_resolution) + ".svo";
+        fs::path outFilePath = inputPath.parent_path() / fileName;
+        std::ifstream inFile(outFilePath, std::ios::binary);
+        if (!inFile) return false;
+
+        // Read metadata
+        // inFile.read(reinterpret_cast<char *>(&svo_resolution), sizeof(svo_resolution));
+        inFile.read(reinterpret_cast<char *>(&nodeCount), sizeof(nodeCount));
+
+        // Read vector sizes
+        uint32_t gpuDataSize, farValuesSize;
+        inFile.read(reinterpret_cast<char *>(&gpuDataSize), sizeof(gpuDataSize));
+        inFile.read(reinterpret_cast<char *>(&farValuesSize), sizeof(farValuesSize));
+
+        // Read vectors
+        gpuData.resize(gpuDataSize);
+        farValues.resize(farValuesSize);
+        inFile.read(reinterpret_cast<char *>(gpuData.data()), gpuDataSize * sizeof(uint32_t));
+        inFile.read(reinterpret_cast<char *>(farValues.data()), farValuesSize * sizeof(uint32_t));
+
+        inFile.close();
+        return true;
+    } catch (...) {
+        return false;
+    }
 }
 
 

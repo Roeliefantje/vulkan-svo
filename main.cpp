@@ -31,7 +31,7 @@ const uint32_t HEIGHT = 1080;
 const float X_GROUPSIZE = 16;
 const float Y_GROUPSIZE = 16;
 
-const uint32_t SIZE = 4096 * 2;
+const uint32_t SIZE = 4096 / 2;
 const uint32_t SEED = 12345 * 5;
 
 const int MAX_FRAMES_IN_FLIGHT = 1;
@@ -103,6 +103,7 @@ const std::vector<uint16_t> indices = {
 class ComputeShaderApplication {
 public:
     void run() {
+        initData();
         initWindow();
         initVulkan();
         mainLoop();
@@ -183,15 +184,19 @@ private:
     uint32_t currentFrame = 0;
     uint32_t maxBufferSize = 0;
     // Grid grid = Grid(2048, 2048, 2048);
+
+    // GridInfo gridInfo;
     GridInfo gridInfo = GridInfo(SIZE, SIZE, SIZE);
     uint32_t amountOfNodes;
     // std::shared_ptr<OctreeNode> root = constructOctree(&grid, amountOfNodes);
     // std::shared_ptr<OctreeNode> root = std::make_shared<OctreeNode>(createOctree(SIZE, SEED, amountOfNodes));
-    std::shared_ptr<OctreeNode> root = std::make_shared<OctreeNode>(
-        voxelizeObj("./assets/san-miguel-low-poly.obj", "./assets/", SIZE, amountOfNodes));
+    // std::shared_ptr<OctreeNode> root = std::make_shared<OctreeNode>(
+    //     voxelizeObj("./assets/san-miguel-low-poly.obj", "./assets/", SIZE, amountOfNodes));
     // std::shared_ptr<OctreeNode> root = std::make_shared<OctreeNode>(createHollowOctree(SIZE, SEED, amountOfNodes));
-    std::vector<uint32_t> farValues = std::vector<uint32_t>(0);
-    std::vector<uint32_t> octreeGPU = getOctreeGPUdata(root, amountOfNodes, farValues);
+    std::vector<uint32_t> farValues;
+    std::vector<uint32_t> octreeGPU;
+    // std::vector<uint32_t> farValues = std::vector<uint32_t>(0);
+    // std::vector<uint32_t> octreeGPU = getOctreeGPUdata(root, amountOfNodes, farValues);
 
     Camera camera = Camera(glm::vec3(256.5, 256.5, 512.5), glm::vec3(256, 250, 512.5), WIDTH, HEIGHT,
                            glm::radians(30.0f));
@@ -206,6 +211,20 @@ private:
 
     double lastTime = 0.0f;
     int frameCounter = 0;
+
+    void initData() {
+        if (!loadObj("san-miguel-low-poly.obj", "./assets/", SIZE, amountOfNodes, octreeGPU, farValues)) {
+            std::cout << "File not found, voxelizing" << std::endl;
+            auto root = std::make_shared<OctreeNode>(voxelizeObj("./assets/san-miguel-low-poly.obj", "./assets/", SIZE,
+                                                                 amountOfNodes));
+            // auto root = std::make_shared<OctreeNode>(createOctree(SIZE, SEED, amountOfNodes));
+            farValues = std::vector<uint32_t>(0);
+            octreeGPU = getOctreeGPUdata(root, amountOfNodes, farValues);
+            saveObj("san-miguel-low-poly.obj", "./assets/", SIZE, amountOfNodes, octreeGPU, farValues);
+        } else {
+            std::cout << "File found, using loaded data" << std::endl;
+        }
+    }
 
     void initWindow() {
         glfwInit();
