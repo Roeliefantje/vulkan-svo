@@ -10,8 +10,6 @@ struct Particle {
 
 layout (binding = 0) uniform ParameterUBO {
     uint width;
-    uint height;
-    uint depth;
     uint bufferSize;
 } ubo;
 
