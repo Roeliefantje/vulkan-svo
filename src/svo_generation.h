@@ -47,7 +47,7 @@ inline uint32_t getColor(int height, int x, int y) {
     }
 }
 
-std::vector<uint32_t> createNoise(int size, uint32_t seed_value) {
+std::vector<uint32_t> createNoise(int size, uint32_t seed_value, glm::ivec2 offset, uint32_t scale) {
     std::cout << "Creating Heightmap" << std::endl;
     FastNoiseLite base;
     // choose ridged for sharp peaks
@@ -74,7 +74,7 @@ std::vector<uint32_t> createNoise(int size, uint32_t seed_value) {
     for (int y = 0; y < size; y++) {
         for (int x = 0; x < size; x++) {
             //Get value between 0 and 2 and * 100
-            float fx = float(x), fy = float(y);
+            float fx = float(x * scale + offset.x), fy = float(y * scale + offset.y);
             warp.DomainWarp(fx, fy);
             float raw = base.GetNoise(fx, fy); // −1…+1
             float e = (raw + 1.0f) * 0.5f;
@@ -256,8 +256,10 @@ std::optional<OctreeNode> createHollowNode(int size, Aabb aabb, std::vector<uint
 }
 
 
-OctreeNode createOctree(int size, uint32_t seed_value, uint32_t &nodeCount) {
-    auto noise = createNoise(size, seed_value);
+OctreeNode createChunkOctree(int size, uint32_t seed_value, glm::ivec2 chunk_coords, int chunk_scale,
+                             uint32_t &nodeCount) {
+    glm::vec2 offset = size * chunk_scale * chunk_coords;
+    auto noise = createNoise(size, seed_value, offset, chunk_scale);
     auto aabb = Aabb{};
     aabb.aa = glm::ivec3(0, 0, 0);
     aabb.bb = glm::ivec3(size, size, size);
@@ -272,8 +274,12 @@ OctreeNode createOctree(int size, uint32_t seed_value, uint32_t &nodeCount) {
     return OctreeNode();
 }
 
+OctreeNode createOctree(int size, uint32_t seed_value, uint32_t &nodeCount) {
+    return createChunkOctree(size, seed_value, glm::ivec2(0), 1, nodeCount);
+}
+
 OctreeNode createHollowOctree(int size, uint32_t seed_value, uint32_t &nodeCount) {
-    auto heightMap = createNoise(size, seed_value);
+    auto heightMap = createNoise(size, seed_value, glm::vec2(0), 1);
     auto depthMap = createDepthMap(heightMap);
     assert(heightMap.size() == size * size);
     assert(depthMap.size() == size * size);
@@ -291,6 +297,25 @@ OctreeNode createHollowOctree(int size, uint32_t seed_value, uint32_t &nodeCount
 
     //Todo!: dont return leaf node if thing is empty
     return OctreeNode();
+}
+
+void constructGrid(std::vector<Chunk> &gridValues, std::vector<uint32_t> &farValues, std::vector<uint32_t> &octreeGPU,
+                   uint32_t maxChunkResolution, uint32_t gridSize, uint32_t seed) {
+    gridValues = std::vector<Chunk>(gridSize * gridSize);
+    farValues = std::vector<uint32_t>();
+    octreeGPU = std::vector<uint32_t>();
+
+    for (int y = 0; y < gridSize; y++) {
+        for (int x = 0; x < gridSize; x++) {
+            uint32_t nodeAmount = 0;
+            auto node = std::make_shared<OctreeNode>(
+                createChunkOctree(maxChunkResolution, seed, glm::ivec2(x, y), 1, nodeAmount));
+            uint32_t rootNodeIndex = octreeGPU.size();
+            std::cout << "Root node Index: " << rootNodeIndex << std::endl;
+            addOctreeGPUdata(octreeGPU, node, nodeAmount, farValues);
+            gridValues[y * gridSize + x] = Chunk{maxChunkResolution, rootNodeIndex};
+        }
+    }
 }
 
 #endif //SVO_GENERATION_H

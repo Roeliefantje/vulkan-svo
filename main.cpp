@@ -32,7 +32,8 @@ const uint32_t HEIGHT = 1080;
 const float X_GROUPSIZE = 16;
 const float Y_GROUPSIZE = 16;
 
-const uint32_t SIZE = 4096;
+const uint32_t CHUNK_RESOLUTION = 4096 / 4;
+const uint32_t GRID_SIZE = 1;
 const uint32_t SEED = 12345 * 5;
 
 const int MAX_FRAMES_IN_FLIGHT = 1;
@@ -189,16 +190,16 @@ private:
     // Grid grid = Grid(2048, 2048, 2048);
 
     // GridInfo gridInfo;
-    GridInfo gridInfo = GridInfo(SIZE);
+    GridInfo gridInfo = GridInfo(CHUNK_RESOLUTION);
     uint32_t amountOfNodes = 0;
     // std::shared_ptr<OctreeNode> root = constructOctree(&grid, amountOfNodes);
-    // std::shared_ptr<OctreeNode> root = std::make_shared<OctreeNode>(createOctree(SIZE, SEED, amountOfNodes));
+    // std::shared_ptr<OctreeNode> root = std::make_shared<OctreeNode>(createOctree(CHUNK_RESOLUTION, SEED, amountOfNodes));
     // std::shared_ptr<OctreeNode> root = std::make_shared<OctreeNode>(
-    //     voxelizeObj("./assets/san-miguel-low-poly.obj", "./assets/", SIZE, amountOfNodes));
-    // std::shared_ptr<OctreeNode> root = std::make_shared<OctreeNode>(createHollowOctree(SIZE, SEED, amountOfNodes));
+    //     voxelizeObj("./assets/san-miguel-low-poly.obj", "./assets/", CHUNK_RESOLUTION, amountOfNodes));
+    // std::shared_ptr<OctreeNode> root = std::make_shared<OctreeNode>(createHollowOctree(CHUNK_RESOLUTION, SEED, amountOfNodes));
     std::vector<uint32_t> farValues;
     std::vector<uint32_t> octreeGPU;
-    std::vector<uint32_t> gridValues;
+    std::vector<Chunk> gridValues;
     // std::vector<uint32_t> farValues = std::vector<uint32_t>(0);
     // std::vector<uint32_t> octreeGPU = getOctreeGPUdata(root, amountOfNodes, farValues);
 
@@ -218,26 +219,28 @@ private:
 
     void initData() {
         if (!useHeightmapData) {
-            if (!loadObj("san-miguel-low-poly.obj", "./assets/", SIZE, amountOfNodes, octreeGPU, farValues)) {
+            if (!loadObj("san-miguel-low-poly.obj", "./assets/", CHUNK_RESOLUTION, amountOfNodes, octreeGPU,
+                         farValues)) {
                 std::cout << "File not found, voxelizing" << std::endl;
                 auto root = std::make_shared<OctreeNode>(voxelizeObj("./assets/san-miguel-low-poly.obj", "./assets/",
-                                                                     SIZE,
+                                                                     CHUNK_RESOLUTION,
                                                                      amountOfNodes));
-                // auto root = std::make_shared<OctreeNode>(createOctree(SIZE, SEED, amountOfNodes));
+                // auto root = std::make_shared<OctreeNode>(createOctree(CHUNK_RESOLUTION, SEED, amountOfNodes));
                 farValues = std::vector<uint32_t>(0);
                 octreeGPU = getOctreeGPUdata(root, amountOfNodes, farValues);
-                saveObj("san-miguel-low-poly.obj", "./assets/", SIZE, amountOfNodes, octreeGPU, farValues);
+                saveObj("san-miguel-low-poly.obj", "./assets/", CHUNK_RESOLUTION, amountOfNodes, octreeGPU, farValues);
             } else {
                 std::cout << "File found, using loaded data" << std::endl;
             }
         } else {
-            auto root = std::make_shared<OctreeNode>(createOctree(SIZE, SEED, amountOfNodes));
-            farValues = std::vector<uint32_t>(0);
-            octreeGPU = getOctreeGPUdata(root, amountOfNodes, farValues);
+            // auto root = std::make_shared<OctreeNode>(createOctree(CHUNK_RESOLUTION, SEED, amountOfNodes));
+            // farValues = std::vector<uint32_t>(0);
+            // octreeGPU = getOctreeGPUdata(root, amountOfNodes, farValues);
+            constructGrid(gridValues, farValues, octreeGPU, CHUNK_RESOLUTION, GRID_SIZE, SEED);
         }
 
-        gridValues = std::vector<uint32_t>(0);
-        gridValues.push_back(0);
+        // gridValues = std::vector<Chunk>(0);
+        // gridValues.push_back(Chunk{});
     }
 
     void initWindow() {
@@ -1125,9 +1128,10 @@ private:
         // std::cout << "Buffer size: " << dataVec.size() * sizeof(uint32_t) << std::endl;
     }
 
-    void createSingleShaderStorageBuffer(std::vector<uint32_t> &dataVec, std::vector<VkBuffer> &buffers,
+    template<typename T>
+    void createSingleShaderStorageBuffer(std::vector<T> &dataVec, std::vector<VkBuffer> &buffers,
                                          std::vector<VkDeviceMemory> &buffersMemory) {
-        VkDeviceSize bufferSize = sizeof(uint32_t) * dataVec.size();
+        VkDeviceSize bufferSize = sizeof(T) * dataVec.size();
         // std::cout << "Grid data size: " << octreeGPU.size() << std::endl;
         std::cout << "Single Buffer size: " << dataVec.size() * sizeof(uint32_t) << std::endl;
 

@@ -14,13 +14,19 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+
 struct UniformBufferObject {
     float deltaTime = 1.0f;
 };
 
 struct Chunk {
-    uint8_t resolution;
+    uint32_t resolution;
     uint32_t rootNodeIndex;
+
+    Chunk() = default;
+
+    Chunk(uint32_t res, uint32_t rootIndex) : resolution(res), rootNodeIndex(rootIndex) {
+    };
 };
 
 struct Camera {
@@ -197,6 +203,15 @@ std::vector<uint32_t> getOctreeGPUdata(std::shared_ptr<OctreeNode> rootNode, uin
     std::cout << "Total nodes: " << data.size() << std::endl;
 
     return data;
+}
+
+void addOctreeGPUdata(std::vector<uint32_t> &gpuData, std::shared_ptr<OctreeNode> rootNode, uint32_t nodesAmount,
+                      std::vector<uint32_t> &farValues) {
+    uint32_t startIndex = gpuData.size();
+    gpuData.resize(startIndex + nodesAmount);
+    uint32_t index = startIndex + 1;
+
+    gpuData[startIndex] = addChildren(rootNode, &gpuData, &index, startIndex, farValues);
 }
 
 
