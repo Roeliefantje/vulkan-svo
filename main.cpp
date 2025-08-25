@@ -26,12 +26,13 @@
 #include "src/svo_generation.h"
 #include "src/voxelizer.h"
 
+const bool useHeightmapData = true;
 const uint32_t WIDTH = 1920;
 const uint32_t HEIGHT = 1080;
 const float X_GROUPSIZE = 16;
 const float Y_GROUPSIZE = 16;
 
-const uint32_t SIZE = 4096 / 2;
+const uint32_t SIZE = 4096;
 const uint32_t SEED = 12345 * 5;
 
 const int MAX_FRAMES_IN_FLIGHT = 1;
@@ -144,8 +145,10 @@ private:
 
     std::vector<std::vector<VkBuffer> > shaderStorageBuffers;
     std::vector<VkBuffer> farValuesSBuffers;
+    std::vector<VkBuffer> gridBuffers;
     std::vector<std::vector<VkDeviceMemory> > shaderStorageBuffersMemory;
     std::vector<VkDeviceMemory> farValuesSBuffersMemory;
+    std::vector<VkDeviceMemory> gridBuffersMemory;
     //Add the other stuff
 
 
@@ -186,8 +189,8 @@ private:
     // Grid grid = Grid(2048, 2048, 2048);
 
     // GridInfo gridInfo;
-    GridInfo gridInfo = GridInfo(SIZE, SIZE, SIZE);
-    uint32_t amountOfNodes;
+    GridInfo gridInfo = GridInfo(SIZE);
+    uint32_t amountOfNodes = 0;
     // std::shared_ptr<OctreeNode> root = constructOctree(&grid, amountOfNodes);
     // std::shared_ptr<OctreeNode> root = std::make_shared<OctreeNode>(createOctree(SIZE, SEED, amountOfNodes));
     // std::shared_ptr<OctreeNode> root = std::make_shared<OctreeNode>(
@@ -195,6 +198,7 @@ private:
     // std::shared_ptr<OctreeNode> root = std::make_shared<OctreeNode>(createHollowOctree(SIZE, SEED, amountOfNodes));
     std::vector<uint32_t> farValues;
     std::vector<uint32_t> octreeGPU;
+    std::vector<uint32_t> gridValues;
     // std::vector<uint32_t> farValues = std::vector<uint32_t>(0);
     // std::vector<uint32_t> octreeGPU = getOctreeGPUdata(root, amountOfNodes, farValues);
 
@@ -213,17 +217,27 @@ private:
     int frameCounter = 0;
 
     void initData() {
-        if (!loadObj("san-miguel-low-poly.obj", "./assets/", SIZE, amountOfNodes, octreeGPU, farValues)) {
-            std::cout << "File not found, voxelizing" << std::endl;
-            auto root = std::make_shared<OctreeNode>(voxelizeObj("./assets/san-miguel-low-poly.obj", "./assets/", SIZE,
-                                                                 amountOfNodes));
-            // auto root = std::make_shared<OctreeNode>(createOctree(SIZE, SEED, amountOfNodes));
+        if (!useHeightmapData) {
+            if (!loadObj("san-miguel-low-poly.obj", "./assets/", SIZE, amountOfNodes, octreeGPU, farValues)) {
+                std::cout << "File not found, voxelizing" << std::endl;
+                auto root = std::make_shared<OctreeNode>(voxelizeObj("./assets/san-miguel-low-poly.obj", "./assets/",
+                                                                     SIZE,
+                                                                     amountOfNodes));
+                // auto root = std::make_shared<OctreeNode>(createOctree(SIZE, SEED, amountOfNodes));
+                farValues = std::vector<uint32_t>(0);
+                octreeGPU = getOctreeGPUdata(root, amountOfNodes, farValues);
+                saveObj("san-miguel-low-poly.obj", "./assets/", SIZE, amountOfNodes, octreeGPU, farValues);
+            } else {
+                std::cout << "File found, using loaded data" << std::endl;
+            }
+        } else {
+            auto root = std::make_shared<OctreeNode>(createOctree(SIZE, SEED, amountOfNodes));
             farValues = std::vector<uint32_t>(0);
             octreeGPU = getOctreeGPUdata(root, amountOfNodes, farValues);
-            saveObj("san-miguel-low-poly.obj", "./assets/", SIZE, amountOfNodes, octreeGPU, farValues);
-        } else {
-            std::cout << "File found, using loaded data" << std::endl;
         }
+
+        gridValues = std::vector<uint32_t>(0);
+        gridValues.push_back(0);
     }
 
     void initWindow() {
@@ -350,8 +364,10 @@ private:
                 vkFreeMemory(device, shaderStorageBuffersMemory[i][j], nullptr);
             }
             vkDestroyBuffer(device, farValuesSBuffers[i], nullptr);
+            vkDestroyBuffer(device, gridBuffers[i], nullptr);
 
             vkFreeMemory(device, farValuesSBuffersMemory[i], nullptr);
+            vkFreeMemory(device, gridBuffersMemory[i], nullptr);
         }
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
@@ -802,7 +818,7 @@ private:
     }
 
     void createComputeDescriptorSetLayout() {
-        std::array<VkDescriptorSetLayoutBinding, 5> layoutBindings{};
+        std::array<VkDescriptorSetLayoutBinding, 6> layoutBindings{};
         layoutBindings[0].binding = 0;
         layoutBindings[0].descriptorCount = 1;
         layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -828,15 +844,21 @@ private:
         layoutBindings[3].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
         layoutBindings[4].binding = 4;
-        layoutBindings[4].descriptorCount = MAX_VOXEL_BUFFERS;
+        layoutBindings[4].descriptorCount = 1;
         layoutBindings[4].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         layoutBindings[4].pImmutableSamplers = nullptr;
         layoutBindings[4].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
+        layoutBindings[5].binding = 5;
+        layoutBindings[5].descriptorCount = MAX_VOXEL_BUFFERS;
+        layoutBindings[5].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        layoutBindings[5].pImmutableSamplers = nullptr;
+        layoutBindings[5].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
 
         // Add per-binding flags
-        std::array<VkDescriptorBindingFlags, 5> bindingFlags{};
-        bindingFlags[4] = VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT |
+        std::array<VkDescriptorBindingFlags, 6> bindingFlags{};
+        bindingFlags[5] = VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT |
                           VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
 
         VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsInfo{};
@@ -1140,6 +1162,8 @@ private:
     void createShaderStorageBuffers() {
         createShaderStorageBuffer(octreeGPU, shaderStorageBuffers, shaderStorageBuffersMemory);
         createSingleShaderStorageBuffer(farValues, farValuesSBuffers, farValuesSBuffersMemory);
+        //TODO!: CHANGE THIS farValues to gridVALUES!!
+        createSingleShaderStorageBuffer(gridValues, gridBuffers, gridBuffersMemory);
     }
 
     void createUniformBuffers() {
@@ -1196,7 +1220,7 @@ private:
     }
 
     void createComputeDescriptorPool() {
-        std::array<VkDescriptorPoolSize, 5> poolSizes{};
+        std::array<VkDescriptorPoolSize, 6> poolSizes{};
         poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
@@ -1211,6 +1235,9 @@ private:
 
         poolSizes[4].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         poolSizes[4].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+
+        poolSizes[5].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        poolSizes[5].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -1364,7 +1391,7 @@ private:
             uniformBufferInfo.offset = 0;
             uniformBufferInfo.range = sizeof(GridInfo);
 
-            std::array<VkWriteDescriptorSet, 5> descriptorWrites{};
+            std::array<VkWriteDescriptorSet, 6> descriptorWrites{};
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[0].dstSet = computeDescriptorSets[i];
             descriptorWrites[0].dstBinding = 0;
@@ -1418,6 +1445,19 @@ private:
             descriptorWrites[3].pBufferInfo = &uniformCameraBufferInfo;
 
 
+            VkDescriptorBufferInfo gridBufferInfo{};
+            gridBufferInfo.buffer = gridBuffers[i];
+            gridBufferInfo.offset = 0;
+            gridBufferInfo.range = sizeof(uint32_t) * gridValues.size();
+
+            descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[4].dstSet = computeDescriptorSets[i];
+            descriptorWrites[4].dstBinding = 4;
+            descriptorWrites[4].dstArrayElement = 0;
+            descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            descriptorWrites[4].descriptorCount = 1;
+            descriptorWrites[4].pBufferInfo = &gridBufferInfo;
+
             std::vector<VkDescriptorBufferInfo> storageBufferInfos{};
             for (int j = 0; j < shaderStorageBuffers[i].size(); j++) {
                 VkBuffer *buffer = &shaderStorageBuffers[i][j];
@@ -1437,14 +1477,14 @@ private:
                 storageBufferInfos.push_back(info);
             }
 
-            descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[4].dstSet = computeDescriptorSets[i];
-            descriptorWrites[4].dstBinding = 4;
-            descriptorWrites[4].dstArrayElement = 0;
-            descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            descriptorWrites[4].descriptorCount = static_cast<uint32_t>(storageBufferInfos.size());
-            // descriptorWrites[4].pBufferInfo = &storageBufferInfoCurrentFrame;
-            descriptorWrites[4].pBufferInfo = storageBufferInfos.data();
+            descriptorWrites[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[5].dstSet = computeDescriptorSets[i];
+            descriptorWrites[5].dstBinding = 5;
+            descriptorWrites[5].dstArrayElement = 0;
+            descriptorWrites[5].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            descriptorWrites[5].descriptorCount = static_cast<uint32_t>(storageBufferInfos.size());
+            // descriptorWrites[5].pBufferInfo = &storageBufferInfoCurrentFrame;
+            descriptorWrites[5].pBufferInfo = storageBufferInfos.data();
 
 
             vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0,

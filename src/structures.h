@@ -18,6 +18,61 @@ struct UniformBufferObject {
     float deltaTime = 1.0f;
 };
 
+struct Chunk {
+    uint8_t resolution;
+    uint32_t rootNodeIndex;
+};
+
+struct Camera {
+    alignas(16) glm::vec3 position;
+    alignas(16) glm::vec3 direction;
+    alignas(16) glm::vec3 up;
+    alignas(8) glm::vec2 resolution;
+    alignas(4) float fov;
+
+    //Technically, adding fov to a vec3 would save some memory. (it could all fit in 3 vec4s)
+    Camera(glm::vec3 pos, glm::vec3 lookAt, int screenWidth, int screenHeight, float fovRadian) : position(pos),
+        fov(fovRadian) {
+        direction = glm::normalize(lookAt - pos);
+        up = glm::vec3(0.0, 0.0, -1.0);
+        resolution = glm::vec2(screenWidth, screenHeight);
+
+        if (direction == up) {
+            throw std::runtime_error("Camera up vector is the same as Camera direction!");
+        }
+    }
+};
+
+
+struct OctreeNode {
+    uint8_t childMask;
+    std::array<std::shared_ptr<OctreeNode>, 8> children;
+    uint32_t color;
+
+    OctreeNode() {
+        childMask = 0;
+        // static std::default_random_engine rndEngine((unsigned) time(nullptr));
+        // static std::uniform_int_distribution<int> dist(0, (1 << 24) - 1);
+        // color = dist(rndEngine);
+        color = 0x777777u;
+        // std::cout << "Hex: 0x" << std::hex << color << std::endl;
+    }
+
+    OctreeNode(uint8_t childMask, std::array<std::shared_ptr<OctreeNode>, 8> &children) : childMask(childMask),
+        children(children) {
+        color = 0;
+    };
+};
+
+struct GridInfo {
+    alignas(4) uint32_t resolution;
+    alignas(4) uint32_t bufferSize;
+
+    GridInfo(uint32_t res) : resolution(res) {
+        bufferSize = 0;
+    }
+};
+
 struct Vertex {
     glm::vec2 position;
     glm::vec2 texCoord;
@@ -49,22 +104,12 @@ struct Vertex {
 
 const uint32_t VOXEL_COUNT = 8000000;
 
-struct GridInfo {
-    alignas(4) uint32_t width;
-    alignas(4) uint32_t height;
-    alignas(4) uint32_t depth;
-    alignas(4) uint32_t bufferSize;
-
-    GridInfo(uint32_t w, uint32_t h, uint32_t d) : width(w), height(h), depth(d) {
-        bufferSize = 0;
-    }
-};
 
 struct Grid {
     GridInfo gridInfo;
     std::vector<int32_t> data;
 
-    Grid(uint32_t w, uint32_t h, uint32_t d) : gridInfo(w, h, d), data(w * d * h) {
+    Grid(uint32_t w, uint32_t h, uint32_t d) : gridInfo(w), data(w * d * h) {
         //Do stuff with data
         std::default_random_engine rndEngine((unsigned) time(nullptr));
         // std::uniform_real_distribution<float> rndDist(0.0f, 1.0f);
@@ -82,26 +127,6 @@ inline uint64_t make_key(uint16_t x, uint16_t y, uint16_t z) {
            (static_cast<uint64_t>(y) << 16) |
            (static_cast<uint64_t>(z));
 }
-
-struct OctreeNode {
-    uint8_t childMask;
-    std::array<std::shared_ptr<OctreeNode>, 8> children;
-    uint32_t color;
-
-    OctreeNode() {
-        childMask = 0;
-        // static std::default_random_engine rndEngine((unsigned) time(nullptr));
-        // static std::uniform_int_distribution<int> dist(0, (1 << 24) - 1);
-        // color = dist(rndEngine);
-        color = 0x777777u;
-        // std::cout << "Hex: 0x" << std::hex << color << std::endl;
-    }
-
-    OctreeNode(uint8_t childMask, std::array<std::shared_ptr<OctreeNode>, 8> &children) : childMask(childMask),
-        children(children) {
-        color = 0;
-    };
-};
 
 
 inline bool hasChildren(uint8_t childMask) {
@@ -179,10 +204,11 @@ int constructLeafNodes(Grid *grid, std::unordered_map<uint64_t, std::shared_ptr<
     uint32_t count = 0;
     auto leafNode = std::make_shared<OctreeNode>();
     sparseGrid->reserve(VOXEL_COUNT);
-    for (size_t z = 0; z < grid->gridInfo.height; z++) {
-        for (size_t y = 0; y < grid->gridInfo.width; y++) {
-            for (size_t x = 0; x < grid->gridInfo.width; x++) {
-                auto index = x + y * grid->gridInfo.width + z * grid->gridInfo.width * grid->gridInfo.height;
+    for (size_t z = 0; z < grid->gridInfo.resolution; z++) {
+        for (size_t y = 0; y < grid->gridInfo.resolution; y++) {
+            for (size_t x = 0; x < grid->gridInfo.resolution; x++) {
+                auto index = x + y * grid->gridInfo.resolution + z * grid->gridInfo.resolution * grid->gridInfo.
+                             resolution;
                 if (grid->data[index] == 1) {
                     count++;
                     // (*sparseGrid)[make_key(x, y, z)] = leafNode;
@@ -264,11 +290,10 @@ inline bool childrenSolid(std::array<std::shared_ptr<OctreeNode>, 8> *children) 
 }
 
 std::shared_ptr<OctreeNode> constructOctree(Grid *grid, uint32_t &nodeCount) {
-    if (!isPowerOfTwo(grid->gridInfo.depth) or grid->gridInfo.height != grid->gridInfo.depth or grid->gridInfo.height !=
-        grid->gridInfo.width) {
+    if (!isPowerOfTwo(grid->gridInfo.resolution)) {
         throw std::runtime_error("Grid for octree construction is not a power of 2 or not square!");
     }
-    uint32_t grid_size = grid->gridInfo.depth;
+    uint32_t grid_size = grid->gridInfo.resolution;
 
     std::unordered_map<uint64_t, std::shared_ptr<OctreeNode> > sparseGrid;
     uint32_t count = constructLeafNodes(grid, &sparseGrid);
@@ -305,27 +330,6 @@ std::shared_ptr<OctreeNode> constructOctree(Grid *grid, uint32_t &nodeCount) {
     nodeCount = count;
     return sparseGrid[make_key(0, 0, 0)];
 }
-
-
-struct Camera {
-    alignas(16) glm::vec3 position;
-    alignas(16) glm::vec3 direction;
-    alignas(16) glm::vec3 up;
-    alignas(8) glm::vec2 resolution;
-    alignas(4) float fov;
-
-    //Technically, adding fov to a vec3 would save some memory. (it could all fit in 3 vec4s)
-    Camera(glm::vec3 pos, glm::vec3 lookAt, int screenWidth, int screenHeight, float fovRadian) : position(pos),
-        fov(fovRadian) {
-        direction = glm::normalize(lookAt - pos);
-        up = glm::vec3(0.0, 0.0, -1.0);
-        resolution = glm::vec2(screenWidth, screenHeight);
-
-        if (direction == up) {
-            throw std::runtime_error("Camera up vector is the same as Camera direction!");
-        }
-    }
-};
 
 
 #endif //STRUCTURES_H

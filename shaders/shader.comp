@@ -22,9 +22,13 @@ layout (binding = 3) uniform CameraUBO {
 } camera;
 
 //Std430 = tightly packed, std140 is not, no clue how exactly it works...
-layout(std430, binding = 4) buffer VoxelSSBO{
+layout(std430, binding = 5) buffer VoxelSSBO{
     uint svo[ ];
 } voxelSSBOs[];
+
+layout(std430, binding = 4) buffer gridSSBO {
+    uint grid[ ];
+};
 
 layout(std430, binding = 1) buffer FarValuesSSBO {
     uint farValues[ ];
