@@ -33,7 +33,7 @@ const float X_GROUPSIZE = 16;
 const float Y_GROUPSIZE = 16;
 
 const uint32_t CHUNK_RESOLUTION = 4096 / 4;
-const uint32_t GRID_SIZE = 1;
+const uint32_t GRID_SIZE = 4;
 const uint32_t SEED = 12345 * 5;
 
 const int MAX_FRAMES_IN_FLIGHT = 1;
@@ -190,7 +190,7 @@ private:
     // Grid grid = Grid(2048, 2048, 2048);
 
     // GridInfo gridInfo;
-    GridInfo gridInfo = GridInfo(CHUNK_RESOLUTION);
+    GridInfo gridInfo = GridInfo(CHUNK_RESOLUTION, GRID_SIZE);
     uint32_t amountOfNodes = 0;
     // std::shared_ptr<OctreeNode> root = constructOctree(&grid, amountOfNodes);
     // std::shared_ptr<OctreeNode> root = std::make_shared<OctreeNode>(createOctree(CHUNK_RESOLUTION, SEED, amountOfNodes));
@@ -203,7 +203,7 @@ private:
     // std::vector<uint32_t> farValues = std::vector<uint32_t>(0);
     // std::vector<uint32_t> octreeGPU = getOctreeGPUdata(root, amountOfNodes, farValues);
 
-    Camera camera = Camera(glm::vec3(256.5, 256.5, 512.5), glm::vec3(256, 250, 512.5), WIDTH, HEIGHT,
+    Camera camera = Camera(glm::vec3(10, 10, 712.5), glm::vec3(10, 20, 710.5), WIDTH, HEIGHT,
                            glm::radians(30.0f));
     float mouseX, mouseY;
     float mouseSensitivity = 0.05f;
@@ -1133,7 +1133,7 @@ private:
                                          std::vector<VkDeviceMemory> &buffersMemory) {
         VkDeviceSize bufferSize = sizeof(T) * dataVec.size();
         // std::cout << "Grid data size: " << octreeGPU.size() << std::endl;
-        std::cout << "Single Buffer size: " << dataVec.size() * sizeof(uint32_t) << std::endl;
+        std::cout << "Single Buffer size: " << dataVec.size() * sizeof(T) << std::endl;
 
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
@@ -1452,7 +1452,7 @@ private:
             VkDescriptorBufferInfo gridBufferInfo{};
             gridBufferInfo.buffer = gridBuffers[i];
             gridBufferInfo.offset = 0;
-            gridBufferInfo.range = sizeof(uint32_t) * gridValues.size();
+            gridBufferInfo.range = sizeof(Chunk) * gridValues.size();
 
             descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[4].dstSet = computeDescriptorSets[i];

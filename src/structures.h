@@ -73,8 +73,9 @@ struct OctreeNode {
 struct GridInfo {
     alignas(4) uint32_t resolution;
     alignas(4) uint32_t bufferSize;
+    alignas(4) uint32_t gridSize;
 
-    GridInfo(uint32_t res) : resolution(res) {
+    GridInfo(uint32_t res, uint32_t gridSize) : resolution(res), gridSize(gridSize) {
         bufferSize = 0;
     }
 };
@@ -115,7 +116,7 @@ struct Grid {
     GridInfo gridInfo;
     std::vector<int32_t> data;
 
-    Grid(uint32_t w, uint32_t h, uint32_t d) : gridInfo(w), data(w * d * h) {
+    Grid(uint32_t w, uint32_t h, uint32_t d) : gridInfo(w, 1), data(w * d * h) {
         //Do stuff with data
         std::default_random_engine rndEngine((unsigned) time(nullptr));
         // std::uniform_real_distribution<float> rndDist(0.0f, 1.0f);
