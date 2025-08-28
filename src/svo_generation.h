@@ -19,12 +19,12 @@
 //         return 0x7CFC00;
 //     }
 // }
-inline uint32_t getColor(int height, int x, int y) {
+inline uint32_t getColor(int height, int x, int y, int chunk_scale) {
     // Simple hash function for coordinate-based randomness
     uint32_t hash = ((x * 73856093) ^ (y * 19349663)) & 255;
     int jitter = (hash % 11) - 5; // Jitter between -5 and +5
 
-    int h = height + jitter;
+    int h = height * chunk_scale + jitter;
 
     if (h > 480) {
         return 0xFFFFFF; // Snow
@@ -80,7 +80,7 @@ std::vector<uint32_t> createNoise(int size, uint32_t seed_value, glm::ivec2 offs
             float e = (raw + 1.0f) * 0.5f;
             e = pow(e * 1.05f, 2.0f); // redistribute: sharper peaks & flat valleys
             // std::cout << "Noise Value: " << val << std::endl;
-            noiseData[index++] = uint32_t(e * 500);
+            noiseData[index++] = uint32_t(e * 500) / scale;
         }
     }
 
@@ -117,7 +117,8 @@ struct Aabb {
 };
 
 
-std::optional<OctreeNode> createNode(int size, Aabb aabb, std::vector<uint32_t> &noise, uint32_t &nodeCount) {
+std::optional<OctreeNode> createNode(int size, Aabb aabb, std::vector<uint32_t> &noise, uint32_t &nodeCount,
+                                     int chunk_scale) {
     //Get aabb,
     auto node = OctreeNode();
 
@@ -143,7 +144,7 @@ std::optional<OctreeNode> createNode(int size, Aabb aabb, std::vector<uint32_t> 
     }
 
     if (isSolid) {
-        node.color = getColor(aabb.bb.z, aabb.bb.x, aabb.bb.y);
+        node.color = getColor(aabb.bb.z, aabb.bb.x, aabb.bb.y, chunk_scale);
         nodeCount++;
         return node;
     }
@@ -170,7 +171,7 @@ std::optional<OctreeNode> createNode(int size, Aabb aabb, std::vector<uint32_t> 
                 };
 
 
-                auto child = createNode(size, childaabb, noise, nodeCount);
+                auto child = createNode(size, childaabb, noise, nodeCount, chunk_scale);
                 if (child) {
                     int childIndex = z * 4 + y * 2 + x;
                     node.childMask |= 1u << (7 - childIndex);
@@ -214,7 +215,7 @@ std::optional<OctreeNode> createHollowNode(int size, Aabb aabb, std::vector<uint
     }
 
     if (isSolid) {
-        node.color = getColor(aabb.bb.z, aabb.bb.x, aabb.bb.y);
+        node.color = getColor(aabb.bb.z, aabb.bb.x, aabb.bb.y, 1.0);
         nodeCount++;
         return node;
     }
@@ -264,7 +265,7 @@ OctreeNode createChunkOctree(int size, uint32_t seed_value, glm::ivec2 chunk_coo
     aabb.aa = glm::ivec3(0, 0, 0);
     aabb.bb = glm::ivec3(size, size, size);
 
-    auto node = createNode(size, aabb, noise, nodeCount);
+    auto node = createNode(size, aabb, noise, nodeCount, chunk_scale);
 
     if (node) {
         return *node;
@@ -308,8 +309,11 @@ void constructGrid(std::vector<Chunk> &gridValues, std::vector<uint32_t> &farVal
     for (int y = 0; y < gridSize; y++) {
         for (int x = 0; x < gridSize; x++) {
             uint32_t nodeAmount = 0;
+            auto octreeResolution = std::max(maxChunkResolution >> int(std::sqrt(std::max(y, x))), 64u);
+            auto octreeScale = maxChunkResolution / octreeResolution;
+            std::cout << "Octree resolution: " << octreeResolution << std::endl;
             auto node = std::make_shared<OctreeNode>(
-                createChunkOctree(maxChunkResolution, seed, glm::ivec2(x, y), 1, nodeAmount));
+                createChunkOctree(octreeResolution, seed, glm::ivec2(x, y), octreeScale, nodeAmount));
             uint32_t rootNodeIndex = octreeGPU.size();
             std::cout << "Root node Index: " << rootNodeIndex << std::endl;
             addOctreeGPUdata(octreeGPU, node, nodeAmount, farValues);

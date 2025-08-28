@@ -119,9 +119,9 @@ void main()
 
     float size = ubo.width;
     ivec3 gridCoord = ivec3(rayPos / size);
-    if (any(greaterThanEqual(gridCoord, ivec3(ubo.gridSize, ubo.gridSize, 1))) || any(lessThan(gridCoord, ivec3(0)))) {
-        return;
-    }
+//    if (any(greaterThanEqual(gridCoord, ivec3(ubo.gridSize, ubo.gridSize, 1))) || any(lessThan(gridCoord, ivec3(0)))) {
+//        return;
+//    }
 
     int level = 0;
     Chunk currentChunk = grid[gridCoord.y * ubo.gridSize + gridCoord.x];
@@ -129,6 +129,10 @@ void main()
     Node currentNode = getNode(currentChunk.rootNodeIndex);
     Node empty;
     empty.index = 0;
+
+    if (any(greaterThanEqual(gridCoord, ivec3(ubo.gridSize, ubo.gridSize, 1))) || any(lessThan(gridCoord, ivec3(0)))) {
+        currentNode = empty;
+    }
 
     vec3 color = vec3(0.1);
     bvec3 mask = bvec3(false, false, false);
@@ -157,13 +161,18 @@ void main()
             lro = rayPos - vec3(gridCoord) * ubo.width;
             fro = ivec3(0);
 
-            if (any(greaterThanEqual(gridCoord, ivec3(ubo.gridSize, ubo.gridSize, 1))) || any(lessThan(gridCoord, ivec3(0)))) {
-                gridCoord = ivec3(gridCoord.x % ubo.gridSize, gridCoord.y % ubo.gridSize, gridCoord.z);
-//                break;
-            }
-
             currentChunk = grid[gridCoord.y * ubo.gridSize + gridCoord.x];
             currentNode = getNode(currentChunk.rootNodeIndex);
+
+            if (any(greaterThanEqual(gridCoord, ivec3(ubo.gridSize, ubo.gridSize, 1))) || any(lessThan(gridCoord, ivec3(0)))) {
+//                gridCoord = ivec3(gridCoord.x % ubo.gridSize, gridCoord.y % ubo.gridSize, gridCoord.z);
+//                if (gridCoord.z >= 1){
+//                    currentNode = empty;
+//                }
+                break;
+            }
+
+
 
 
 

@@ -32,8 +32,8 @@ const uint32_t HEIGHT = 1080;
 const float X_GROUPSIZE = 16;
 const float Y_GROUPSIZE = 16;
 
-const uint32_t CHUNK_RESOLUTION = 4096 / 4;
-const uint32_t GRID_SIZE = 4;
+const uint32_t CHUNK_RESOLUTION = 4096;
+const uint32_t GRID_SIZE = 16;
 const uint32_t SEED = 12345 * 5;
 
 const int MAX_FRAMES_IN_FLIGHT = 1;
