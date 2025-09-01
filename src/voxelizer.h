@@ -24,9 +24,10 @@ struct TexturedTriangle {
     glm::vec3 diffuse;
 };
 
+//TODO: Improve memory usage by only storing the triangles that are inside of a chunk
 
 int loadObject(std::string inputFile, std::string path, int resolution, int gridSize,
-               std::vector<std::shared_ptr<TexturedTriangle> > &triangles, float &scale) {
+               std::vector<TexturedTriangle> &triangles, float &scale) {
     tinyobj::ObjReaderConfig reader_config;
     reader_config.mtl_search_path = path;
 
@@ -131,7 +132,7 @@ int loadObject(std::string inputFile, std::string path, int resolution, int grid
                 }
             }
 
-            triangles.push_back(std::make_shared<TexturedTriangle>(tri));
+            triangles.push_back(tri);
             index_offset += fv;
         }
     }
@@ -145,7 +146,7 @@ struct LoadedTexture {
     int texWidth, texHeight, channels;
 };
 
-LoadedTexture &loadImage(std::string &tex_name, std::map<std::string, LoadedTexture> &loadedTextures) {
+LoadedTexture &loadImage(const std::string &tex_name, std::map<std::string, LoadedTexture> &loadedTextures) {
     if (loadedTextures.contains(tex_name)) {
         return loadedTextures[tex_name];
     }
@@ -158,10 +159,10 @@ LoadedTexture &loadImage(std::string &tex_name, std::map<std::string, LoadedText
     return loadedTextures[tex_name];
 }
 
-glm::vec2 getTextureUV(glm::vec3 &midpoint, std::shared_ptr<TexturedTriangle> &triangle) {
-    auto v0 = triangle->v[1] - triangle->v[0];
-    auto v1 = triangle->v[2] - triangle->v[0];
-    auto v2 = midpoint - triangle->v[0];
+glm::vec2 getTextureUV(glm::vec3 &midpoint, const TexturedTriangle &triangle) {
+    auto v0 = triangle.v[1] - triangle.v[0];
+    auto v1 = triangle.v[2] - triangle.v[0];
+    auto v2 = midpoint - triangle.v[0];
 
     float d00 = dot(v0, v0);
     float d01 = dot(v0, v1);
@@ -174,43 +175,37 @@ glm::vec2 getTextureUV(glm::vec3 &midpoint, std::shared_ptr<TexturedTriangle> &t
     float w = (d00 * d21 - d01 * d20) / denom;
     float u = 1.0f - v - w;
 
-    return triangle->uv[0] * u + triangle->uv[1] * v + triangle->uv[2] * w;
+    return triangle.uv[0] * u + triangle.uv[1] * v + triangle.uv[2] * w;
 }
 
-std::optional<OctreeNode> createNode(Aabb aabb, std::vector<std::shared_ptr<TexturedTriangle> > &parentTriangles,
+std::optional<OctreeNode> createNode(Aabb aabb, std::vector<TexturedTriangle> &globalTriangles,
+                                     std::vector<uint32_t> &parentTriIndices,
                                      std::map<std::string, LoadedTexture> &loadedTextures, uint32_t &nodeCount,
                                      uint32_t &maxDepth, uint32_t currentDepth) {
     auto node = OctreeNode();
 
-    std::vector<std::shared_ptr<TexturedTriangle> > triangles;
+    // std::vector<std::shared_ptr<TexturedTriangle> > triangles;
+    std::vector<uint32_t> triangleIndices;
     glm::vec3 midpoint = glm::vec3(aabb.aa + aabb.bb) / 2.0f;
     glm::vec3 halfSize = glm::vec3(aabb.bb - aabb.aa) / 2.0f;
 
     float mp[3] = {float(midpoint.x), float(midpoint.y), float(midpoint.z)};
     float hs[3] = {float(halfSize.x), float(halfSize.y), float(halfSize.z)};
 
-    for (const auto &triPtr: parentTriangles) {
-        if (triPtr) {
-            // Access members via pointer
-            auto v0 = triPtr->v[0];
-            auto v1 = triPtr->v[1];
-            auto v2 = triPtr->v[2];
-            // auto tex = triPtr->texture;
-            // do something...
-            float triverts[3][3] = {
-                {v0.x, v0.y, v0.z},
-                {v1.x, v1.y, v1.z},
-                {v2.x, v2.y, v2.z}
-            };
+    for (uint32_t triIdx: parentTriIndices) {
+        const auto &tri = globalTriangles[triIdx];
+        float triverts[3][3] = {
+            {tri.v[0].x, tri.v[0].y, tri.v[0].z},
+            {tri.v[1].x, tri.v[1].y, tri.v[1].z},
+            {tri.v[2].x, tri.v[2].y, tri.v[2].z}
+        };
 
-            if (triBoxOverlap(mp, hs, triverts)) {
-                //TODO: Instead of creating new triangle lists, instead have a list of indices
-                triangles.push_back(triPtr);
-            }
+        if (triBoxOverlap(mp, hs, triverts)) {
+            triangleIndices.push_back(triIdx);
         }
     }
 
-    if (triangles.size() == 0) {
+    if (triangleIndices.size() == 0) {
         return std::nullopt;
     }
 
@@ -232,7 +227,8 @@ std::optional<OctreeNode> createNode(Aabb aabb, std::vector<std::shared_ptr<Text
                     };
 
 
-                    auto child = createNode(childaabb, triangles, loadedTextures, nodeCount, maxDepth,
+                    auto child = createNode(childaabb, globalTriangles, triangleIndices, loadedTextures, nodeCount,
+                                            maxDepth,
                                             currentDepth + 1);
                     if (child) {
                         int childIndex = z * 4 + y * 2 + x;
@@ -244,14 +240,15 @@ std::optional<OctreeNode> createNode(Aabb aabb, std::vector<std::shared_ptr<Text
         }
     } else {
         //Do color stuff
-        auto texture = loadImage(triangles[0]->diffuse_texname, loadedTextures);
+        const auto &tri = globalTriangles[triangleIndices[0]];
+        auto texture = loadImage(tri.diffuse_texname, loadedTextures);
         if (!texture.imageData) {
-            uint8_t r = triangles[0]->diffuse.r * 255;
-            uint8_t g = triangles[0]->diffuse.g * 255;
-            uint8_t b = triangles[0]->diffuse.b * 255;
+            uint8_t r = tri.diffuse.r * 255;
+            uint8_t g = tri.diffuse.g * 255;
+            uint8_t b = tri.diffuse.b * 255;
             node.color = (r << 16) | (g << 8) | b;
         } else {
-            glm::vec2 uv = glm::mod(getTextureUV(midpoint, triangles[0]), glm::vec2(1.0f));
+            glm::vec2 uv = glm::mod(getTextureUV(midpoint, tri), glm::vec2(1.0f));
 
             int px = static_cast<int>(uv.x * texture.texWidth);
             int py = static_cast<int>((1.0f - uv.y) * texture.texHeight); // flip Y axis
@@ -291,11 +288,15 @@ void gridVoxelizeScene(std::vector<Chunk> &gridValues, std::vector<uint32_t> &fa
     farValues = std::vector<uint32_t>();
     octreeGPU = std::vector<uint32_t>();
 
-    std::vector<std::shared_ptr<TexturedTriangle> > triangles;
+    std::vector<TexturedTriangle> triangles;
     int totalResolution = maxChunkResolution * gridSize;
     float scale;
 
     int result = loadObject(inputFile, path, totalResolution, gridSize, triangles, scale);
+
+    std::vector<uint32_t> allIndices(triangles.size());
+    std::iota(allIndices.begin(), allIndices.end(), 0);
+
     std::cout << "Scale: " << scale << std::endl;
     glm::vec3 scaledCameraPos = cameraPosition * scale;
     camera = Camera(scaledCameraPos, cameraLookAt * scale, screenWidth, screenHeight, glm::radians(30.0f));
@@ -319,7 +320,7 @@ void gridVoxelizeScene(std::vector<Chunk> &gridValues, std::vector<uint32_t> &fa
 
             uint32_t nodeAmount = 0;
             std::cout << "Creating nodes" << std::endl;
-            auto node = createNode(aabb, triangles, textures, nodeAmount, maxDepth, 0);
+            auto node = createNode(aabb, triangles, allIndices, textures, nodeAmount, maxDepth, 0);
             std::cout << "Finished creating nodes " << triangles.size() << std::endl;
 
             if (node) {
@@ -338,7 +339,7 @@ void gridVoxelizeScene(std::vector<Chunk> &gridValues, std::vector<uint32_t> &fa
 
 
 OctreeNode voxelizeObj(std::string inputFile, std::string path, uint32_t svo_resolution, uint32_t &nodeCount) {
-    std::vector<std::shared_ptr<TexturedTriangle> > triangles;
+    std::vector<TexturedTriangle> triangles;
     float scale;
     int result = loadObject(inputFile, path, svo_resolution, svo_resolution, triangles, scale);
 
@@ -347,9 +348,12 @@ OctreeNode voxelizeObj(std::string inputFile, std::string path, uint32_t svo_res
     aabb.bb = glm::ivec3(svo_resolution, svo_resolution, svo_resolution);
     uint32_t maxDepth = std::ceil(std::log2(svo_resolution));
 
+    std::vector<uint32_t> allIndices(triangles.size());
+    std::iota(allIndices.begin(), allIndices.end(), 0);
+
     std::map<std::string, LoadedTexture> textures;
     std::cout << "Creating nodes" << std::endl;
-    auto node = createNode(aabb, triangles, textures, nodeCount, maxDepth, 0);
+    auto node = createNode(aabb, triangles, allIndices, textures, nodeCount, maxDepth, 0);
     std::cout << "Finished creating nodes " << triangles.size() << std::endl;
 
     for (const auto &[key, value]: textures) {
