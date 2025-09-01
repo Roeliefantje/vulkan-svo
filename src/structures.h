@@ -36,6 +36,8 @@ struct Camera {
     alignas(8) glm::vec2 resolution;
     alignas(4) float fov;
 
+    Camera() = default;
+
     //Technically, adding fov to a vec3 would save some memory. (it could all fit in 3 vec4s)
     Camera(glm::vec3 pos, glm::vec3 lookAt, int screenWidth, int screenHeight, float fovRadian) : position(pos),
         fov(fovRadian) {
@@ -71,12 +73,14 @@ struct OctreeNode {
 };
 
 struct GridInfo {
+    alignas(16) glm::vec3 cameraPosition;
     alignas(4) uint32_t resolution;
     alignas(4) uint32_t bufferSize;
     alignas(4) uint32_t gridSize;
 
     GridInfo(uint32_t res, uint32_t gridSize) : resolution(res), gridSize(gridSize) {
         bufferSize = 0;
+        cameraPosition = glm::vec3(100, 100, 5000);
     }
 };
 

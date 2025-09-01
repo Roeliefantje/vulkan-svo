@@ -25,8 +25,8 @@ struct TexturedTriangle {
 };
 
 
-int loadObject(std::string inputFile, std::string path, int resolution,
-               std::vector<std::shared_ptr<TexturedTriangle> > &triangles) {
+int loadObject(std::string inputFile, std::string path, int resolution, int gridSize,
+               std::vector<std::shared_ptr<TexturedTriangle> > &triangles, float &scale) {
     tinyobj::ObjReaderConfig reader_config;
     reader_config.mtl_search_path = path;
 
@@ -80,7 +80,13 @@ int loadObject(std::string inputFile, std::string path, int resolution,
             << std::endl;
     glm::vec3 sceneSize = {bbMax.x - bbMin.x, bbMax.y - bbMin.y, bbMax.z - bbMin.z};
     glm::vec3 offset = bbMin;
-    float scale = resolution / std::max({sceneSize.x, sceneSize.y, sceneSize.z});
+    auto maxChunkResolution = resolution / gridSize;
+    scale = std::min(
+        (resolution) / std::max(sceneSize.x, sceneSize.y),
+        (float) maxChunkResolution / sceneSize.z
+    );
+    // float scale = resolution / std::max({sceneSize.x, sceneSize.y, sceneSize.z});
+    // float scaleZ = scale / gridSize; //Compensate for the grid
 
     // Loop over shapes
     for (size_t s = 0; s < shapes.size(); s++) {
@@ -111,6 +117,10 @@ int loadObject(std::string inputFile, std::string path, int resolution,
                 tri.v[v].x = (attrib.vertices[3 * idx.vertex_index + 0] - offset.x) * scale;
                 tri.v[v].y = (attrib.vertices[3 * idx.vertex_index + 2] - offset.y) * scale;
                 tri.v[v].z = (attrib.vertices[3 * idx.vertex_index + 1] - offset.z) * scale;
+
+                if (tri.v[v].z > (resolution / gridSize)) {
+                    std::cout << "Z is wrong!" << std::endl;
+                }
 
                 // Texcoord (might be missing)
                 if (idx.texcoord_index >= 0) {
@@ -194,6 +204,7 @@ std::optional<OctreeNode> createNode(Aabb aabb, std::vector<std::shared_ptr<Text
             };
 
             if (triBoxOverlap(mp, hs, triverts)) {
+                //TODO: Instead of creating new triangle lists, instead have a list of indices
                 triangles.push_back(triPtr);
             }
         }
@@ -261,10 +272,75 @@ std::optional<OctreeNode> createNode(Aabb aabb, std::vector<std::shared_ptr<Text
     return node;
 }
 
+int fetchresolution(uint32_t maxChunkResolution, float distance) {
+    int lod_reduction = 0;
+
+    if (distance > 10.0f) lod_reduction++;
+    if (distance > 20.0f) lod_reduction++;
+    if (distance > 30.0f) lod_reduction++;
+
+    return std::max(maxChunkResolution >> lod_reduction, 64u);
+}
+
+void gridVoxelizeScene(std::vector<Chunk> &gridValues, std::vector<uint32_t> &farValues,
+                       std::vector<uint32_t> &octreeGPU, Camera &camera,
+                       uint32_t maxChunkResolution, uint32_t gridSize, std::string inputFile, std::string path,
+                       glm::vec3 cameraPosition, glm::vec3 cameraLookAt,
+                       uint32_t screenWidth, uint32_t screenHeight) {
+    gridValues = std::vector<Chunk>(gridSize * gridSize);
+    farValues = std::vector<uint32_t>();
+    octreeGPU = std::vector<uint32_t>();
+
+    std::vector<std::shared_ptr<TexturedTriangle> > triangles;
+    int totalResolution = maxChunkResolution * gridSize;
+    float scale;
+
+    int result = loadObject(inputFile, path, totalResolution, gridSize, triangles, scale);
+    std::cout << "Scale: " << scale << std::endl;
+    glm::vec3 scaledCameraPos = cameraPosition * scale;
+    camera = Camera(scaledCameraPos, cameraLookAt * scale, screenWidth, screenHeight, glm::radians(30.0f));
+    std::map<std::string, LoadedTexture> textures;
+
+    for (int y = 0; y < gridSize; y++) {
+        for (int x = 0; x < gridSize; x++) {
+            auto aabb = Aabb{};
+
+            auto midPoint = glm::vec2((x + 0.5) * maxChunkResolution, (y + 0.5) * maxChunkResolution);
+            //Todo: Use Chunk Distance instead of actual distance
+            float dist = glm::distance(midPoint, glm::vec2(scaledCameraPos.x, scaledCameraPos.y));
+            std::cout << "Distance: " << dist / scale << std::endl;
+            int octreeResolution = fetchresolution(maxChunkResolution, dist / scale);
+            std::cout << "Octree resolution: " << octreeResolution << std::endl;
+
+
+            aabb.aa = glm::ivec3(x * maxChunkResolution, y * maxChunkResolution, 0);
+            aabb.bb = glm::ivec3(aabb.aa.x + maxChunkResolution, aabb.aa.y + maxChunkResolution, maxChunkResolution);
+            uint32_t maxDepth = std::ceil(std::log2(octreeResolution));
+
+            uint32_t nodeAmount = 0;
+            std::cout << "Creating nodes" << std::endl;
+            auto node = createNode(aabb, triangles, textures, nodeAmount, maxDepth, 0);
+            std::cout << "Finished creating nodes " << triangles.size() << std::endl;
+
+            if (node) {
+                uint32_t rootNodeIndex = octreeGPU.size();
+                auto shared_node = std::make_shared<OctreeNode>(*node);
+                addOctreeGPUdata(octreeGPU, shared_node, nodeAmount, farValues);
+                gridValues[y * gridSize + x] = Chunk{maxChunkResolution, rootNodeIndex};
+            }
+        }
+    }
+
+    for (const auto &[key, value]: textures) {
+        stbi_image_free(value.imageData);
+    }
+}
+
 
 OctreeNode voxelizeObj(std::string inputFile, std::string path, uint32_t svo_resolution, uint32_t &nodeCount) {
     std::vector<std::shared_ptr<TexturedTriangle> > triangles;
-    int result = loadObject(inputFile, path, svo_resolution, triangles);
+    float scale;
+    int result = loadObject(inputFile, path, svo_resolution, svo_resolution, triangles, scale);
 
     auto aabb = Aabb{};
     aabb.aa = glm::ivec3(0, 0, 0);

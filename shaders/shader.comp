@@ -14,6 +14,7 @@ struct Chunk {
 };
 
 layout (binding = 0) uniform ParameterUBO {
+    vec3 lightPosition;
     uint width;
     uint bufferSize;
     uint gridSize;
@@ -113,7 +114,7 @@ void main()
     );
 
     vec3 rayPos = camera.position;
-    ivec3 rayStep = ivec3(sign(rayDir)); //The directino of the ray
+    ivec3 rayStep = ivec3(sign(rayDir)); //The direction of the ray
 
     //Initialize stuffs
 
@@ -148,6 +149,7 @@ void main()
     bool movegrid = false;
     float dist = 0.0; //Total distance the ray traversed
     float fdist = 0.0;
+    int collisions = 0;
 
     for(int i = 0; i < MAX_RAY_STEPS; i++) {
         if(dist > MAX_DISTANCE) break;
@@ -171,10 +173,6 @@ void main()
 //                }
                 break;
             }
-
-
-
-
 
             movegrid = false;
             exitoct = false;
@@ -212,14 +210,26 @@ void main()
             exitoct = abs(distanceBorder) < 0.1; //Error margin
         } else {
             if (currentNode.index != 0u && currentNode.childMask == 0u) {
-                float red = ((currentNode.color >> 16) & 0xFFu) / float(0xFF);
-                float green = ((currentNode.color >> 8) & 0xFFu) / float(0xFF);
-                float blue = (currentNode.color & 0xFFu) / float(0xFF);
-                color = vec3(red, green, blue);
+                if (collisions == 0) {
+                    float red = ((currentNode.color >> 16) & 0xFFu) / float(0xFF);
+                    float green = ((currentNode.color >> 8) & 0xFFu) / float(0xFF);
+                    float blue = (currentNode.color & 0xFFu) / float(0xFF);
+                    color = vec3(red, green, blue);
 
-                float intensity = dot(vec3(mask), vec3(0.5, 1.0, 0.75));
-                color *= intensity;
-                break;
+                    //                float intensity = dot(vec3(mask), vec3(0.5, 1.0, 0.75));
+                    //                color *= intensity;
+                    collisions += 1;
+                    rayPos = lro + vec3(fro) + vec3(gridCoord * ubo.width);
+                    rayDir = normalize(ubo.lightPosition - rayPos);
+                    rdsign = sign(rayDir);
+                    irdsign = ivec3(rdsign);
+                    ird = 1.0/max(abs(rayDir), 0.001);
+                } else {
+                    color *= 0.2f;
+                    break;
+                }
+
+
             }
 
             //If current node is not empty

@@ -32,8 +32,8 @@ const uint32_t HEIGHT = 1080;
 const float X_GROUPSIZE = 16;
 const float Y_GROUPSIZE = 16;
 
-const uint32_t CHUNK_RESOLUTION = 4096;
-const uint32_t GRID_SIZE = 16;
+const uint32_t CHUNK_RESOLUTION = 4096 / 2;
+const uint32_t GRID_SIZE = 2;
 const uint32_t SEED = 12345 * 5;
 
 const int MAX_FRAMES_IN_FLIGHT = 1;
@@ -203,8 +203,9 @@ private:
     // std::vector<uint32_t> farValues = std::vector<uint32_t>(0);
     // std::vector<uint32_t> octreeGPU = getOctreeGPUdata(root, amountOfNodes, farValues);
 
-    Camera camera = Camera(glm::vec3(10, 10, 712.5), glm::vec3(10, 20, 710.5), WIDTH, HEIGHT,
-                           glm::radians(30.0f));
+    // Camera camera = Camera(glm::vec3(10, 10, 712.5), glm::vec3(20, 20, 710.5), WIDTH, HEIGHT,
+    //                        glm::radians(30.0f));
+    Camera camera;
     float mouseX, mouseY;
     float mouseSensitivity = 0.05f;
     bool escPressed = false;
@@ -218,6 +219,12 @@ private:
     int frameCounter = 0;
 
     void initData() {
+        gridVoxelizeScene(gridValues, farValues, octreeGPU, camera, CHUNK_RESOLUTION, GRID_SIZE,
+                          "./assets/san-miguel-low-poly.obj", "./assets/",
+                          glm::vec3(29.5, 10.0, 8.6), glm::vec3(30.0, 11.0, 8.6),
+                          WIDTH, HEIGHT);
+        return;
+
         if (!useHeightmapData) {
             if (!loadObj("san-miguel-low-poly.obj", "./assets/", CHUNK_RESOLUTION, amountOfNodes, octreeGPU,
                          farValues)) {
