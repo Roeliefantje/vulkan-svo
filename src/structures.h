@@ -42,7 +42,7 @@ struct Camera {
     Camera(glm::vec3 pos, glm::vec3 lookAt, int screenWidth, int screenHeight, float fovRadian) : position(pos),
         fov(fovRadian) {
         direction = glm::normalize(lookAt - pos);
-        up = glm::vec3(0.0, 0.0, -1.0);
+        up = glm::vec3(0.0, 0.0, 1.0);
         resolution = glm::vec2(screenWidth, screenHeight);
 
         if (direction == up) {
@@ -73,14 +73,14 @@ struct OctreeNode {
 };
 
 struct GridInfo {
-    alignas(16) glm::vec3 cameraPosition;
+    alignas(16) glm::vec3 sunPosition;
     alignas(4) uint32_t resolution;
     alignas(4) uint32_t bufferSize;
     alignas(4) uint32_t gridSize;
 
     GridInfo(uint32_t res, uint32_t gridSize) : resolution(res), gridSize(gridSize) {
         bufferSize = 0;
-        cameraPosition = glm::vec3(100, 100, 5000);
+        sunPosition = glm::vec3(4000, 4000, 500);
     }
 };
 
