@@ -14,10 +14,12 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-
-struct UniformBufferObject {
-    float deltaTime = 1.0f;
+struct DebugValues {
+    alignas(4) uint32_t totalSteps;
+    alignas(4) uint32_t maxSteps;
+    uint32_t pad[2];
 };
+
 
 struct Chunk {
     uint32_t resolution;
@@ -113,25 +115,6 @@ struct Vertex {
     }
 };
 
-const uint32_t VOXEL_COUNT = 8000000;
-
-
-struct Grid {
-    GridInfo gridInfo;
-    std::vector<int32_t> data;
-
-    Grid(uint32_t w, uint32_t h, uint32_t d) : gridInfo(w, 1), data(w * d * h) {
-        //Do stuff with data
-        std::default_random_engine rndEngine((unsigned) time(nullptr));
-        // std::uniform_real_distribution<float> rndDist(0.0f, 1.0f);
-        std::uniform_int_distribution<int> rndWidth(0, w - 1);
-        std::uniform_int_distribution<int> rndHeight(0, h - 1);
-        std::uniform_int_distribution<int> rndDepth(0, d - 1);
-
-        std::cout << "Finished making grid" << std::endl;
-    }
-};
-
 //Key make thing for sparseGrid
 inline uint64_t make_key(uint16_t x, uint16_t y, uint16_t z) {
     return (static_cast<uint64_t>(x) << 32) |
@@ -197,10 +180,6 @@ uint32_t addChildren(std::shared_ptr<OctreeNode> node, std::vector<uint32_t> *da
 std::vector<uint32_t> getOctreeGPUdata(std::shared_ptr<OctreeNode> rootNode, uint32_t nodesAmount,
                                        std::vector<uint32_t> &farValues) {
     std::cout << "Nodes amount: " << nodesAmount << std::endl;
-    // if (nodesAmount > 0xFFFFFF) {
-    //     std::cerr << nodesAmount << " exceeds maximum allowed nodes of " << 0xFFFFFF << std::endl;
-    //     throw std::runtime_error("Index exceeds maximum allowed value!");
-    // }
     auto data = std::vector<uint32_t>(nodesAmount);
     uint32_t index = 1;
     data[0] = addChildren(rootNode, &data, &index, 0, farValues);
@@ -217,29 +196,6 @@ void addOctreeGPUdata(std::vector<uint32_t> &gpuData, std::shared_ptr<OctreeNode
     uint32_t index = startIndex + 1;
 
     gpuData[startIndex] = addChildren(rootNode, &gpuData, &index, startIndex, farValues);
-}
-
-
-int constructLeafNodes(Grid *grid, std::unordered_map<uint64_t, std::shared_ptr<OctreeNode> > *sparseGrid) {
-    uint32_t count = 0;
-    auto leafNode = std::make_shared<OctreeNode>();
-    sparseGrid->reserve(VOXEL_COUNT);
-    for (size_t z = 0; z < grid->gridInfo.resolution; z++) {
-        for (size_t y = 0; y < grid->gridInfo.resolution; y++) {
-            for (size_t x = 0; x < grid->gridInfo.resolution; x++) {
-                auto index = x + y * grid->gridInfo.resolution + z * grid->gridInfo.resolution * grid->gridInfo.
-                             resolution;
-                if (grid->data[index] == 1) {
-                    count++;
-                    // (*sparseGrid)[make_key(x, y, z)] = leafNode;
-                    (*sparseGrid)[make_key(x, y, z)] = std::make_shared<OctreeNode>();
-                }
-            }
-        }
-    }
-
-    std::cout << "Made " << count << "leafnodes for first level sparseGrid" << std::endl;
-    return count;
 }
 
 void checkChildren(uint8_t *childMask, std::array<std::shared_ptr<OctreeNode>, 8> *children,
@@ -308,48 +264,5 @@ inline bool childrenSolid(std::array<std::shared_ptr<OctreeNode>, 8> *children) 
     }
     return true;
 }
-
-std::shared_ptr<OctreeNode> constructOctree(Grid *grid, uint32_t &nodeCount) {
-    if (!isPowerOfTwo(grid->gridInfo.resolution)) {
-        throw std::runtime_error("Grid for octree construction is not a power of 2 or not square!");
-    }
-    uint32_t grid_size = grid->gridInfo.resolution;
-
-    std::unordered_map<uint64_t, std::shared_ptr<OctreeNode> > sparseGrid;
-    uint32_t count = constructLeafNodes(grid, &sparseGrid);
-    auto leafNode = std::make_shared<OctreeNode>();
-
-    while (grid_size > 1) {
-        std::unordered_map<uint64_t, std::shared_ptr<OctreeNode> > newSparseGrid;
-        newSparseGrid.reserve(sparseGrid.size() / 8);
-        for (size_t z = 0; z < grid_size; z += 2) {
-            std::cout << "Z: " << z << " Grid size: " << grid_size << std::endl;
-            for (size_t y = 0; y < grid_size; y += 2) {
-                for (size_t x = 0; x < grid_size; x += 2) {
-                    uint8_t childMask = 0;
-                    auto children = std::array<std::shared_ptr<OctreeNode>, 8>();
-                    checkChildren(&childMask, &children, &sparseGrid, x, y, z);
-                    auto key = make_key(x / 2, y / 2, z / 2);
-
-                    if (childMask != 0) {
-                        count++;
-                        newSparseGrid[key] = (childMask == 0b11111111 && childrenSolid(&children))
-                                                 // ? leafNode
-                                                 ? std::make_shared<OctreeNode>()
-                                                 : std::make_shared<OctreeNode>(childMask, children);
-                    }
-                }
-            }
-        }
-
-        sparseGrid = newSparseGrid;
-        grid_size /= 2;
-        std::cout << "Made octree level with size: " << grid_size << std::endl;
-    }
-    std::cout << "Total nodes: " << count << std::endl;
-    nodeCount = count;
-    return sparseGrid[make_key(0, 0, 0)];
-}
-
 
 #endif //STRUCTURES_H

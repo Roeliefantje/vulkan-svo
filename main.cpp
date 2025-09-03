@@ -32,8 +32,10 @@ const uint32_t HEIGHT = 1080;
 const float X_GROUPSIZE = 16;
 const float Y_GROUPSIZE = 16;
 
+#define SHADERDEBUG 1
+
 const uint32_t CHUNK_RESOLUTION = 1024;
-const uint32_t GRID_SIZE = 4;
+const uint32_t GRID_SIZE = 1;
 const uint32_t SEED = 12345 * 5;
 
 const int MAX_FRAMES_IN_FLIGHT = 1;
@@ -47,6 +49,7 @@ const std::vector<const char *> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
     VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME
 };
+
 
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
@@ -147,9 +150,11 @@ private:
     std::vector<std::vector<VkBuffer> > shaderStorageBuffers;
     std::vector<VkBuffer> farValuesSBuffers;
     std::vector<VkBuffer> gridBuffers;
+    std::vector<VkBuffer> debugBuffers;
     std::vector<std::vector<VkDeviceMemory> > shaderStorageBuffersMemory;
     std::vector<VkDeviceMemory> farValuesSBuffersMemory;
     std::vector<VkDeviceMemory> gridBuffersMemory;
+    std::vector<VkDeviceMemory> debugBuffersMemory;
     //Add the other stuff
 
 
@@ -217,6 +222,10 @@ private:
 
     double lastTime = 0.0f;
     int frameCounter = 0;
+
+    //Debug stuff
+    uint32_t totalSteps;
+    uint32_t maxSteps;
 
     void initData() {
         // gridVoxelizeScene(gridValues, farValues, octreeGPU, camera, CHUNK_RESOLUTION, GRID_SIZE,
@@ -323,6 +332,10 @@ private:
             double elapsed = currentTime - lastPrint;
             if (elapsed >= 1.0) {
                 std::cout << "FPS: " << (frameCounter / elapsed) << "\n";
+#if SHADERDEBUG
+                std::cout << "Average Steps per ray: " << (totalSteps / (float) (WIDTH * HEIGHT)) << "\n";
+                std::cout << "Max Steps per ray: " << maxSteps << "\n";
+#endif
                 frameCounter = 0;
                 lastPrint = currentTime;
             }
@@ -828,7 +841,7 @@ private:
     }
 
     void createComputeDescriptorSetLayout() {
-        std::array<VkDescriptorSetLayoutBinding, 6> layoutBindings{};
+        std::array<VkDescriptorSetLayoutBinding, 7> layoutBindings{};
         layoutBindings[0].binding = 0;
         layoutBindings[0].descriptorCount = 1;
         layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -860,15 +873,21 @@ private:
         layoutBindings[4].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
         layoutBindings[5].binding = 5;
-        layoutBindings[5].descriptorCount = MAX_VOXEL_BUFFERS;
+        layoutBindings[5].descriptorCount = 1;
         layoutBindings[5].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         layoutBindings[5].pImmutableSamplers = nullptr;
         layoutBindings[5].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
+        layoutBindings[6].binding = 6;
+        layoutBindings[6].descriptorCount = MAX_VOXEL_BUFFERS;
+        layoutBindings[6].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        layoutBindings[6].pImmutableSamplers = nullptr;
+        layoutBindings[6].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
 
         // Add per-binding flags
-        std::array<VkDescriptorBindingFlags, 6> bindingFlags{};
-        bindingFlags[5] = VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT |
+        std::array<VkDescriptorBindingFlags, 7> bindingFlags{};
+        bindingFlags[6] = VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT |
                           VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
 
         VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsInfo{};
@@ -1135,6 +1154,26 @@ private:
         // std::cout << "Buffer size: " << dataVec.size() * sizeof(uint32_t) << std::endl;
     }
 
+    void createDebugShaderStorageBuffer() {
+        VkDeviceSize bufferSize = sizeof(DebugValues);
+        debugBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+        debugBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            createBuffer(
+                bufferSize,
+                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, debugBuffers[i],
+                debugBuffersMemory[i]);
+
+            void *data;
+            DebugValues zero = {};
+            vkMapMemory(device, debugBuffersMemory[i], 0, bufferSize, 0, &data);
+            memcpy(data, &zero, (size_t) bufferSize);
+            vkUnmapMemory(device, debugBuffersMemory[i]);
+        }
+    }
+
     template<typename T>
     void createSingleShaderStorageBuffer(std::vector<T> &dataVec, std::vector<VkBuffer> &buffers,
                                          std::vector<VkDeviceMemory> &buffersMemory) {
@@ -1173,8 +1212,8 @@ private:
     void createShaderStorageBuffers() {
         createShaderStorageBuffer(octreeGPU, shaderStorageBuffers, shaderStorageBuffersMemory);
         createSingleShaderStorageBuffer(farValues, farValuesSBuffers, farValuesSBuffersMemory);
-        //TODO!: CHANGE THIS farValues to gridVALUES!!
         createSingleShaderStorageBuffer(gridValues, gridBuffers, gridBuffersMemory);
+        createDebugShaderStorageBuffer();
     }
 
     void createUniformBuffers() {
@@ -1231,7 +1270,7 @@ private:
     }
 
     void createComputeDescriptorPool() {
-        std::array<VkDescriptorPoolSize, 6> poolSizes{};
+        std::array<VkDescriptorPoolSize, 7> poolSizes{};
         poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
@@ -1249,6 +1288,9 @@ private:
 
         poolSizes[5].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         poolSizes[5].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+
+        poolSizes[6].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        poolSizes[6].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -1402,7 +1444,7 @@ private:
             uniformBufferInfo.offset = 0;
             uniformBufferInfo.range = sizeof(GridInfo);
 
-            std::array<VkWriteDescriptorSet, 6> descriptorWrites{};
+            std::array<VkWriteDescriptorSet, 7> descriptorWrites{};
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[0].dstSet = computeDescriptorSets[i];
             descriptorWrites[0].dstBinding = 0;
@@ -1469,6 +1511,19 @@ private:
             descriptorWrites[4].descriptorCount = 1;
             descriptorWrites[4].pBufferInfo = &gridBufferInfo;
 
+            VkDescriptorBufferInfo debugBufferInfo{};
+            debugBufferInfo.buffer = debugBuffers[i];
+            debugBufferInfo.offset = 0;
+            debugBufferInfo.range = sizeof(DebugValues);
+
+            descriptorWrites[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[5].dstSet = computeDescriptorSets[i];
+            descriptorWrites[5].dstBinding = 5;
+            descriptorWrites[5].dstArrayElement = 0;
+            descriptorWrites[5].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            descriptorWrites[5].descriptorCount = 1;
+            descriptorWrites[5].pBufferInfo = &debugBufferInfo;
+
             std::vector<VkDescriptorBufferInfo> storageBufferInfos{};
             for (int j = 0; j < shaderStorageBuffers[i].size(); j++) {
                 VkBuffer *buffer = &shaderStorageBuffers[i][j];
@@ -1488,14 +1543,14 @@ private:
                 storageBufferInfos.push_back(info);
             }
 
-            descriptorWrites[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[5].dstSet = computeDescriptorSets[i];
-            descriptorWrites[5].dstBinding = 5;
-            descriptorWrites[5].dstArrayElement = 0;
-            descriptorWrites[5].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            descriptorWrites[5].descriptorCount = static_cast<uint32_t>(storageBufferInfos.size());
+            descriptorWrites[6].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[6].dstSet = computeDescriptorSets[i];
+            descriptorWrites[6].dstBinding = 6;
+            descriptorWrites[6].dstArrayElement = 0;
+            descriptorWrites[6].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            descriptorWrites[6].descriptorCount = static_cast<uint32_t>(storageBufferInfos.size());
             // descriptorWrites[5].pBufferInfo = &storageBufferInfoCurrentFrame;
-            descriptorWrites[5].pBufferInfo = storageBufferInfos.data();
+            descriptorWrites[6].pBufferInfo = storageBufferInfos.data();
 
 
             vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0,
@@ -1658,7 +1713,7 @@ private:
         }
     }
 
-    void recordComputeCommandBuffer(VkCommandBuffer commandBuffer) {
+    void recordComputeCommandBuffer(VkCommandBuffer commandBuffer, uint32_t current_frame) {
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
@@ -1670,6 +1725,37 @@ private:
 
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout, 0, 1,
                                 &computeDescriptorSets[currentFrame], 0, nullptr);
+#if SHADERDEBUG
+
+        vkCmdFillBuffer(commandBuffer, debugBuffers[current_frame], 0, VK_WHOLE_SIZE, 0);
+
+        // --- SYNCHRONIZATION BARRIER ---
+        VkBufferMemoryBarrier bufferBarrier{};
+        bufferBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        // No ownership transfer
+        bufferBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        bufferBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+        bufferBarrier.buffer = debugBuffers[current_frame];
+        bufferBarrier.offset = 0;
+        bufferBarrier.size = VK_WHOLE_SIZE;
+
+        // Source: The fill operation is a transfer write
+        bufferBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        // Destination: The compute shader will read from it
+        bufferBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+        vkCmdPipelineBarrier(
+            commandBuffer,
+            VK_PIPELINE_STAGE_TRANSFER_BIT, // Producer: vkCmdFillBuffer happens here
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, // Consumer: vkCmdDispatch shaders run here
+            0, // Dependency flags
+            0, nullptr, // Memory barriers
+            1, &bufferBarrier, // Buffer memory barriers
+            0, nullptr // Image memory barriers
+        );
+        // --- END BARRIER ---
+#endif
 
         vkCmdDispatch(commandBuffer, std::ceil(WIDTH / X_GROUPSIZE), std::ceil(HEIGHT / Y_GROUPSIZE), 1);
 
@@ -1771,11 +1857,20 @@ private:
         vkWaitForFences(device, 1, &computeInFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
         updateUniformCameraBuffer();
+#if SHADERDEBUG
+        // Safe to map now
+        void *data;
+        vkMapMemory(device, debugBuffersMemory[currentFrame], 0, sizeof(DebugValues), 0, &data);
+        auto *stats = reinterpret_cast<DebugValues *>(data);
+        totalSteps = stats->totalSteps;
+        maxSteps = stats->maxSteps;
+        vkUnmapMemory(device, debugBuffersMemory[currentFrame]);
+#endif
 
         vkResetFences(device, 1, &computeInFlightFences[currentFrame]);
 
         vkResetCommandBuffer(computeCommandBuffers[currentFrame], /*VkCommandBufferResetFlagBits*/ 0);
-        recordComputeCommandBuffer(computeCommandBuffers[currentFrame]);
+        recordComputeCommandBuffer(computeCommandBuffers[currentFrame], currentFrame);
 
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &computeCommandBuffers[currentFrame];
@@ -1800,6 +1895,8 @@ private:
             throw std::runtime_error("failed to acquire swap chain image!");
         }
 
+
+        //Reset compute fence
         vkResetFences(device, 1, &inFlightFences[currentFrame]);
 
         vkResetCommandBuffer(commandBuffers[currentFrame], /*VkCommandBufferResetFlagBits*/ 0);
