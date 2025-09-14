@@ -34,7 +34,7 @@ const float Y_GROUPSIZE = 16;
 
 #define SHADERDEBUG 1
 
-const uint32_t CHUNK_RESOLUTION = 1024;
+const uint32_t CHUNK_RESOLUTION = 1024 * 4;
 const uint32_t GRID_SIZE = 6;
 const uint32_t SEED = 12345 * 5;
 

@@ -328,14 +328,12 @@ void gridVoxelizeScene(std::vector<Chunk> &gridValues, std::vector<uint32_t> &fa
 
             if (!loadChunk(directory, maxChunkResolution, octreeResolution, glm::ivec2(x, y), nodeAmount, octreeGPU,
                            farValues)) {
-                std::cout << "Chunk not yet created, loading the chunk" << std::endl;
+                std::cout << "Chunk not yet created, generating the chunk" << std::endl;
                 auto node = createNode(aabb, triangles, allIndices, textures, nodeAmount, maxDepth, 0);
-                std::cout << "Finished creating nodes " << triangles.size() << std::endl;
-
+                // std::cout << "Finished creating nodes " << triangles.size() << std::endl;
+                auto chunkFarValues = std::vector<uint32_t>();
+                auto chunkOctreeGPU = std::vector<uint32_t>();
                 if (node) {
-                    auto chunkFarValues = std::vector<uint32_t>();
-                    auto chunkOctreeGPU = std::vector<uint32_t>();
-
                     auto shared_node = std::make_shared<OctreeNode>(*node);
                     addOctreeGPUdata(chunkOctreeGPU, shared_node, nodeAmount, chunkFarValues);
                     if (!saveChunk(directory, maxChunkResolution, octreeResolution, glm::ivec2(x, y), nodeAmount,
@@ -345,12 +343,18 @@ void gridVoxelizeScene(std::vector<Chunk> &gridValues, std::vector<uint32_t> &fa
 
                     octreeGPU.insert(octreeGPU.end(), chunkOctreeGPU.begin(), chunkOctreeGPU.end());
                     farValues.insert(farValues.end(), chunkFarValues.begin(), chunkFarValues.end());
+                } else {
+                    rootNodeIndex = 0;
+                    saveChunk(directory, maxChunkResolution, octreeResolution, glm::ivec2(x, y), nodeAmount,
+                              chunkOctreeGPU, chunkFarValues);
                 }
             }
+
 
             gridValues[y * gridSize + x] = Chunk{farValuesOffset, rootNodeIndex};
         }
     }
+    std::cout << "Total far values: " << farValues.size() << std::endl;
 
     for (const auto &[key, value]: textures) {
         stbi_image_free(value.imageData);

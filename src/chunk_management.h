@@ -27,7 +27,6 @@ bool saveChunk(const std::string &scenePath, uint32_t max_resolution, uint32_t s
 
         std::ofstream outFile(filePath, std::ios::binary);
         if (!outFile) return false;
-
         // Write metadata
         outFile.write(reinterpret_cast<char *>(&nodeCount), sizeof(nodeCount));
         //Write Vector sizes to interpret reset of file

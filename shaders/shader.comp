@@ -76,7 +76,7 @@ Node convertNode(uint value, uint parentIndex, uint farValuesOffset){
     node.childMask = (value >> 24) & 0xFFu;
     bool isFar = (value & (1u << 23)) != 0u;
     uint childIndex = value & 0x007FFFFFu;
-    node.index = (isFar ? farValues[childIndex] : childIndex) + parentIndex;
+    node.index = (isFar ? farValues[farValuesOffset + childIndex] : childIndex) + parentIndex;
     node.color = value & 0x00FFFFFFu;;
 
     return node;
@@ -234,7 +234,7 @@ void main()
                     rdsign = sign(rayDir);
                     irdsign = ivec3(rdsign);
                     ird = 1.0/max(abs(rayDir), 0.001);
-                    break;
+//                    break;
                 } else {
                     intensity = 0.2f;
                     break;
