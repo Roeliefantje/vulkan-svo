@@ -11,7 +11,7 @@ struct Particle {
 };
 
 struct Chunk {
-    uint resolution;
+    uint farValuesOffset;
     uint rootNodeIndex;
 };
 
@@ -71,23 +71,23 @@ struct StackInfo {
 };
 
 
-Node convertNode(uint value, uint parentIndex){
+Node convertNode(uint value, uint parentIndex, uint farValuesOffset){
     Node node;
     node.childMask = (value >> 24) & 0xFFu;
     bool isFar = (value & (1u << 23)) != 0u;
     uint childIndex = value & 0x007FFFFFu;
     node.index = (isFar ? farValues[childIndex] : childIndex) + parentIndex;
-    node.color = value & 0x00FFFFFFu;; //Todo! also use the far bit so red can have 16 values as well.
+    node.color = value & 0x00FFFFFFu;;
 
     return node;
 }
 
-Node getNode(uint index) {
+Node getNode(uint index, uint farValuesOffset) {
     uint chunkIndex = index / ubo.bufferSize;
     uint svoIndex = index % ubo.bufferSize;
     uint value = voxelSSBOs[chunkIndex].svo[svoIndex];
 
-    return convertNode(value, index);
+    return convertNode(value, index, farValuesOffset);
 }
 
 vec3 voxel(vec3 ro, vec3 rd, vec3 ird, float size)
@@ -132,7 +132,8 @@ void main()
     int level = 0;
     Chunk currentChunk = grid[gridCoord.y * ubo.gridSize + gridCoord.x];
     Node stack[MAX_DEPTH];
-    Node currentNode = getNode(currentChunk.rootNodeIndex);
+    Node currentNode = getNode(currentChunk.rootNodeIndex, 0);
+    uint farValueOffset = currentChunk.farValuesOffset;
     Node empty;
     empty.index = 0;
 
@@ -171,7 +172,8 @@ void main()
             fro = ivec3(0);
 
             currentChunk = grid[gridCoord.y * ubo.gridSize + gridCoord.x];
-            currentNode = getNode(currentChunk.rootNodeIndex);
+            currentNode = getNode(currentChunk.rootNodeIndex, 0);
+            farValueOffset = currentChunk.farValuesOffset;
 
             if (any(greaterThanEqual(gridCoord, ivec3(ubo.gridSize, ubo.gridSize, 1))) || any(lessThan(gridCoord, ivec3(0)))) {
                 break;
@@ -201,7 +203,7 @@ void main()
             int childIndex = childCoord.z * 4 + childCoord.y * 2 + childCoord.x;
             int childOffset = bitCount(stack[level - 1].childMask >> (8 - childIndex));
             uint parentIndex = stack[level - 1].index + childOffset;
-            currentNode = (stack[level - 1].childMask >> (7 - childIndex) & 1u) == 1u ? getNode(parentIndex) : empty;
+            currentNode = (stack[level - 1].childMask >> (7 - childIndex) & 1u) == 1u ? getNode(parentIndex, farValueOffset) : empty;
 
             //Fetch the new voxCoord and see if it is still on a border
             // +0.5 centers the voxel range so borders lie at half-integers.
@@ -232,6 +234,7 @@ void main()
                     rdsign = sign(rayDir);
                     irdsign = ivec3(rdsign);
                     ird = 1.0/max(abs(rayDir), 0.001);
+                    break;
                 } else {
                     intensity = 0.2f;
                     break;
@@ -251,7 +254,7 @@ void main()
                 int childIndex = imask2.z * 4 + imask2.y * 2 + imask2.x;
                 int childOffset = bitCount(currentNode.childMask >> (8 - childIndex));
                 uint parentIndex = currentNode.index + childOffset;
-                currentNode = (currentNode.childMask >> (7 - childIndex) & 1u) == 1u ? getNode(parentIndex) : empty;
+                currentNode = (currentNode.childMask >> (7 - childIndex) & 1u) == 1u ? getNode(parentIndex, farValueOffset) : empty;
 
                 fro += imask2 * int(size);
                 lro -= mask2 * size;
@@ -280,7 +283,7 @@ void main()
                 int childIndex = childCoord.z * 4 + childCoord.y * 2 + childCoord.x;
                 int childOffset = bitCount(stack[level - 1].childMask >> (8 - childIndex));
                 uint parentIndex = stack[level - 1].index + childOffset;
-                currentNode = (stack[level - 1].childMask >> (7 - childIndex) & 1u) == 1u ? getNode(parentIndex) : empty;
+                currentNode = (stack[level - 1].childMask >> (7 - childIndex) & 1u) == 1u ? getNode(parentIndex, farValueOffset) : empty;
 
 
                 exitoct = (floor(newfro / size * 0.5 + 0.25)!=floor(fro / size * 0.5 + 0.25));
@@ -292,13 +295,8 @@ void main()
 
     }
 
-    if (steps == MAX_RAY_STEPS) {
-        color = vec3(1.0, 0.0, 0.0);
-        intensity = 1.0;
-    }
-
     #ifdef SHOWSTEPS
-        color += vec3(steps / float(MAX_RAY_STEPS), 0.0, 0.0);
+        color += vec3(steps / float(200.0), 0.0, 0.0);
         intensity = 1.0;
     #endif
 

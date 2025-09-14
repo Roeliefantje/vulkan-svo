@@ -20,14 +20,15 @@ struct DebugValues {
     uint32_t pad[2];
 };
 
-
+// TODO: Add ChunkFarValuesOffset and remove resolution :)
 struct Chunk {
-    uint32_t resolution;
+    uint32_t ChunkFarValuesOffset;
     uint32_t rootNodeIndex;
 
     Chunk() = default;
 
-    Chunk(uint32_t res, uint32_t rootIndex) : resolution(res), rootNodeIndex(rootIndex) {
+    Chunk(uint32_t chunkFarValuesOffset, uint32_t rootIndex) : ChunkFarValuesOffset(chunkFarValuesOffset),
+                                                               rootNodeIndex(rootIndex) {
     };
 };
 

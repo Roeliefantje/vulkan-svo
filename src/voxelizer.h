@@ -13,6 +13,7 @@
 #include "tiny_obj_loader.h"
 #include "tribox.h"
 #include "stb_image.h"
+#include "chunk_management.h"
 
 #ifndef VOXELIZER_H
 #define VOXELIZER_H
@@ -279,6 +280,7 @@ int fetchresolution(uint32_t maxChunkResolution, float distance) {
     return std::max(maxChunkResolution >> lod_reduction, 64u);
 }
 
+//TODO: Rewrite to save and load chunks
 void gridVoxelizeScene(std::vector<Chunk> &gridValues, std::vector<uint32_t> &farValues,
                        std::vector<uint32_t> &octreeGPU, Camera &camera,
                        uint32_t maxChunkResolution, uint32_t gridSize, std::string inputFile, std::string path,
@@ -302,15 +304,17 @@ void gridVoxelizeScene(std::vector<Chunk> &gridValues, std::vector<uint32_t> &fa
     camera = Camera(scaledCameraPos, cameraLookAt * scale, screenWidth, screenHeight, glm::radians(30.0f));
     std::map<std::string, LoadedTexture> textures;
 
+    auto cameraChunkCoords = glm::ivec2(floor(scaledCameraPos.x / maxChunkResolution),
+                                        floor(scaledCameraPos.y / maxChunkResolution));
+
+    std::filesystem::path filePath{inputFile};
+    auto directory = std::format("{}_{}", (filePath.parent_path() / filePath.stem()).string(), gridSize);
+
     for (int y = 0; y < gridSize; y++) {
         for (int x = 0; x < gridSize; x++) {
             auto aabb = Aabb{};
-
-            auto midPoint = glm::vec2((x + 0.5) * maxChunkResolution, (y + 0.5) * maxChunkResolution);
-            //Todo: Use Chunk Distance instead of actual distance
-            float dist = glm::distance(midPoint, glm::vec2(scaledCameraPos.x, scaledCameraPos.y));
-            std::cout << "Distance: " << dist / scale << std::endl;
-            int octreeResolution = fetchresolution(maxChunkResolution, dist / scale);
+            int dist = std::max(abs(y - cameraChunkCoords.y), abs(x - cameraChunkCoords.x));
+            int octreeResolution = maxChunkResolution >> dist;
             std::cout << "Octree resolution: " << octreeResolution << std::endl;
 
 
@@ -319,16 +323,32 @@ void gridVoxelizeScene(std::vector<Chunk> &gridValues, std::vector<uint32_t> &fa
             uint32_t maxDepth = std::ceil(std::log2(octreeResolution));
 
             uint32_t nodeAmount = 0;
-            std::cout << "Creating nodes" << std::endl;
-            auto node = createNode(aabb, triangles, allIndices, textures, nodeAmount, maxDepth, 0);
-            std::cout << "Finished creating nodes " << triangles.size() << std::endl;
+            uint32_t farValuesOffset = farValues.size();
+            uint32_t rootNodeIndex = octreeGPU.size();
 
-            if (node) {
-                uint32_t rootNodeIndex = octreeGPU.size();
-                auto shared_node = std::make_shared<OctreeNode>(*node);
-                addOctreeGPUdata(octreeGPU, shared_node, nodeAmount, farValues);
-                gridValues[y * gridSize + x] = Chunk{maxChunkResolution, rootNodeIndex};
+            if (!loadChunk(directory, maxChunkResolution, octreeResolution, glm::ivec2(x, y), nodeAmount, octreeGPU,
+                           farValues)) {
+                std::cout << "Chunk not yet created, loading the chunk" << std::endl;
+                auto node = createNode(aabb, triangles, allIndices, textures, nodeAmount, maxDepth, 0);
+                std::cout << "Finished creating nodes " << triangles.size() << std::endl;
+
+                if (node) {
+                    auto chunkFarValues = std::vector<uint32_t>();
+                    auto chunkOctreeGPU = std::vector<uint32_t>();
+
+                    auto shared_node = std::make_shared<OctreeNode>(*node);
+                    addOctreeGPUdata(chunkOctreeGPU, shared_node, nodeAmount, chunkFarValues);
+                    if (!saveChunk(directory, maxChunkResolution, octreeResolution, glm::ivec2(x, y), nodeAmount,
+                                   chunkOctreeGPU, chunkFarValues)) {
+                        std::cout << "Something went wrong storing Chunk data" << std::endl;
+                    }
+
+                    octreeGPU.insert(octreeGPU.end(), chunkOctreeGPU.begin(), chunkOctreeGPU.end());
+                    farValues.insert(farValues.end(), chunkFarValues.begin(), chunkFarValues.end());
+                }
             }
+
+            gridValues[y * gridSize + x] = Chunk{farValuesOffset, rootNodeIndex};
         }
     }
 
@@ -365,75 +385,6 @@ OctreeNode voxelizeObj(std::string inputFile, std::string path, uint32_t svo_res
     }
 
     return OctreeNode();
-}
-
-bool saveObj(const std::string &inputFile, const std::string &path, uint32_t svo_resolution, uint32_t &nodeCount,
-             std::vector<uint32_t> &gpuData, std::vector<uint32_t> &farValues) {
-    try {
-        namespace fs = std::filesystem;
-
-        fs::path dirPath(path);
-        fs::path inputPath = dirPath / inputFile;
-        std::string fileName = inputPath.stem().string() + "_res" + std::to_string(svo_resolution) + ".svo";
-        fs::path outFilePath = inputPath.parent_path() / fileName;
-
-        std::ofstream outFile(outFilePath, std::ios::binary);
-        if (!outFile) return false;
-
-        // Write metadata
-        // outFile.write(reinterpret_cast<char *>(&svo_resolution), sizeof(svo_resolution));
-        outFile.write(reinterpret_cast<char *>(&nodeCount), sizeof(nodeCount));
-
-        // Write vector sizes
-        uint32_t gpuDataSize = gpuData.size();
-        uint32_t farValuesSize = farValues.size();
-        outFile.write(reinterpret_cast<char *>(&gpuDataSize), sizeof(gpuDataSize));
-        outFile.write(reinterpret_cast<char *>(&farValuesSize), sizeof(farValuesSize));
-
-        // Write vectors
-        outFile.write(reinterpret_cast<char *>(gpuData.data()), gpuDataSize * sizeof(uint32_t));
-        outFile.write(reinterpret_cast<char *>(farValues.data()), farValuesSize * sizeof(uint32_t));
-
-        outFile.close();
-        return true;
-    } catch (...) {
-        return false;
-    }
-}
-
-
-bool loadObj(const std::string &inputFile, const std::string &path, uint32_t svo_resolution, uint32_t &nodeCount,
-             std::vector<uint32_t> &gpuData, std::vector<uint32_t> &farValues) {
-    try {
-        namespace fs = std::filesystem;
-
-        fs::path dirPath(path);
-        fs::path inputPath = dirPath / inputFile;
-        std::string fileName = inputPath.stem().string() + "_res" + std::to_string(svo_resolution) + ".svo";
-        fs::path outFilePath = inputPath.parent_path() / fileName;
-        std::ifstream inFile(outFilePath, std::ios::binary);
-        if (!inFile) return false;
-
-        // Read metadata
-        // inFile.read(reinterpret_cast<char *>(&svo_resolution), sizeof(svo_resolution));
-        inFile.read(reinterpret_cast<char *>(&nodeCount), sizeof(nodeCount));
-
-        // Read vector sizes
-        uint32_t gpuDataSize, farValuesSize;
-        inFile.read(reinterpret_cast<char *>(&gpuDataSize), sizeof(gpuDataSize));
-        inFile.read(reinterpret_cast<char *>(&farValuesSize), sizeof(farValuesSize));
-
-        // Read vectors
-        gpuData.resize(gpuDataSize);
-        farValues.resize(farValuesSize);
-        inFile.read(reinterpret_cast<char *>(gpuData.data()), gpuDataSize * sizeof(uint32_t));
-        inFile.read(reinterpret_cast<char *>(farValues.data()), farValuesSize * sizeof(uint32_t));
-
-        inFile.close();
-        return true;
-    } catch (...) {
-        return false;
-    }
 }
 
 

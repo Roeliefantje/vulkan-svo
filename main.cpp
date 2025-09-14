@@ -35,7 +35,7 @@ const float Y_GROUPSIZE = 16;
 #define SHADERDEBUG 1
 
 const uint32_t CHUNK_RESOLUTION = 1024;
-const uint32_t GRID_SIZE = 1;
+const uint32_t GRID_SIZE = 6;
 const uint32_t SEED = 12345 * 5;
 
 const int MAX_FRAMES_IN_FLIGHT = 1;
@@ -228,32 +228,32 @@ private:
     uint32_t maxSteps;
 
     void initData() {
-        // gridVoxelizeScene(gridValues, farValues, octreeGPU, camera, CHUNK_RESOLUTION, GRID_SIZE,
-        //                   "./assets/san-miguel-low-poly.obj", "./assets/",
-        //                   glm::vec3(29.5, 10.0, 8.6), glm::vec3(30.0, 11.0, 8.6),
-        //                   WIDTH, HEIGHT);
-        // return;
+        gridVoxelizeScene(gridValues, farValues, octreeGPU, camera, CHUNK_RESOLUTION, GRID_SIZE,
+                          "./assets/san-miguel-low-poly.obj", "./assets/",
+                          glm::vec3(29.5, 10.0, 8.6), glm::vec3(30.0, 11.0, 8.6),
+                          WIDTH, HEIGHT);
+        return;
 
-        if (!useHeightmapData) {
-            if (!loadObj("san-miguel-low-poly.obj", "./assets/", CHUNK_RESOLUTION, amountOfNodes, octreeGPU,
-                         farValues)) {
-                std::cout << "File not found, voxelizing" << std::endl;
-                auto root = std::make_shared<OctreeNode>(voxelizeObj("./assets/san-miguel-low-poly.obj", "./assets/",
-                                                                     CHUNK_RESOLUTION,
-                                                                     amountOfNodes));
-                // auto root = std::make_shared<OctreeNode>(createOctree(CHUNK_RESOLUTION, SEED, amountOfNodes));
-                farValues = std::vector<uint32_t>(0);
-                octreeGPU = getOctreeGPUdata(root, amountOfNodes, farValues);
-                saveObj("san-miguel-low-poly.obj", "./assets/", CHUNK_RESOLUTION, amountOfNodes, octreeGPU, farValues);
-            } else {
-                std::cout << "File found, using loaded data" << std::endl;
-            }
-        } else {
-            // auto root = std::make_shared<OctreeNode>(createOctree(CHUNK_RESOLUTION, SEED, amountOfNodes));
-            // farValues = std::vector<uint32_t>(0);
-            // octreeGPU = getOctreeGPUdata(root, amountOfNodes, farValues);
-            constructGrid(gridValues, farValues, octreeGPU, CHUNK_RESOLUTION, GRID_SIZE, SEED);
-        }
+        // if (!useHeightmapData) {
+        //     if (!loadObj("san-miguel-low-poly.obj", "./assets/", CHUNK_RESOLUTION, amountOfNodes, octreeGPU,
+        //                  farValues)) {
+        //         std::cout << "File not found, voxelizing" << std::endl;
+        //         auto root = std::make_shared<OctreeNode>(voxelizeObj("./assets/san-miguel-low-poly.obj", "./assets/",
+        //                                                              CHUNK_RESOLUTION,
+        //                                                              amountOfNodes));
+        //         // auto root = std::make_shared<OctreeNode>(createOctree(CHUNK_RESOLUTION, SEED, amountOfNodes));
+        //         farValues = std::vector<uint32_t>(0);
+        //         octreeGPU = getOctreeGPUdata(root, amountOfNodes, farValues);
+        //         saveObj("san-miguel-low-poly.obj", "./assets/", CHUNK_RESOLUTION, amountOfNodes, octreeGPU, farValues);
+        //     } else {
+        //         std::cout << "File found, using loaded data" << std::endl;
+        //     }
+        // } else {
+        //     // auto root = std::make_shared<OctreeNode>(createOctree(CHUNK_RESOLUTION, SEED, amountOfNodes));
+        //     // farValues = std::vector<uint32_t>(0);
+        //     // octreeGPU = getOctreeGPUdata(root, amountOfNodes, farValues);
+        //     constructGrid(gridValues, farValues, octreeGPU, CHUNK_RESOLUTION, GRID_SIZE, SEED);
+        // }
 
         // gridValues = std::vector<Chunk>(0);
         // gridValues.push_back(Chunk{});
