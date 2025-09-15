@@ -20,7 +20,21 @@ struct DebugValues {
     uint32_t pad[2];
 };
 
-// TODO: Add ChunkFarValuesOffset and remove resolution :)
+//CPU and GPU Chunk struct, cpu has some more values to allow management by the worker thread
+struct CpuChunk {
+    uint32_t ChunkFarValuesOffset;
+    uint32_t rootNodeIndex;
+    uint32_t resolution;
+    bool loading = false;
+
+    CpuChunk() = default;
+
+    CpuChunk(uint32_t chunkFarValuesOffset, uint32_t rootIndex, uint32_t resolution) : ChunkFarValuesOffset(
+            chunkFarValuesOffset),
+        rootNodeIndex(rootIndex), resolution(resolution) {
+    };
+};
+
 struct Chunk {
     uint32_t ChunkFarValuesOffset;
     uint32_t rootNodeIndex;

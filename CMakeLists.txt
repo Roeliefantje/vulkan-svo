@@ -13,7 +13,8 @@ add_executable(clion_vulkan main.cpp
         src/svo_generation.h
         src/voxelizer.h
         include/tribox.h
-        src/chunk_management.h)
+        src/chunk_management.h
+        src/data_manage_threat.h)
 
 target_include_directories(clion_vulkan PRIVATE ${Vulkan_INCLUDE_DIRS})
 target_include_directories(clion_vulkan PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)

@@ -25,14 +25,19 @@
 #include "src/structures.h"
 #include "src/svo_generation.h"
 #include "src/voxelizer.h"
+#include "src/data_manage_threat.h"
 
 const bool useHeightmapData = true;
 const uint32_t WIDTH = 1920;
 const uint32_t HEIGHT = 1080;
 const float X_GROUPSIZE = 16;
 const float Y_GROUPSIZE = 16;
+const uint32_t GIGABYTE = 1073741824;
+const VkDeviceSize STAGING_SIZE = GIGABYTE;
 
 #define SHADERDEBUG 1
+// #define PRELOAD_DATA
+
 
 const uint32_t CHUNK_RESOLUTION = 1024 * 4;
 const uint32_t GRID_SIZE = 6;
@@ -80,9 +85,11 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
 struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsAndComputeFamily;
     std::optional<uint32_t> presentFamily;
+    std::optional<uint32_t> transferFamily;
 
     bool isComplete() {
-        return graphicsAndComputeFamily.has_value() && presentFamily.has_value();
+        return graphicsAndComputeFamily.has_value() && presentFamily.has_value() &&
+               transferFamily.has_value();
     }
 };
 
@@ -111,8 +118,10 @@ public:
         initData();
         initWindow();
         initVulkan();
+        initThreads();
         mainLoop();
         cleanup();
+        free(dmThreat);
     }
 
 private:
@@ -125,6 +134,7 @@ private:
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     VkDevice device;
 
+    VkQueue transferQueue;
     VkQueue graphicsQueue;
     VkQueue computeQueue;
     VkQueue presentQueue;
@@ -155,6 +165,8 @@ private:
     std::vector<VkDeviceMemory> farValuesSBuffersMemory;
     std::vector<VkDeviceMemory> gridBuffersMemory;
     std::vector<VkDeviceMemory> debugBuffersMemory;
+    VkBuffer pStagingBuffer;
+    VkDeviceMemory pStagingBufferMemory;
     //Add the other stuff
 
 
@@ -192,21 +204,14 @@ private:
     std::vector<VkFence> computeInFlightFences;
     uint32_t currentFrame = 0;
     uint32_t maxBufferSize = 0;
-    // Grid grid = Grid(2048, 2048, 2048);
 
     // GridInfo gridInfo;
     GridInfo gridInfo = GridInfo(CHUNK_RESOLUTION, GRID_SIZE);
     uint32_t amountOfNodes = 0;
-    // std::shared_ptr<OctreeNode> root = constructOctree(&grid, amountOfNodes);
-    // std::shared_ptr<OctreeNode> root = std::make_shared<OctreeNode>(createOctree(CHUNK_RESOLUTION, SEED, amountOfNodes));
-    // std::shared_ptr<OctreeNode> root = std::make_shared<OctreeNode>(
-    //     voxelizeObj("./assets/san-miguel-low-poly.obj", "./assets/", CHUNK_RESOLUTION, amountOfNodes));
-    // std::shared_ptr<OctreeNode> root = std::make_shared<OctreeNode>(createHollowOctree(CHUNK_RESOLUTION, SEED, amountOfNodes));
     std::vector<uint32_t> farValues;
     std::vector<uint32_t> octreeGPU;
     std::vector<Chunk> gridValues;
-    // std::vector<uint32_t> farValues = std::vector<uint32_t>(0);
-    // std::vector<uint32_t> octreeGPU = getOctreeGPUdata(root, amountOfNodes, farValues);
+    std::vector<CpuChunk> cpuGridValues;
 
     Camera camera = Camera(glm::vec3(10, 10, 712.5), glm::vec3(20, 20, 710.5), WIDTH, HEIGHT,
                            glm::radians(30.0f));
@@ -227,36 +232,21 @@ private:
     uint32_t totalSteps;
     uint32_t maxSteps;
 
+    DataManageThreat *dmThreat;
+
+
     void initData() {
-        gridVoxelizeScene(gridValues, farValues, octreeGPU, camera, CHUNK_RESOLUTION, GRID_SIZE,
-                          "./assets/san-miguel-low-poly.obj", "./assets/",
-                          glm::vec3(29.5, 10.0, 8.6), glm::vec3(30.0, 11.0, 8.6),
-                          WIDTH, HEIGHT);
-        return;
-
-        // if (!useHeightmapData) {
-        //     if (!loadObj("san-miguel-low-poly.obj", "./assets/", CHUNK_RESOLUTION, amountOfNodes, octreeGPU,
-        //                  farValues)) {
-        //         std::cout << "File not found, voxelizing" << std::endl;
-        //         auto root = std::make_shared<OctreeNode>(voxelizeObj("./assets/san-miguel-low-poly.obj", "./assets/",
-        //                                                              CHUNK_RESOLUTION,
-        //                                                              amountOfNodes));
-        //         // auto root = std::make_shared<OctreeNode>(createOctree(CHUNK_RESOLUTION, SEED, amountOfNodes));
-        //         farValues = std::vector<uint32_t>(0);
-        //         octreeGPU = getOctreeGPUdata(root, amountOfNodes, farValues);
-        //         saveObj("san-miguel-low-poly.obj", "./assets/", CHUNK_RESOLUTION, amountOfNodes, octreeGPU, farValues);
-        //     } else {
-        //         std::cout << "File found, using loaded data" << std::endl;
-        //     }
-        // } else {
-        //     // auto root = std::make_shared<OctreeNode>(createOctree(CHUNK_RESOLUTION, SEED, amountOfNodes));
-        //     // farValues = std::vector<uint32_t>(0);
-        //     // octreeGPU = getOctreeGPUdata(root, amountOfNodes, farValues);
-        //     constructGrid(gridValues, farValues, octreeGPU, CHUNK_RESOLUTION, GRID_SIZE, SEED);
-        // }
-
-        // gridValues = std::vector<Chunk>(0);
-        // gridValues.push_back(Chunk{});
+#ifdef PRELOAD_DATA
+            gridVoxelizeScene(gridValues, farValues, octreeGPU, camera, CHUNK_RESOLUTION, GRID_SIZE,
+                              "./assets/san-miguel-low-poly.obj", "./assets/",
+                              glm::vec3(29.5, 10.0, 8.6), glm::vec3(30.0, 11.0, 8.6),
+                              WIDTH, HEIGHT);
+#else
+        gridValues = std::vector<Chunk>(GRID_SIZE * GRID_SIZE);
+        cpuGridValues = std::vector<CpuChunk>(GRID_SIZE * GRID_SIZE);
+        farValues = std::vector<uint32_t>(GIGABYTE / sizeof(uint32_t));
+        octreeGPU = std::vector<uint32_t>(GIGABYTE * 4 / sizeof(uint32_t));
+#endif
     }
 
     void initWindow() {
@@ -304,6 +294,7 @@ private:
         createFramebuffers();
         createCommandPool();
         createShaderStorageBuffers();
+        createStagingBuffer(STAGING_SIZE);
         createVertexBuffer();
         createIndexBuffer();
 
@@ -321,13 +312,17 @@ private:
         createSyncObjects();
     }
 
+    void initThreads() {
+        dmThreat = new DataManageThreat(pStagingBuffer, pStagingBufferMemory, transferQueue, CHUNK_RESOLUTION);
+    }
+
     void mainLoop() {
         double lastPrint = glfwGetTime();
         while (!glfwWindowShouldClose(window)) {
+            checkChunks(cpuGridValues, camera, CHUNK_RESOLUTION, *dmThreat);
             processInput();
             glfwPollEvents();
             drawFrame();
-            // We want to animate the particle system using the last frames time to get smooth, frame-rate independent animation
             double currentTime = glfwGetTime();
             double elapsed = currentTime - lastPrint;
             if (elapsed >= 1.0) {
@@ -622,9 +617,10 @@ private:
 
         std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
         std::set<uint32_t> uniqueQueueFamilies = {
-            indices.graphicsAndComputeFamily.value(), indices.presentFamily.value()
+            indices.graphicsAndComputeFamily.value(), indices.presentFamily.value(), indices.transferFamily.value()
         };
 
+        //Perhaps give transfer lower prio in case its the same queue family.
         float queuePriority = 1.0f;
         for (uint32_t queueFamily: uniqueQueueFamilies) {
             VkDeviceQueueCreateInfo queueCreateInfo{};
@@ -676,6 +672,7 @@ private:
         vkGetDeviceQueue(device, indices.graphicsAndComputeFamily.value(), 0, &graphicsQueue);
         vkGetDeviceQueue(device, indices.graphicsAndComputeFamily.value(), 0, &computeQueue);
         vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
+        vkGetDeviceQueue(device, indices.transferFamily.value(), 0, &transferQueue);
     }
 
     void getMaxBufferSize() {
@@ -1101,6 +1098,12 @@ private:
         if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
             throw std::runtime_error("failed to create graphics command pool!");
         }
+    }
+
+    void createStagingBuffer(VkDeviceSize size) {
+        createBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, pStagingBuffer,
+                     pStagingBufferMemory);
     }
 
     void createShaderStorageBuffer(std::vector<uint32_t> &dataVec, std::vector<std::vector<VkBuffer> > &buffers,
@@ -2080,6 +2083,12 @@ private:
 
             if (presentSupport) {
                 indices.presentFamily = i;
+            }
+
+            if ((queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT) &&
+                !(queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) &&
+                !(queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)) {
+                indices.transferFamily = i;
             }
 
             if (indices.isComplete()) {

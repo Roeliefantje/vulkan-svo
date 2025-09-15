@@ -1,15 +1,16 @@
 #pragma once
 
+
+#ifndef CHUNK_MANAGEMENT_H
+#define CHUNK_MANAGEMENT_H
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <format>
 
 
+#include "data_manage_threat.h"
 #include "structures.h"
-
-#ifndef CHUNK_MANAGEMENT_H
-#define CHUNK_MANAGEMENT_H
 
 bool saveChunk(const std::string &scenePath, uint32_t max_resolution, uint32_t svo_resolution, glm::ivec2 gridCoords,
                uint32_t &nodeCount,
@@ -88,75 +89,26 @@ bool loadChunk(const std::string &scenePath, uint32_t max_resolution, uint32_t s
     }
 }
 
-bool saveObj(const std::string &inputFile, const std::string &path, uint32_t svo_resolution, uint32_t &nodeCount,
-             std::vector<uint32_t> &gpuData, std::vector<uint32_t> &farValues) {
-    try {
-        namespace fs = std::filesystem;
 
-        fs::path dirPath(path);
-        fs::path inputPath = dirPath / inputFile;
-        std::string fileName = inputPath.stem().string() + "_res" + std::to_string(svo_resolution) + ".svo";
-        fs::path outFilePath = inputPath.parent_path() / fileName;
+//Check whether all currently loaded chunks are in the right resolution and queue them to be loaded if not
+void checkChunks(std::vector<CpuChunk> &chunks, Camera &camera, uint32_t maxChunkResolution,
+                 DataManageThreat &dmThreat) {
+    auto cameraChunkCoords = glm::ivec2(floor(camera.position.x / maxChunkResolution),
+                                        floor(camera.position.y / maxChunkResolution));
+    //TODO: Schedule so that the chunks around the camera are checked / scheduled first
+    uint32_t gridSize = sqrt(chunks.size());
+    for (int chunkY = 0; chunkY < gridSize; chunkY++) {
+        for (int chunkX = 0; chunkX < gridSize; chunkX++) {
+            int dist = std::max(abs(chunkY - cameraChunkCoords.y), abs(chunkX - cameraChunkCoords.x));
+            uint32_t octreeResolution = maxChunkResolution >> dist;
+            auto gridCoord = glm::ivec2{chunkX, chunkY};
 
-        std::ofstream outFile(outFilePath, std::ios::binary);
-        if (!outFile) return false;
-
-        // Write metadata
-        // outFile.write(reinterpret_cast<char *>(&svo_resolution), sizeof(svo_resolution));
-        outFile.write(reinterpret_cast<char *>(&nodeCount), sizeof(nodeCount));
-
-        // Write vector sizes
-        uint32_t gpuDataSize = gpuData.size();
-        uint32_t farValuesSize = farValues.size();
-        outFile.write(reinterpret_cast<char *>(&gpuDataSize), sizeof(gpuDataSize));
-        outFile.write(reinterpret_cast<char *>(&farValuesSize), sizeof(farValuesSize));
-
-        // Write vectors
-        outFile.write(reinterpret_cast<char *>(gpuData.data()), gpuDataSize * sizeof(uint32_t));
-        outFile.write(reinterpret_cast<char *>(farValues.data()), farValuesSize * sizeof(uint32_t));
-
-        outFile.close();
-        return true;
-    } catch (...) {
-        return false;
-    }
-}
-
-
-bool loadObj(const std::string &inputFile, const std::string &path, uint32_t svo_resolution, uint32_t &nodeCount,
-             std::vector<uint32_t> &gpuData, std::vector<uint32_t> &farValues) {
-    try {
-        namespace fs = std::filesystem;
-
-        fs::path dirPath(path);
-        fs::path inputPath = dirPath / inputFile;
-        std::string fileName = inputPath.stem().string() + "_res" + std::to_string(svo_resolution) + ".svo";
-        fs::path outFilePath = inputPath.parent_path() / fileName;
-        std::ifstream inFile(outFilePath, std::ios::binary);
-        if (!inFile) return false;
-
-        // Read metadata
-        // inFile.read(reinterpret_cast<char *>(&svo_resolution), sizeof(svo_resolution));
-        inFile.read(reinterpret_cast<char *>(&nodeCount), sizeof(nodeCount));
-
-        // Read vector sizes
-        uint32_t gpuDataSize, farValuesSize;
-        inFile.read(reinterpret_cast<char *>(&gpuDataSize), sizeof(gpuDataSize));
-        inFile.read(reinterpret_cast<char *>(&farValuesSize), sizeof(farValuesSize));
-
-        // Read vectors
-        size_t old_gpu_data_size = gpuData.size();
-        size_t old_far_values_size = farValues.size();
-
-        gpuData.resize(gpuDataSize + old_gpu_data_size);
-        farValues.resize(farValuesSize + old_far_values_size);
-        inFile.read(reinterpret_cast<char *>(gpuData.data() + old_gpu_data_size), gpuDataSize * sizeof(uint32_t));
-        inFile.read(reinterpret_cast<char *>(farValues.data() + old_far_values_size), farValuesSize * sizeof(uint32_t));
-
-        inFile.close();
-        return true;
-    } catch (...) {
-        return false;
+            CpuChunk &chunk = chunks[chunkY * gridSize + chunkX];
+            if (chunk.resolution < octreeResolution && chunk.loading != true) {
+                dmThreat.pushWork(ChunkLoadInfo{gridCoord, octreeResolution});
+                chunk.loading = true;
+            }
+        }
     }
 }
 
