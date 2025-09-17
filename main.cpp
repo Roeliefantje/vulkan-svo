@@ -32,8 +32,8 @@ const uint32_t WIDTH = 1920;
 const uint32_t HEIGHT = 1080;
 const float X_GROUPSIZE = 16;
 const float Y_GROUPSIZE = 16;
-const uint32_t GIGABYTE = 1073741824;
-const VkDeviceSize STAGING_SIZE = GIGABYTE;
+const size_t GIGABYTE = (1 << 30);
+const VkDeviceSize STAGING_SIZE = GIGABYTE >> 1;
 
 #define SHADERDEBUG 1
 // #define PRELOAD_DATA
@@ -156,6 +156,7 @@ private:
     VkPipeline computePipeline;
 
     VkCommandPool commandPool;
+    VkCommandPool transferCommandPool;
 
     std::vector<std::vector<VkBuffer> > shaderStorageBuffers;
     std::vector<VkBuffer> farValuesSBuffers;
@@ -212,6 +213,9 @@ private:
     std::vector<uint32_t> octreeGPU;
     std::vector<Chunk> gridValues;
     std::vector<CpuChunk> cpuGridValues;
+    VkFence renderingFence;
+    VkSemaphore transferSemaphore;
+    std::atomic_bool waitForTransfer = false;
 
     Camera camera = Camera(glm::vec3(10, 10, 712.5), glm::vec3(20, 20, 710.5), WIDTH, HEIGHT,
                            glm::radians(30.0f));
@@ -245,7 +249,7 @@ private:
         gridValues = std::vector<Chunk>(GRID_SIZE * GRID_SIZE);
         cpuGridValues = std::vector<CpuChunk>(GRID_SIZE * GRID_SIZE);
         farValues = std::vector<uint32_t>(GIGABYTE / sizeof(uint32_t));
-        octreeGPU = std::vector<uint32_t>(GIGABYTE * 4 / sizeof(uint32_t));
+        octreeGPU = std::vector<uint32_t>(GIGABYTE * 2 / sizeof(uint32_t));
 #endif
     }
 
@@ -293,6 +297,7 @@ private:
         createComputePipeline();
         createFramebuffers();
         createCommandPool();
+        createTransferCommandPool();
         createShaderStorageBuffers();
         createStagingBuffer(STAGING_SIZE);
         createVertexBuffer();
@@ -312,10 +317,15 @@ private:
         createSyncObjects();
     }
 
+    //std::vector<VkBuffer> farValuesSBuffers;
+    //std::vector<VkBuffer> gridBuffers;
     void initThreads() {
-        dmThreat = new DataManageThreat(device, pStagingBuffer, pStagingBufferMemory, STAGING_SIZE, transferQueue,
+        dmThreat = new DataManageThreat(device, transferCommandPool, pStagingBuffer, shaderStorageBuffers[0][0],
+                                        gridBuffers[0], farValuesSBuffers[0], pStagingBufferMemory, STAGING_SIZE,
+                                        transferQueue,
                                         CHUNK_RESOLUTION,
-                                        GRID_SIZE, "./assets/san-miguel-low-poly.obj");
+                                        GRID_SIZE, "./assets/san-miguel-low-poly.obj", renderingFence,
+                                        transferSemaphore, waitForTransfer);
     }
 
     void mainLoop() {
@@ -399,6 +409,7 @@ private:
         }
 
         vkDestroyCommandPool(device, commandPool, nullptr);
+        vkDestroyCommandPool(device, transferCommandPool, nullptr);
 
         vkDestroyDevice(device, nullptr);
 
@@ -1099,6 +1110,19 @@ private:
 
         if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
             throw std::runtime_error("failed to create graphics command pool!");
+        }
+    }
+
+    void createTransferCommandPool() {
+        QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice);
+
+        VkCommandPoolCreateInfo poolInfo{};
+        poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+        poolInfo.queueFamilyIndex = queueFamilyIndices.transferFamily.value();
+
+        if (vkCreateCommandPool(device, &poolInfo, nullptr, &transferCommandPool) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create transfer command pool!");
         }
     }
 
@@ -1840,19 +1864,10 @@ private:
                 throw std::runtime_error("failed to create compute synchronization objects for a frame!");
             }
         }
+
+        vkCreateSemaphore(device, &semaphoreInfo, nullptr, &transferSemaphore);
+        vkCreateFence(device, &fenceInfo, nullptr, &renderingFence);
     }
-
-    // void initUniformBufferData() {
-    //     for ()
-    //     memcpy(uniformBuffersMapped[currentImage])
-    // }
-
-    // void updateUniformBuffer(uint32_t currentImage) {
-    //     UniformBufferObject ubo{};
-    //     ubo.deltaTime = lastFrameTime * 2.0f;
-    //
-    //     memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
-    // }
 
     void drawFrame() {
         VkSubmitInfo submitInfo{};
@@ -1860,7 +1875,7 @@ private:
 
         // Compute submission
         vkWaitForFences(device, 1, &computeInFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
-
+        // vkWaitForFences(device, 1, &renderingFence, VK_TRUE, UINT64_MAX);
         updateUniformCameraBuffer();
 #if SHADERDEBUG
         // Safe to map now
@@ -1873,6 +1888,7 @@ private:
 #endif
 
         vkResetFences(device, 1, &computeInFlightFences[currentFrame]);
+        vkResetFences(device, 1, &renderingFence);
 
         vkResetCommandBuffer(computeCommandBuffers[currentFrame], /*VkCommandBufferResetFlagBits*/ 0);
         recordComputeCommandBuffer(computeCommandBuffers[currentFrame], currentFrame);
@@ -1881,6 +1897,14 @@ private:
         submitInfo.pCommandBuffers = &computeCommandBuffers[currentFrame];
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = &computeFinishedSemaphores[currentFrame];
+
+        if (dmThreat->CheckToWaitAndStartTransfer()) {
+            std::cout << "Waiting for transfer" << std::endl;
+            VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+            submitInfo.waitSemaphoreCount = 1;
+            submitInfo.pWaitSemaphores = &transferSemaphore;
+            submitInfo.pWaitDstStageMask = &waitStage;
+        }
 
         if (vkQueueSubmit(computeQueue, 1, &submitInfo, computeInFlightFences[currentFrame]) != VK_SUCCESS) {
             throw std::runtime_error("failed to submit compute command buffer!");

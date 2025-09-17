@@ -22,22 +22,35 @@ namespace fs = std::filesystem;
 
 class DataManageThreat {
 public:
-    DataManageThreat(VkDevice &device, VkBuffer &stagingBuffer, VkDeviceMemory &stagingBufferMemory,
+    DataManageThreat(VkDevice &device, VkCommandPool &cmdPool, VkBuffer &stagingBuffer, VkBuffer &octreeGPUBuffer,
+                     VkBuffer &chunkBuffer, VkBuffer &farValuesBuffer,
+                     VkDeviceMemory &stagingBufferMemory,
                      VkDeviceSize bufferSize,
                      VkQueue &transferQueue, uint32_t maxChunkResolution, uint32_t gridSize,
-                     std::string objFile) : stopFlag(false), bufferSize(bufferSize),
-                                            device(device),
-                                            stagingBuffer(stagingBuffer),
-                                            stagingBufferMemory(stagingBufferMemory),
-                                            transferQueue(transferQueue),
-                                            maxChunkResolution(maxChunkResolution),
-                                            objFile(objFile),
-                                            gridSize(gridSize) {
+                     std::string objFile, VkFence &renderFence, VkSemaphore &transferSema,
+                     std::atomic_bool &waitForTransfer) : stopFlag(false),
+                                                          waitForTransfer(waitForTransfer),
+                                                          renderingFence(renderFence),
+                                                          transferSemaphore(transferSema),
+                                                          commandPool(cmdPool),
+                                                          bufferSize(bufferSize),
+                                                          device(device),
+                                                          stagingBuffer(stagingBuffer),
+                                                          octreeGPUBuffer(octreeGPUBuffer),
+                                                          chunkBuffer(chunkBuffer),
+                                                          farValuesBuffer(farValuesBuffer),
+                                                          stagingBufferMemory(stagingBufferMemory),
+                                                          transferQueue(transferQueue),
+                                                          maxChunkResolution(maxChunkResolution),
+                                                          objFile(objFile),
+                                                          gridSize(gridSize) {
         workerThread = std::thread([this]() { this->threadLoop(); });
         fs::path filePath{objFile};
         this->objDirectory = filePath.parent_path().string();
         this->directory = std::format("{}_{}", (filePath.parent_path() / filePath.stem()).string(), gridSize);
         loadObj();
+        initFence();
+        initCommandBuffers();
     }
 
     ~DataManageThreat() {
@@ -52,6 +65,9 @@ public:
         for (const auto &[key, value]: textures) {
             stbi_image_free(value.imageData);
         }
+
+        vkDestroyFence(device, transferFence, nullptr);
+        vkFreeCommandBuffers(device, commandPool, 2, commandBuffers.data());
     }
 
     void pushWork(ChunkLoadInfo job) { {
@@ -61,6 +77,24 @@ public:
         cv.notify_one(); // wake the thread
     }
 
+    bool CheckToWaitAndStartTransfer() {
+        if (waitForTransfer) {
+            //CommandBuffer is prepped and needs to be submitted
+            VkSubmitInfo submitInfo{};
+            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers = &commandBuffers[1];
+            submitInfo.signalSemaphoreCount = 1;
+            submitInfo.pSignalSemaphores = &transferSemaphore;
+
+            vkQueueSubmit(transferQueue, 1, &submitInfo, gridFence);
+            waitForTransfer = false;
+            return true;
+        }
+
+        return false;
+    }
+
 private:
     std::thread workerThread;
     std::queue<ChunkLoadInfo> workQueue;
@@ -68,9 +102,20 @@ private:
     std::condition_variable cv;
     bool stopFlag;
 
+    std::atomic_bool &waitForTransfer;
+
+    VkFence &renderingFence;
+    VkFence transferFence;
+    VkFence gridFence;
+    VkSemaphore &transferSemaphore;
+    VkCommandPool &commandPool;
     VkDeviceSize bufferSize;
     VkDevice &device;
+    std::array<VkCommandBuffer, 2> commandBuffers;
     VkBuffer &stagingBuffer;
+    VkBuffer &octreeGPUBuffer;
+    VkBuffer &chunkBuffer;
+    VkBuffer &farValuesBuffer;
     VkDeviceMemory &stagingBufferMemory;
     VkQueue &transferQueue;
     uint32_t maxChunkResolution;
@@ -82,13 +127,33 @@ private:
     std::vector<TexturedTriangle> triangles;
     std::map<std::string, LoadedTexture> textures;
 
-    uint32_t rootNodeIndex;
-    uint32_t farValuesOffset;
+    uint32_t rootNodeIndex = 0;
+    uint32_t farValuesOffset = 0;
 
     void loadObj() {
         int totalResolution = maxChunkResolution * gridSize;
         float _scale;
         int result = loadObject(objFile, objDirectory, totalResolution, gridSize, triangles, _scale);
+    }
+
+    void initFence() {
+        VkFenceCreateInfo fenceInfo{};
+        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fenceInfo.flags = 0;
+        vkCreateFence(device, &fenceInfo, nullptr, &transferFence);
+        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+        vkCreateFence(device, &fenceInfo, nullptr, &gridFence);
+    }
+
+    void initCommandBuffers() {
+        VkCommandBufferAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandPool = commandPool;
+        allocInfo.commandBufferCount = 2;
+
+        VkCommandBuffer commandBuffer;
+        vkAllocateCommandBuffers(device, &allocInfo, commandBuffers.data());
     }
 
 
@@ -112,6 +177,7 @@ private:
 
     void loadChunkToGPU(ChunkLoadInfo job) {
         //TODO: When loading a chunk we should check if the desired resolution is still what the job expects.
+        //TODO: Update far values and Index value!!!!!
         std::cout << std::format("Chunk Coords to load: {}, {}, Desired resolution: {}", job.gridCoord.x,
                                  job.gridCoord.y,
                                  job.resolution) <<
@@ -133,6 +199,11 @@ private:
             return;
         }
 
+        //Wait until all the data on the staging buffer is used before we use it again.
+        vkWaitForFences(device, 1, &gridFence, VK_TRUE, UINT64_MAX);
+
+        vkResetFences(device, 1, &gridFence);
+
         void *data;
         vkMapMemory(device, stagingBufferMemory, 0, totalSize, 0, &data);
 
@@ -145,6 +216,60 @@ private:
         memcpy(dst, &chunkGpu, (size_t) chunkSize);
 
         vkUnmapMemory(device, stagingBufferMemory);
+
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        vkResetCommandBuffer(commandBuffers[0], 0);
+        vkBeginCommandBuffer(commandBuffers[0], &beginInfo);
+
+        // Copy octree
+        VkBufferCopy copyRegion{};
+        copyRegion.srcOffset = farValuesSize;
+        copyRegion.dstOffset = rootNodeIndex * sizeof(uint32_t);
+        copyRegion.size = octreeSize;
+
+        vkCmdCopyBuffer(commandBuffers[0], stagingBuffer, octreeGPUBuffer, 1, &copyRegion);
+
+        // Copy farvalues
+        copyRegion.srcOffset = 0;
+        copyRegion.dstOffset = farValuesOffset * sizeof(uint32_t);
+        copyRegion.size = farValuesSize;
+
+        vkCmdCopyBuffer(commandBuffers[0], stagingBuffer, farValuesBuffer, 1, &copyRegion);
+        vkEndCommandBuffer(commandBuffers[0]);
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &commandBuffers[0];
+
+        // if (signalSemaphore != VK_NULL_HANDLE) {
+        //     submitInfo.signalSemaphoreCount = 1;
+        //     submitInfo.pSignalSemaphores = &signalSemaphore;
+        // }
+
+        vkQueueSubmit(transferQueue, 1, &submitInfo, transferFence);
+
+        //Wait for the octree copy to be done before we start copying grid values over.
+        vkWaitForFences(device, 1, &transferFence, VK_TRUE, UINT64_MAX);
+        vkResetFences(device, 1, &transferFence);
+
+        //After we finish copying the octree, signal to the render thread that it should wait and wait until it is finished rendering.
+        // vkWaitForFences(device, 1, &renderingFence, VK_TRUE, UINT64_MAX);
+
+        //Start copying grid over
+        vkResetCommandBuffer(commandBuffers[1], 0);
+        vkBeginCommandBuffer(commandBuffers[1], &beginInfo);
+
+        // Copy Grid
+        copyRegion.srcOffset = farValuesSize + octreeSize;
+        copyRegion.dstOffset = (job.gridCoord.y * gridSize + job.gridCoord.x) * sizeof(Chunk);
+        copyRegion.size = chunkSize;
+
+        vkCmdCopyBuffer(commandBuffers[1], stagingBuffer, chunkBuffer, 1, &copyRegion);
+        vkEndCommandBuffer(commandBuffers[1]);
+        waitForTransfer = true;
     }
 
     void loadChunkData(ChunkLoadInfo &job, std::vector<uint32_t> &chunkFarValues,
@@ -174,6 +299,45 @@ private:
                           chunkOctreeGPU, chunkFarValues);
             }
         }
+    }
+
+    //TODO: use fences and idk
+    void recordUploadCommandBuffer(
+        VkCommandBuffer commandBuffer,
+        VkBuffer dstBuffer,
+        VkDeviceSize size,
+        VkFence transferFence,
+        VkDeviceSize srcOffset = 0,
+        VkDeviceSize dstOffset = 0,
+        VkSemaphore signalSemaphore = VK_NULL_HANDLE
+    ) {
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+        vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+        // Copy region
+        VkBufferCopy copyRegion{};
+        copyRegion.srcOffset = srcOffset;
+        copyRegion.dstOffset = dstOffset;
+        copyRegion.size = size;
+
+        vkCmdCopyBuffer(commandBuffer, stagingBuffer, dstBuffer, 1, &copyRegion);
+
+        vkEndCommandBuffer(commandBuffer);
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &commandBuffer;
+
+        if (signalSemaphore != VK_NULL_HANDLE) {
+            submitInfo.signalSemaphoreCount = 1;
+            submitInfo.pSignalSemaphores = &signalSemaphore;
+        }
+
+        vkQueueSubmit(transferQueue, 1, &submitInfo, transferFence);
     }
 };
 
