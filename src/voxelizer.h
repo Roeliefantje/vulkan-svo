@@ -11,19 +11,13 @@
 
 #include "structures.h"
 #include "tiny_obj_loader.h"
+#include "chunk_management.h"
 #include "tribox.h"
 #include "stb_image.h"
-#include "chunk_management.h"
 
 #ifndef VOXELIZER_H
 #define VOXELIZER_H
 
-struct TexturedTriangle {
-    glm::vec3 v[3];
-    glm::vec2 uv[3];
-    std::string diffuse_texname; // empty if none
-    glm::vec3 diffuse;
-};
 
 //TODO: Improve memory usage by only storing the triangles that are inside of a chunk
 
@@ -142,10 +136,6 @@ int loadObject(std::string inputFile, std::string path, int resolution, int grid
     return 0;
 }
 
-struct LoadedTexture {
-    unsigned char *imageData;
-    int texWidth, texHeight, channels;
-};
 
 LoadedTexture &loadImage(const std::string &tex_name, std::map<std::string, LoadedTexture> &loadedTextures) {
     if (loadedTextures.contains(tex_name)) {

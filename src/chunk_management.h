@@ -9,7 +9,7 @@
 #include <format>
 
 
-#include "data_manage_threat.h"
+// #include "data_manage_threat.h"
 #include "structures.h"
 
 bool saveChunk(const std::string &scenePath, uint32_t max_resolution, uint32_t svo_resolution, glm::ivec2 gridCoords,
@@ -86,29 +86,6 @@ bool loadChunk(const std::string &scenePath, uint32_t max_resolution, uint32_t s
         return true;
     } catch (...) {
         return false;
-    }
-}
-
-
-//Check whether all currently loaded chunks are in the right resolution and queue them to be loaded if not
-void checkChunks(std::vector<CpuChunk> &chunks, Camera &camera, uint32_t maxChunkResolution,
-                 DataManageThreat &dmThreat) {
-    auto cameraChunkCoords = glm::ivec2(floor(camera.position.x / maxChunkResolution),
-                                        floor(camera.position.y / maxChunkResolution));
-    //TODO: Schedule so that the chunks around the camera are checked / scheduled first
-    uint32_t gridSize = sqrt(chunks.size());
-    for (int chunkY = 0; chunkY < gridSize; chunkY++) {
-        for (int chunkX = 0; chunkX < gridSize; chunkX++) {
-            int dist = std::max(abs(chunkY - cameraChunkCoords.y), abs(chunkX - cameraChunkCoords.x));
-            uint32_t octreeResolution = maxChunkResolution >> dist;
-            auto gridCoord = glm::ivec2{chunkX, chunkY};
-
-            CpuChunk &chunk = chunks[chunkY * gridSize + chunkX];
-            if (chunk.resolution < octreeResolution && chunk.loading != true) {
-                dmThreat.pushWork(ChunkLoadInfo{gridCoord, octreeResolution});
-                chunk.loading = true;
-            }
-        }
     }
 }
 

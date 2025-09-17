@@ -46,6 +46,18 @@ struct Chunk {
     };
 };
 
+struct TexturedTriangle {
+    glm::vec3 v[3];
+    glm::vec2 uv[3];
+    std::string diffuse_texname; // empty if none
+    glm::vec3 diffuse;
+};
+
+struct LoadedTexture {
+    unsigned char *imageData;
+    int texWidth, texHeight, channels;
+};
+
 struct Camera {
     alignas(16) glm::vec3 position;
     alignas(16) glm::vec3 direction;

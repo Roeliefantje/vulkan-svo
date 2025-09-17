@@ -313,7 +313,9 @@ private:
     }
 
     void initThreads() {
-        dmThreat = new DataManageThreat(pStagingBuffer, pStagingBufferMemory, transferQueue, CHUNK_RESOLUTION);
+        dmThreat = new DataManageThreat(device, pStagingBuffer, pStagingBufferMemory, STAGING_SIZE, transferQueue,
+                                        CHUNK_RESOLUTION,
+                                        GRID_SIZE, "./assets/san-miguel-low-poly.obj");
     }
 
     void mainLoop() {
