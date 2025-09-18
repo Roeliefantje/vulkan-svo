@@ -88,7 +88,9 @@ public:
             submitInfo.pSignalSemaphores = &transferSemaphore;
 
             vkQueueSubmit(transferQueue, 1, &submitInfo, gridFence);
-            waitForTransfer = false;
+            // waitForTransfer = false;
+            waitForTransfer.store(false);
+            waitForTransfer.notify_one();
             return true;
         }
 
@@ -198,7 +200,12 @@ private:
             std::cerr << "Chunk values are bigger than staging buffer!" << std::endl;
             return;
         }
+        std::cout << "Waiting for transfer" << std::endl;
+        if (waitForTransfer) {
+            waitForTransfer.wait(false);
+        }
 
+        std::cout << "Done waiting!" << std::endl;
         //Wait until all the data on the staging buffer is used before we use it again.
         vkWaitForFences(device, 1, &gridFence, VK_TRUE, UINT64_MAX);
 
@@ -270,6 +277,8 @@ private:
         vkCmdCopyBuffer(commandBuffers[1], stagingBuffer, chunkBuffer, 1, &copyRegion);
         vkEndCommandBuffer(commandBuffers[1]);
         waitForTransfer = true;
+        farValuesOffset += chunkFarValues.size();
+        rootNodeIndex += chunkOctreeGPU.size();
     }
 
     void loadChunkData(ChunkLoadInfo &job, std::vector<uint32_t> &chunkFarValues,
