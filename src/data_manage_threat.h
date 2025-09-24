@@ -129,7 +129,7 @@ private:
     std::vector<TexturedTriangle> triangles;
     std::map<std::string, LoadedTexture> textures;
 
-    uint32_t rootNodeIndex = 0;
+    uint32_t rootNodeIndex = 1;
     uint32_t farValuesOffset = 0;
 
     void loadObj() {
@@ -185,6 +185,8 @@ private:
                                  job.resolution) <<
                 std::endl;
 
+        // std::this_thread::sleep_for(std::chrono::seconds(5));
+
         auto chunkFarValues = std::vector<uint32_t>();
         auto chunkOctreeGPU = std::vector<uint32_t>();
         loadChunkData(job, chunkFarValues, chunkOctreeGPU);
@@ -200,9 +202,10 @@ private:
             std::cerr << "Chunk values are bigger than staging buffer!" << std::endl;
             return;
         }
-        std::cout << "Waiting for transfer" << std::endl;
+
         if (waitForTransfer) {
-            waitForTransfer.wait(false);
+            std::cout << "Waiting for transfer" << std::endl;
+            waitForTransfer.wait(true);
         }
 
         std::cout << "Done waiting!" << std::endl;
@@ -288,7 +291,7 @@ private:
                        chunkFarValues)) {
             std::cout << "Chunk not yet created, generating the chunk" << std::endl;
             auto aabb = Aabb{};
-            aabb.aa = glm::ivec3(job.gridCoord.x * maxChunkResolution, job.gridCoord.x * maxChunkResolution, 0);
+            aabb.aa = glm::ivec3(job.gridCoord.x * maxChunkResolution, job.gridCoord.y * maxChunkResolution, 0);
             aabb.bb = glm::ivec3(aabb.aa.x + maxChunkResolution, aabb.aa.y + maxChunkResolution, maxChunkResolution);
             uint32_t maxDepth = std::ceil(std::log2(job.resolution));
 
