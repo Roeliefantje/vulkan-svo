@@ -28,22 +28,25 @@ public:
                      VkDeviceSize bufferSize,
                      VkQueue &transferQueue, uint32_t maxChunkResolution, uint32_t gridSize,
                      std::string objFile, VkFence &renderFence, VkSemaphore &transferSema,
-                     std::atomic_bool &waitForTransfer) : stopFlag(false),
-                                                          waitForTransfer(waitForTransfer),
-                                                          renderingFence(renderFence),
-                                                          transferSemaphore(transferSema),
-                                                          commandPool(cmdPool),
-                                                          bufferSize(bufferSize),
-                                                          device(device),
-                                                          stagingBuffer(stagingBuffer),
-                                                          octreeGPUBuffer(octreeGPUBuffer),
-                                                          chunkBuffer(chunkBuffer),
-                                                          farValuesBuffer(farValuesBuffer),
-                                                          stagingBufferMemory(stagingBufferMemory),
-                                                          transferQueue(transferQueue),
-                                                          maxChunkResolution(maxChunkResolution),
-                                                          objFile(objFile),
-                                                          gridSize(gridSize) {
+                     std::atomic_bool &waitForTransfer, std::vector<CpuChunk> &chunks,
+                     Camera &camera) : stopFlag(false),
+                                       waitForTransfer(waitForTransfer),
+                                       chunks(chunks),
+                                       camera(camera),
+                                       renderingFence(renderFence),
+                                       transferSemaphore(transferSema),
+                                       commandPool(cmdPool),
+                                       bufferSize(bufferSize),
+                                       device(device),
+                                       stagingBuffer(stagingBuffer),
+                                       octreeGPUBuffer(octreeGPUBuffer),
+                                       chunkBuffer(chunkBuffer),
+                                       farValuesBuffer(farValuesBuffer),
+                                       stagingBufferMemory(stagingBufferMemory),
+                                       transferQueue(transferQueue),
+                                       maxChunkResolution(maxChunkResolution),
+                                       objFile(objFile),
+                                       gridSize(gridSize) {
         workerThread = std::thread([this]() { this->threadLoop(); });
         fs::path filePath{objFile};
         this->objDirectory = filePath.parent_path().string();
@@ -88,9 +91,16 @@ public:
             submitInfo.pSignalSemaphores = &transferSemaphore;
 
             vkQueueSubmit(transferQueue, 1, &submitInfo, gridFence);
-            // waitForTransfer = false;
+            //Update cpu side chunk info
+            //Todo: queue old data for deletion
+            CpuChunk &chunk = chunks[currentChunk.gridCoord.y * gridSize + currentChunk.gridCoord.x];
+            chunk.loading = false;
+            chunk.resolution = currentChunk.resolution;
+            //Tell data manage threat its okay to use staging buffer again.
             waitForTransfer.store(false);
             waitForTransfer.notify_one();
+
+
             return true;
         }
 
@@ -105,7 +115,8 @@ private:
     bool stopFlag;
 
     std::atomic_bool &waitForTransfer;
-
+    std::vector<CpuChunk> &chunks;
+    Camera &camera;
     VkFence &renderingFence;
     VkFence transferFence;
     VkFence gridFence;
@@ -131,6 +142,7 @@ private:
 
     uint32_t rootNodeIndex = 1;
     uint32_t farValuesOffset = 0;
+    ChunkLoadInfo currentChunk;
 
     void loadObj() {
         int totalResolution = maxChunkResolution * gridSize;
@@ -184,6 +196,11 @@ private:
                                  job.gridCoord.y,
                                  job.resolution) <<
                 std::endl;
+        if (!checkChunkResolution(job)) {
+            //Chunk is not in the right resolution for the camera position, cancel
+            chunks[job.gridCoord.y * gridSize + job.gridCoord.x].loading = false;
+            return;
+        }
 
         // std::this_thread::sleep_for(std::chrono::seconds(5));
 
@@ -204,11 +221,10 @@ private:
         }
 
         if (waitForTransfer) {
-            std::cout << "Waiting for transfer" << std::endl;
+            // std::cout << "Waiting for transfer" << std::endl;
             waitForTransfer.wait(true);
         }
-
-        std::cout << "Done waiting!" << std::endl;
+        currentChunk = job;
         //Wait until all the data on the staging buffer is used before we use it again.
         vkWaitForFences(device, 1, &gridFence, VK_TRUE, UINT64_MAX);
 
@@ -284,6 +300,16 @@ private:
         rootNodeIndex += chunkOctreeGPU.size();
     }
 
+    bool checkChunkResolution(ChunkLoadInfo &job) {
+        auto cameraChunkCoords = glm::ivec2(floor(camera.position.x / maxChunkResolution),
+                                            floor(camera.position.y / maxChunkResolution));
+        uint32_t gridSize = sqrt(chunks.size());
+        int dist = std::max(abs(job.gridCoord.y - cameraChunkCoords.y), abs(job.gridCoord.x - cameraChunkCoords.x));
+        uint32_t octreeResolution = maxChunkResolution >> dist;
+
+        return octreeResolution == job.resolution;
+    }
+
     void loadChunkData(ChunkLoadInfo &job, std::vector<uint32_t> &chunkFarValues,
                        std::vector<uint32_t> &chunkOctreeGPU) {
         uint32_t nodeAmount = 0;
@@ -292,7 +318,8 @@ private:
             std::cout << "Chunk not yet created, generating the chunk" << std::endl;
             auto aabb = Aabb{};
             aabb.aa = glm::ivec3(job.gridCoord.x * maxChunkResolution, job.gridCoord.y * maxChunkResolution, 0);
-            aabb.bb = glm::ivec3(aabb.aa.x + maxChunkResolution, aabb.aa.y + maxChunkResolution, maxChunkResolution);
+            aabb.bb = glm::ivec3(aabb.aa.x + maxChunkResolution, aabb.aa.y + maxChunkResolution,
+                                 maxChunkResolution);
             uint32_t maxDepth = std::ceil(std::log2(job.resolution));
 
             std::vector<uint32_t> allIndices(triangles.size());

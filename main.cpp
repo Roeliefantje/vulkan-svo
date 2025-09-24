@@ -325,7 +325,7 @@ private:
                                         transferQueue,
                                         CHUNK_RESOLUTION,
                                         GRID_SIZE, "./assets/san-miguel-low-poly.obj", renderingFence,
-                                        transferSemaphore, waitForTransfer);
+                                        transferSemaphore, waitForTransfer, cpuGridValues, camera);
     }
 
     void mainLoop() {
