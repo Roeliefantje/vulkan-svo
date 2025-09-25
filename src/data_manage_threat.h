@@ -20,6 +20,86 @@ struct ChunkLoadInfo {
 
 namespace fs = std::filesystem;
 
+class BufferManager {
+public:
+    VkBuffer &buffer;
+
+    BufferManager(VkBuffer &buffer, VkDeviceSize bufferSize) : bufferSize(bufferSize), buffer(buffer) {
+        this->chunks = std::vector<DataChunk>();
+        this->chunks.emplace_back(0, bufferSize, false);
+    }
+
+    size_t allocateChunk(size_t size) {
+        auto best = chunks.end();
+        size_t bestSize = bufferSize + 1;
+        for (auto it = chunks.begin(); it != chunks.end(); ++it) {
+            if (!it->occupied && it->elementSize >= size && it->elementSize < bestSize) {
+                best = it;
+                bestSize = it->elementSize;
+            }
+        }
+
+        if (best == chunks.end()) {
+            std::cerr << "No possible location to allocate Chunk!" << std::endl;
+            return 0;
+        }
+
+        size_t remaining_area = bestSize - size;
+        size_t offset = best->offset;
+        if (remaining_area > 0) {
+            chunks.emplace(std::next(best), offset + size, remaining_area, false);
+        }
+        best->elementSize = size;
+        best->occupied = true;
+    }
+
+    void freeChunk(size_t offset) {
+        auto chunk = chunks.end();
+        for (auto it = chunks.begin(); it != chunks.end(); ++it) {
+            if (it->offset == offset) {
+                chunk = it;
+                break;
+            }
+        }
+
+        if (chunk == chunks.end()) {
+            std::cerr << "Tried to free an offset that is not allocated!" << std::endl;
+            return;
+        }
+
+        //Check if prev and next are free, if so, merge them into one
+        auto first = chunk;
+        auto last = chunk;
+        auto newSize = chunk->elementSize;
+        if (chunk != chunks.begin() && !std::prev(chunk)->occupied) {
+            first = std::prev(chunk);
+            newSize += first->elementSize;
+        }
+        if (std::next(chunk) != chunks.end() && !std::next(chunk)->occupied) {
+            last = std::next(chunk);
+            newSize += last->elementSize;
+        }
+        first->occupied = false;
+        first->elementSize = newSize;
+
+        if (first != last) {
+            //Next on first because we replace first not remove it, next on last because [__first,__last).
+            chunks.erase(std::next(first), std::next(last));
+        }
+    }
+
+private:
+    struct DataChunk {
+        size_t offset;
+        size_t elementSize;
+        bool occupied;
+    };
+
+    //Buffer size in allowed elements, so if type is uin32_t, byte size would be bufferSize * sizeof(uint32_t)
+    uint32_t bufferSize;
+    std::vector<DataChunk> chunks;
+};
+
 class DataManageThreat {
 public:
     DataManageThreat(VkDevice &device, VkCommandPool &cmdPool, VkBuffer &stagingBuffer, VkBuffer &octreeGPUBuffer,
@@ -143,6 +223,7 @@ private:
     uint32_t rootNodeIndex = 1;
     uint32_t farValuesOffset = 0;
     ChunkLoadInfo currentChunk;
+    CpuChunk newChunk;
 
     void loadObj() {
         int totalResolution = maxChunkResolution * gridSize;
@@ -296,6 +377,11 @@ private:
         vkCmdCopyBuffer(commandBuffers[1], stagingBuffer, chunkBuffer, 1, &copyRegion);
         vkEndCommandBuffer(commandBuffers[1]);
         waitForTransfer = true;
+
+        newChunk = CpuChunk(farValuesOffset, rootNodeIndex, job.resolution);
+        newChunk.chunkSize = chunkOctreeGPU.size();
+        newChunk.offsetSize = chunkFarValues.size();
+
         farValuesOffset += chunkFarValues.size();
         rootNodeIndex += chunkOctreeGPU.size();
     }

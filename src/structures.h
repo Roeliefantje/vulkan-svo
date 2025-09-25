@@ -25,6 +25,9 @@ struct CpuChunk {
     uint32_t ChunkFarValuesOffset;
     uint32_t rootNodeIndex;
     uint32_t resolution;
+    //Values used to manage memory
+    uint32_t chunkSize;
+    uint32_t offsetSize;
     bool loading = false;
 
     CpuChunk() = default;
@@ -32,6 +35,8 @@ struct CpuChunk {
     CpuChunk(uint32_t chunkFarValuesOffset, uint32_t rootIndex, uint32_t resolution) : ChunkFarValuesOffset(
             chunkFarValuesOffset),
         rootNodeIndex(rootIndex), resolution(resolution) {
+        chunkSize = 0;
+        offsetSize = 0;
     };
 };
 

@@ -33,9 +33,10 @@ const uint32_t HEIGHT = 1080;
 const float X_GROUPSIZE = 16;
 const float Y_GROUPSIZE = 16;
 const size_t GIGABYTE = (1 << 30);
-const VkDeviceSize STAGING_SIZE = GIGABYTE >> 1;
+const VkDeviceSize STAGING_SIZE = GIGABYTE >> 2;
 
 #define SHADERDEBUG 1
+// #define DEBUG 1
 // #define PRELOAD_DATA
 
 
@@ -337,16 +338,18 @@ private:
             drawFrame();
             double currentTime = glfwGetTime();
             double elapsed = currentTime - lastPrint;
+#ifdef DEBUG
             if (elapsed >= 1.0) {
                 std::cout << "FPS: " << (frameCounter / elapsed) << "\n";
 #if SHADERDEBUG
                 std::cout << "Average Steps per ray: " << (totalSteps / (float) (WIDTH * HEIGHT)) << "\n";
                 std::cout << "Max Steps per ray: " << maxSteps << "\n";
 #endif
-                frameCounter = 0;
-                lastPrint = currentTime;
-            }
 
+            frameCounter = 0;
+            lastPrint = currentTime;
+        }
+#endif
             lastFrameTime = (currentTime - lastTime) * 1000.0;
             lastTime = currentTime;
             frameCounter++;
