@@ -33,7 +33,7 @@ const uint32_t HEIGHT = 1080;
 const float X_GROUPSIZE = 16;
 const float Y_GROUPSIZE = 16;
 const size_t GIGABYTE = (1 << 30);
-const VkDeviceSize STAGING_SIZE = GIGABYTE >> 2;
+const VkDeviceSize STAGING_SIZE = GIGABYTE << 1;
 
 #define SHADERDEBUG 1
 // #define DEBUG 1
@@ -237,6 +237,8 @@ private:
     uint32_t totalSteps;
     uint32_t maxSteps;
 
+    BufferManager *octreeGPUManager;
+    BufferManager *farValuesGPUManager;
     DataManageThreat *dmThreat;
 
 
@@ -321,8 +323,10 @@ private:
     //std::vector<VkBuffer> farValuesSBuffers;
     //std::vector<VkBuffer> gridBuffers;
     void initThreads() {
-        dmThreat = new DataManageThreat(device, transferCommandPool, pStagingBuffer, shaderStorageBuffers[0][0],
-                                        gridBuffers[0], farValuesSBuffers[0], pStagingBufferMemory, STAGING_SIZE,
+        farValuesGPUManager = new BufferManager(farValuesSBuffers[0], farValues.size());
+        octreeGPUManager = new BufferManager(shaderStorageBuffers[0][0], octreeGPU.size());
+        dmThreat = new DataManageThreat(device, transferCommandPool, pStagingBuffer, *octreeGPUManager,
+                                        gridBuffers[0], *farValuesGPUManager, pStagingBufferMemory, STAGING_SIZE,
                                         transferQueue,
                                         CHUNK_RESOLUTION,
                                         GRID_SIZE, "./assets/san-miguel-low-poly.obj", renderingFence,

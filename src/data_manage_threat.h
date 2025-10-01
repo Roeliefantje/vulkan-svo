@@ -24,12 +24,18 @@ class BufferManager {
 public:
     VkBuffer &buffer;
 
-    BufferManager(VkBuffer &buffer, VkDeviceSize bufferSize) : bufferSize(bufferSize), buffer(buffer) {
+    BufferManager(VkBuffer &buffer, VkDeviceSize bufferSize) : buffer(buffer), bufferSize(bufferSize) {
         this->chunks = std::vector<DataChunk>();
-        this->chunks.emplace_back(0, bufferSize, false);
+        //Initial offset is 1, so 0 can be reserved as a special value
+        this->chunks.emplace_back(1, bufferSize - 1, false);
     }
 
     size_t allocateChunk(size_t size) {
+        if (size == 0) {
+            std::cerr << "Tried allocating 0 memory!" << std::endl;
+            return 0;
+        }
+
         auto best = chunks.end();
         size_t bestSize = bufferSize + 1;
         for (auto it = chunks.begin(); it != chunks.end(); ++it) {
@@ -46,14 +52,21 @@ public:
 
         size_t remaining_area = bestSize - size;
         size_t offset = best->offset;
+        best->elementSize = size;
+        best->occupied = true;
         if (remaining_area > 0) {
             chunks.emplace(std::next(best), offset + size, remaining_area, false);
         }
-        best->elementSize = size;
-        best->occupied = true;
+
+        return offset;
     }
 
     void freeChunk(size_t offset) {
+        std::cout << "\n\n\nBefore the Free" << std::endl;
+        for (DataChunk c: chunks) {
+            std::cout << "Start Index: " << c.offset << " Start Index + size: " << c.offset + c.elementSize <<
+                    " Occupied: " << c.occupied << std::endl;
+        }
         auto chunk = chunks.end();
         for (auto it = chunks.begin(); it != chunks.end(); ++it) {
             if (it->offset == offset) {
@@ -86,6 +99,12 @@ public:
             //Next on first because we replace first not remove it, next on last because [__first,__last).
             chunks.erase(std::next(first), std::next(last));
         }
+
+        std::cout << "\n\n\nAfter the Free" << std::endl;
+        for (DataChunk c: chunks) {
+            std::cout << "Start Index: " << c.offset << " Start Index + size: " << c.offset + c.elementSize <<
+                    " Occupied: " << c.occupied << std::endl;
+        }
     }
 
 private:
@@ -102,8 +121,8 @@ private:
 
 class DataManageThreat {
 public:
-    DataManageThreat(VkDevice &device, VkCommandPool &cmdPool, VkBuffer &stagingBuffer, VkBuffer &octreeGPUBuffer,
-                     VkBuffer &chunkBuffer, VkBuffer &farValuesBuffer,
+    DataManageThreat(VkDevice &device, VkCommandPool &cmdPool, VkBuffer &stagingBuffer, BufferManager &octreeGPUBuffer,
+                     VkBuffer &chunkBuffer, BufferManager &farValuesBuffer,
                      VkDeviceMemory &stagingBufferMemory,
                      VkDeviceSize bufferSize,
                      VkQueue &transferQueue, uint32_t maxChunkResolution, uint32_t gridSize,
@@ -127,6 +146,7 @@ public:
                                        maxChunkResolution(maxChunkResolution),
                                        objFile(objFile),
                                        gridSize(gridSize) {
+        std::cout << "Staging buffer size:" << bufferSize;
         workerThread = std::thread([this]() { this->threadLoop(); });
         fs::path filePath{objFile};
         this->objDirectory = filePath.parent_path().string();
@@ -173,9 +193,20 @@ public:
             vkQueueSubmit(transferQueue, 1, &submitInfo, gridFence);
             //Update cpu side chunk info
             //Todo: queue old data for deletion
-            CpuChunk &chunk = chunks[currentChunk.gridCoord.y * gridSize + currentChunk.gridCoord.x];
+            auto chunk_idx = currentChunk.gridCoord.y * gridSize + currentChunk.gridCoord.x;
+            CpuChunk &chunk = chunks[chunk_idx];
             chunk.loading = false;
             chunk.resolution = currentChunk.resolution;
+
+            if (chunk.rootNodeIndex != 0) {
+                octreeGPUBuffer.freeChunk(chunk.rootNodeIndex);
+            }
+            if (chunk.ChunkFarValuesOffset != 0) {
+                farValuesBuffer.freeChunk(chunk.ChunkFarValuesOffset);
+            }
+
+            chunks[chunk_idx] = newChunk;
+
             //Tell data manage threat its okay to use staging buffer again.
             waitForTransfer.store(false);
             waitForTransfer.notify_one();
@@ -206,9 +237,9 @@ private:
     VkDevice &device;
     std::array<VkCommandBuffer, 2> commandBuffers;
     VkBuffer &stagingBuffer;
-    VkBuffer &octreeGPUBuffer;
+    BufferManager &octreeGPUBuffer;
     VkBuffer &chunkBuffer;
-    VkBuffer &farValuesBuffer;
+    BufferManager &farValuesBuffer;
     VkDeviceMemory &stagingBufferMemory;
     VkQueue &transferQueue;
     uint32_t maxChunkResolution;
@@ -220,8 +251,6 @@ private:
     std::vector<TexturedTriangle> triangles;
     std::map<std::string, LoadedTexture> textures;
 
-    uint32_t rootNodeIndex = 1;
-    uint32_t farValuesOffset = 0;
     ChunkLoadInfo currentChunk;
     CpuChunk newChunk;
 
@@ -271,8 +300,6 @@ private:
     }
 
     void loadChunkToGPU(ChunkLoadInfo job) {
-        //TODO: When loading a chunk we should check if the desired resolution is still what the job expects.
-        //TODO: Update far values and Index value!!!!!
         std::cout << std::format("Chunk Coords to load: {}, {}, Desired resolution: {}", job.gridCoord.x,
                                  job.gridCoord.y,
                                  job.resolution) <<
@@ -284,10 +311,27 @@ private:
         }
 
         // std::this_thread::sleep_for(std::chrono::seconds(5));
-
-        auto chunkFarValues = std::vector<uint32_t>();
         auto chunkOctreeGPU = std::vector<uint32_t>();
+        auto chunkFarValues = std::vector<uint32_t>();
         loadChunkData(job, chunkFarValues, chunkOctreeGPU);
+        uint32_t rootNodeIndex = 0;
+        uint32_t farValuesOffset = 0;
+        if (chunkOctreeGPU.size() > 0) {
+            rootNodeIndex = octreeGPUBuffer.allocateChunk(chunkOctreeGPU.size());
+            if (rootNodeIndex == 0) {
+                std::cerr << "Octree GPU Buffer has no memory to be allocated!" << std::endl;
+                // chunks[job.gridCoord.y * gridSize + job.gridCoord.x].loading = false;
+                return;
+            }
+        }
+        if (chunkFarValues.size() > 0) {
+            farValuesOffset = farValuesBuffer.allocateChunk(chunkFarValues.size());
+            if (farValuesOffset == 0) {
+                std::cerr << "Far Values Buffer has no memory to be allocated!" << std::endl;
+                chunks[job.gridCoord.y * gridSize + job.gridCoord.x].loading = false;
+                return;
+            }
+        }
         auto chunkGpu = Chunk{farValuesOffset, rootNodeIndex};
 
         VkDeviceSize farValuesSize = chunkFarValues.size() * sizeof(uint32_t);
@@ -330,20 +374,23 @@ private:
         vkResetCommandBuffer(commandBuffers[0], 0);
         vkBeginCommandBuffer(commandBuffers[0], &beginInfo);
 
-        // Copy octree
         VkBufferCopy copyRegion{};
-        copyRegion.srcOffset = farValuesSize;
-        copyRegion.dstOffset = rootNodeIndex * sizeof(uint32_t);
-        copyRegion.size = octreeSize;
-
-        vkCmdCopyBuffer(commandBuffers[0], stagingBuffer, octreeGPUBuffer, 1, &copyRegion);
-
+        // Copy octree
+        if (octreeSize > 0) {
+            // VkBufferCopy copyRegion{};
+            copyRegion.srcOffset = farValuesSize;
+            copyRegion.dstOffset = rootNodeIndex * sizeof(uint32_t);
+            copyRegion.size = octreeSize;
+            vkCmdCopyBuffer(commandBuffers[0], stagingBuffer, octreeGPUBuffer.buffer, 1, &copyRegion);
+        }
         // Copy farvalues
-        copyRegion.srcOffset = 0;
-        copyRegion.dstOffset = farValuesOffset * sizeof(uint32_t);
-        copyRegion.size = farValuesSize;
+        if (farValuesSize > 0) {
+            copyRegion.srcOffset = 0;
+            copyRegion.dstOffset = farValuesOffset * sizeof(uint32_t);
+            copyRegion.size = farValuesSize;
+            vkCmdCopyBuffer(commandBuffers[0], stagingBuffer, farValuesBuffer.buffer, 1, &copyRegion);
+        }
 
-        vkCmdCopyBuffer(commandBuffers[0], stagingBuffer, farValuesBuffer, 1, &copyRegion);
         vkEndCommandBuffer(commandBuffers[0]);
 
         VkSubmitInfo submitInfo{};
@@ -351,19 +398,12 @@ private:
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &commandBuffers[0];
 
-        // if (signalSemaphore != VK_NULL_HANDLE) {
-        //     submitInfo.signalSemaphoreCount = 1;
-        //     submitInfo.pSignalSemaphores = &signalSemaphore;
-        // }
 
         vkQueueSubmit(transferQueue, 1, &submitInfo, transferFence);
 
         //Wait for the octree copy to be done before we start copying grid values over.
         vkWaitForFences(device, 1, &transferFence, VK_TRUE, UINT64_MAX);
         vkResetFences(device, 1, &transferFence);
-
-        //After we finish copying the octree, signal to the render thread that it should wait and wait until it is finished rendering.
-        // vkWaitForFences(device, 1, &renderingFence, VK_TRUE, UINT64_MAX);
 
         //Start copying grid over
         vkResetCommandBuffer(commandBuffers[1], 0);
@@ -376,14 +416,10 @@ private:
 
         vkCmdCopyBuffer(commandBuffers[1], stagingBuffer, chunkBuffer, 1, &copyRegion);
         vkEndCommandBuffer(commandBuffers[1]);
-        waitForTransfer = true;
-
         newChunk = CpuChunk(farValuesOffset, rootNodeIndex, job.resolution);
         newChunk.chunkSize = chunkOctreeGPU.size();
         newChunk.offsetSize = chunkFarValues.size();
-
-        farValuesOffset += chunkFarValues.size();
-        rootNodeIndex += chunkOctreeGPU.size();
+        waitForTransfer = true;
     }
 
     bool checkChunkResolution(ChunkLoadInfo &job) {
@@ -391,7 +427,7 @@ private:
                                             floor(camera.position.y / maxChunkResolution));
         uint32_t gridSize = sqrt(chunks.size());
         int dist = std::max(abs(job.gridCoord.y - cameraChunkCoords.y), abs(job.gridCoord.x - cameraChunkCoords.x));
-        uint32_t octreeResolution = maxChunkResolution >> dist;
+        uint32_t octreeResolution = maxChunkResolution >> (dist * 4);
 
         return octreeResolution == job.resolution;
     }
@@ -425,45 +461,6 @@ private:
             }
         }
     }
-
-    //TODO: use fences and idk
-    void recordUploadCommandBuffer(
-        VkCommandBuffer commandBuffer,
-        VkBuffer dstBuffer,
-        VkDeviceSize size,
-        VkFence transferFence,
-        VkDeviceSize srcOffset = 0,
-        VkDeviceSize dstOffset = 0,
-        VkSemaphore signalSemaphore = VK_NULL_HANDLE
-    ) {
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-        vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-        // Copy region
-        VkBufferCopy copyRegion{};
-        copyRegion.srcOffset = srcOffset;
-        copyRegion.dstOffset = dstOffset;
-        copyRegion.size = size;
-
-        vkCmdCopyBuffer(commandBuffer, stagingBuffer, dstBuffer, 1, &copyRegion);
-
-        vkEndCommandBuffer(commandBuffer);
-
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &commandBuffer;
-
-        if (signalSemaphore != VK_NULL_HANDLE) {
-            submitInfo.signalSemaphoreCount = 1;
-            submitInfo.pSignalSemaphores = &signalSemaphore;
-        }
-
-        vkQueueSubmit(transferQueue, 1, &submitInfo, transferFence);
-    }
 };
 
 
@@ -477,11 +474,11 @@ void checkChunks(std::vector<CpuChunk> &chunks, Camera &camera, uint32_t maxChun
     for (int chunkY = 0; chunkY < gridSize; chunkY++) {
         for (int chunkX = 0; chunkX < gridSize; chunkX++) {
             int dist = std::max(abs(chunkY - cameraChunkCoords.y), abs(chunkX - cameraChunkCoords.x));
-            uint32_t octreeResolution = maxChunkResolution >> dist;
+            uint32_t octreeResolution = maxChunkResolution >> (dist * 4);
             auto gridCoord = glm::ivec2{chunkX, chunkY};
 
             CpuChunk &chunk = chunks[chunkY * gridSize + chunkX];
-            if (chunk.resolution < octreeResolution && chunk.loading != true) {
+            if (chunk.resolution != octreeResolution && chunk.loading != true) {
                 dmThreat.pushWork(ChunkLoadInfo{gridCoord, octreeResolution});
                 chunk.loading = true;
             }
