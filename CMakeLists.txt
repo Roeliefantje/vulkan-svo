@@ -14,7 +14,9 @@ add_executable(clion_vulkan main.cpp
         src/voxelizer.h
         include/tribox.h
         src/chunk_management.h
-        src/data_manage_threat.h)
+        src/data_manage_threat.h
+        src/config.h
+        src/input.h)
 
 target_include_directories(clion_vulkan PRIVATE ${Vulkan_INCLUDE_DIRS})
 target_include_directories(clion_vulkan PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)

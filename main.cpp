@@ -8,6 +8,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/rotate_vector.hpp>
 
+
 #include <iostream>
 #include <fstream>
 #include <stdexcept>
@@ -22,6 +23,7 @@
 #include <optional>
 #include <set>
 
+#include "src/config.h"
 #include "src/structures.h"
 #include "src/svo_generation.h"
 #include "src/voxelizer.h"
@@ -56,7 +58,7 @@ const std::vector<const char *> deviceExtensions = {
     VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME
 };
 
-
+#define NDEBUG
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
 #else
@@ -222,7 +224,7 @@ private:
                            glm::radians(30.0f));
     // Camera camera;
     float mouseX, mouseY;
-    float mouseSensitivity = 0.05f;
+    float mouseSensitivity = 0.01f;
     bool escPressed = false;
     bool mouseFree = false;
 
@@ -252,7 +254,7 @@ private:
         gridValues = std::vector<Chunk>(GRID_SIZE * GRID_SIZE);
         cpuGridValues = std::vector<CpuChunk>(GRID_SIZE * GRID_SIZE);
         farValues = std::vector<uint32_t>(GIGABYTE / sizeof(uint32_t));
-        octreeGPU = std::vector<uint32_t>(GIGABYTE * 2 / sizeof(uint32_t));
+        octreeGPU = std::vector<uint32_t>(GIGABYTE * 3 / sizeof(uint32_t));
 #endif
     }
 
@@ -473,33 +475,37 @@ private:
         glm::vec3 forward = glm::normalize(camera.direction - glm::dot(camera.direction, camera.up) * camera.up);
         glm::vec3 left = glm::cross(forward, camera.up);
         if (!mouseFree) {
+            auto multiplier = 0.2f;
+            if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
+                multiplier *= 10.0f;
+            }
             if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-                glm::vec3 change = forward * 0.2f * lastFrameTime;
+                glm::vec3 change = forward * multiplier * lastFrameTime;
                 camera.position += change;
                 // camera.lookAt += change;
             }
             if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-                glm::vec3 change = forward * -0.2f * lastFrameTime;
+                glm::vec3 change = forward * -1.0f * multiplier * lastFrameTime;
                 camera.position += change;
                 // camera.lookAt += change;
             }
             if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-                glm::vec3 change = left * 0.2f * lastFrameTime;
+                glm::vec3 change = left * multiplier * lastFrameTime;
                 camera.position += change;
                 // camera.lookAt += change;
             }
             if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-                glm::vec3 change = left * -0.2f * lastFrameTime;
+                glm::vec3 change = left * -1.0f * multiplier * lastFrameTime;
                 camera.position += change;
                 // camera.lookAt += change;
             }
             if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-                glm::vec3 change = camera.up * 0.2f * lastFrameTime;
+                glm::vec3 change = camera.up * multiplier * lastFrameTime;
                 camera.position += change;
                 // camera.lookAt += change;
             }
             if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-                glm::vec3 change = camera.up * -0.2f * lastFrameTime;
+                glm::vec3 change = camera.up * -1.0f * multiplier * lastFrameTime;
                 camera.position += change;
                 // camera.lookAt += change;
             }
@@ -1906,7 +1912,6 @@ private:
         submitInfo.pSignalSemaphores = &computeFinishedSemaphores[currentFrame];
 
         if (dmThreat->CheckToWaitAndStartTransfer()) {
-            std::cout << "Waiting for transfer" << std::endl;
             VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
             submitInfo.waitSemaphoreCount = 1;
             submitInfo.pWaitSemaphores = &transferSemaphore;
@@ -2291,8 +2296,9 @@ private:
     }
 };
 
-int main() {
+int main(int argc, char *argv[]) {
     ComputeShaderApplication app;
+
 
     try {
         app.run();

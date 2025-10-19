@@ -20,6 +20,10 @@ struct ChunkLoadInfo {
 
 namespace fs = std::filesystem;
 
+inline uint32_t calculateChunkResolution(uint32_t maxChunkResolution, int dist) {
+    return maxChunkResolution >> (dist);
+}
+
 class BufferManager {
 public:
     VkBuffer &buffer;
@@ -58,15 +62,11 @@ public:
             chunks.emplace(std::next(best), offset + size, remaining_area, false);
         }
 
+
         return offset;
     }
 
     void freeChunk(size_t offset) {
-        std::cout << "\n\n\nBefore the Free" << std::endl;
-        for (DataChunk c: chunks) {
-            std::cout << "Start Index: " << c.offset << " Start Index + size: " << c.offset + c.elementSize <<
-                    " Occupied: " << c.occupied << std::endl;
-        }
         auto chunk = chunks.end();
         for (auto it = chunks.begin(); it != chunks.end(); ++it) {
             if (it->offset == offset) {
@@ -98,12 +98,6 @@ public:
         if (first != last) {
             //Next on first because we replace first not remove it, next on last because [__first,__last).
             chunks.erase(std::next(first), std::next(last));
-        }
-
-        std::cout << "\n\n\nAfter the Free" << std::endl;
-        for (DataChunk c: chunks) {
-            std::cout << "Start Index: " << c.offset << " Start Index + size: " << c.offset + c.elementSize <<
-                    " Occupied: " << c.occupied << std::endl;
         }
     }
 
@@ -427,7 +421,7 @@ private:
                                             floor(camera.position.y / maxChunkResolution));
         uint32_t gridSize = sqrt(chunks.size());
         int dist = std::max(abs(job.gridCoord.y - cameraChunkCoords.y), abs(job.gridCoord.x - cameraChunkCoords.x));
-        uint32_t octreeResolution = maxChunkResolution >> (dist * 4);
+        uint32_t octreeResolution = calculateChunkResolution(maxChunkResolution, dist);
 
         return octreeResolution == job.resolution;
     }
@@ -474,7 +468,7 @@ void checkChunks(std::vector<CpuChunk> &chunks, Camera &camera, uint32_t maxChun
     for (int chunkY = 0; chunkY < gridSize; chunkY++) {
         for (int chunkX = 0; chunkX < gridSize; chunkX++) {
             int dist = std::max(abs(chunkY - cameraChunkCoords.y), abs(chunkX - cameraChunkCoords.x));
-            uint32_t octreeResolution = maxChunkResolution >> (dist * 4);
+            uint32_t octreeResolution = calculateChunkResolution(maxChunkResolution, dist);
             auto gridCoord = glm::ivec2{chunkX, chunkY};
 
             CpuChunk &chunk = chunks[chunkY * gridSize + chunkX];
