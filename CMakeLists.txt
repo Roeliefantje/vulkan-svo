@@ -16,7 +16,15 @@ add_executable(clion_vulkan main.cpp
         src/chunk_management.h
         src/data_manage_threat.h
         src/config.h
-        src/input.h)
+        src/input.h
+        src/input.cpp
+        src/compute_shader_application.h
+        src/structures.cpp
+        src/data_manage_threat.cpp
+        src/svo_generation.cpp
+        src/voxelizer.cpp
+        src/chunk_management.cpp
+        src/compute_shader_application.cpp)
 
 target_include_directories(clion_vulkan PRIVATE ${Vulkan_INCLUDE_DIRS})
 target_include_directories(clion_vulkan PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
