@@ -32,27 +32,13 @@
 #include <optional>
 #include <set>
 
+#include "config.h"
 #include "data_manage_threat.h"
 #include "structures.h"
 #include "scene_metadata.h"
 
-
-const bool useHeightmapData = true;
-const uint32_t WIDTH = 1920;
-const uint32_t HEIGHT = 1080;
-const float X_GROUPSIZE = 16;
-const float Y_GROUPSIZE = 16;
-const size_t GIGABYTE = (1 << 30);
-const VkDeviceSize STAGING_SIZE = GIGABYTE << 1;
-
 #define SHADERDEBUG 1
 // #define DEBUG 1
-// #define PRELOAD_DATA
-
-
-const uint32_t CHUNK_RESOLUTION = 1024 * 4;
-const uint32_t GRID_SIZE = 6;
-const uint32_t SEED = 12345 * 5;
 
 const int MAX_FRAMES_IN_FLIGHT = 1;
 const int MAX_VOXEL_BUFFERS = 32;
@@ -109,13 +95,14 @@ const std::vector<uint16_t> indices = {
 
 class ComputeShaderApplication {
 public:
+    ComputeShaderApplication(Config config);
+
     void run();
 
-    Camera camera = Camera(glm::vec3(10, 10, 712.5), glm::vec3(20, 20, 710.5), WIDTH, HEIGHT,
-                           glm::radians(30.0f));
-    // Camera camera;
+    Camera camera;
+    Config config;
+
     float mouseX, mouseY;
-    float mouseSensitivity = 0.01f;
     bool escPressed = false;
     bool mouseFree = false;
 
@@ -203,8 +190,8 @@ private:
     uint32_t currentFrame = 0;
     uint32_t maxBufferSize = 0;
 
-    // GridInfo gridInfo;
-    GridInfo gridInfo = GridInfo(CHUNK_RESOLUTION, GRID_SIZE);
+    //TODO: Rename gridinfo to proper name...
+    GridInfo gridInfo;
     uint32_t amountOfNodes = 0;
     std::vector<uint32_t> farValues;
     std::vector<uint32_t> octreeGPU;
@@ -241,6 +228,8 @@ private:
     //std::vector<VkBuffer> farValuesSBuffers;
     //std::vector<VkBuffer> gridBuffers;
     void initThreads();
+
+    void initCamera();
 
     void mainLoop();
 
@@ -280,7 +269,6 @@ private:
     void createGraphicsDescriptorSetLayout();
 
     void createComputeDescriptorSetLayout();
-
 
     void createGraphicsPipeline();
 

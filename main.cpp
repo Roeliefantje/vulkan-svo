@@ -1,7 +1,9 @@
 #include "src/compute_shader_application.h"
+#include "src/config.h"
 
 int main(int argc, char *argv[]) {
-    ComputeShaderApplication app;
+    Config config{argc, argv};
+    ComputeShaderApplication app{config};
 
     try {
         app.run();

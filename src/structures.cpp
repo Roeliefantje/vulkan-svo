@@ -1,5 +1,7 @@
 #include "structures.h"
 
+#include <queue>
+
 CpuChunk::CpuChunk(uint32_t chunkFarValuesOffset, uint32_t rootIndex, uint32_t resolution)
     : ChunkFarValuesOffset(chunkFarValuesOffset), rootNodeIndex(rootIndex), resolution(resolution) {
     chunkSize = 0;
@@ -124,6 +126,52 @@ std::vector<uint32_t> getOctreeGPUdata(std::shared_ptr<OctreeNode> rootNode, uin
     data[0] = addChildren(rootNode, &data, &index, 0, farValues);
     std::cout << "Total nodes: " << data.size() << std::endl;
     return data;
+}
+
+void addOctreeGPUdataBF(std::vector<uint32_t> &gpuData, std::shared_ptr<OctreeNode> rootNode, uint32_t nodesAmount,
+                        std::vector<uint32_t> &farValues) {
+    //ParentIndex is a bit confusing in this matter, it is actually the index of the current node.
+    struct QueueNode {
+        std::shared_ptr<OctreeNode> node;
+        uint32_t parentIndex;
+    };
+    //Instead of the previous structure, we add all the nodes of the tree next to eachother.
+    uint32_t startIndex = gpuData.size();
+    gpuData.resize(startIndex + nodesAmount);
+    uint32_t index = startIndex + 1;
+    std::queue<QueueNode> q;
+    q.push({rootNode, startIndex});
+
+    while (!q.empty()) {
+        auto current = q.front();
+        q.pop();
+
+        std::shared_ptr<OctreeNode> node = current.node;
+        uint32_t parentIndex = current.parentIndex;
+        uint32_t index = startIndex; //The first index of the children, is where we currently are.
+        uint32_t childCount = amountChildren(node->childMask);
+        startIndex += childCount;
+
+        uint32_t childOffset = 0;
+        for (int i = 0; i < 8; ++i) {
+            uint32_t bitIndex = 7 - i;
+            if ((node->childMask >> bitIndex) & 1) {
+                std::shared_ptr<OctreeNode> child = node->children[i];
+                if (!child) throw std::runtime_error("Null child in octree");
+
+                // (*data)[index + childOffset] = addChildren(child, data, startIndex, index + childOffset, farValues);
+                //Add children to queue to process its children later.
+                q.push({child, index + childOffset});
+                uint32_t offsetCalc = node->childMask >> (8 - i);
+                if (childOffset != std::popcount(offsetCalc)) {
+                    throw std::runtime_error("Counting bits gives different value!");
+                }
+                childOffset += 1;
+            }
+        }
+
+        gpuData[parentIndex] = createGPUData(node->childMask, node->color, index - parentIndex, farValues);
+    }
 }
 
 void addOctreeGPUdata(std::vector<uint32_t> &gpuData, std::shared_ptr<OctreeNode> rootNode, uint32_t nodesAmount,

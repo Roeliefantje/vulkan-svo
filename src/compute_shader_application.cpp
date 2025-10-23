@@ -35,27 +35,9 @@ bool QueueFamilyIndices::isComplete() {
 
 
 void ComputeShaderApplication::run() {
-    initData();
-    initWindow();
-    initVulkan();
-    initThreads();
     mainLoop();
     cleanup();
     free(dmThreat);
-}
-
-void ComputeShaderApplication::initData() {
-#ifdef PRELOAD_DATA
-    gridVoxelizeScene(gridValues, farValues, octreeGPU, camera, CHUNK_RESOLUTION, GRID_SIZE,
-                      "./assets/san-miguel-low-poly.obj", "./assets/",
-                      glm::vec3(29.5, 10.0, 8.6), glm::vec3(30.0, 11.0, 8.6),
-                      WIDTH, HEIGHT);
-#else
-    gridValues = std::vector<Chunk>(GRID_SIZE * GRID_SIZE);
-    cpuGridValues = std::vector<CpuChunk>(GRID_SIZE * GRID_SIZE);
-    farValues = std::vector<uint32_t>(GIGABYTE / sizeof(uint32_t));
-    octreeGPU = std::vector<uint32_t>(GIGABYTE * 3 / sizeof(uint32_t));
-#endif
 }
 
 void ComputeShaderApplication::initWindow() {
@@ -63,7 +45,7 @@ void ComputeShaderApplication::initWindow() {
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-    window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
+    window = glfwCreateWindow(config.width, config.height, "Vulkan", nullptr, nullptr);
     glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 
@@ -104,7 +86,7 @@ void ComputeShaderApplication::initVulkan() {
     createCommandPool();
     createTransferCommandPool();
     createShaderStorageBuffers();
-    createStagingBuffer(STAGING_SIZE);
+    createStagingBuffer(config.staging_size);
     createVertexBuffer();
     createIndexBuffer();
 
@@ -127,18 +109,19 @@ void ComputeShaderApplication::initThreads() {
     octreeGPUManager = new BufferManager(shaderStorageBuffers[0][0], octreeGPU.size());
     objSceneMetaData = SceneMetadata("./assets/san-miguel-low-poly.obj");
     std::cout << "ObjFile to be loaded: " << objSceneMetaData.objFile << std::endl;
+    //TODO: Revamp datamangethreat to be a lot cleaner
     dmThreat = new DataManageThreat(device, transferCommandPool, pStagingBuffer, *octreeGPUManager,
-                                    gridBuffers[0], *farValuesGPUManager, pStagingBufferMemory, STAGING_SIZE,
+                                    gridBuffers[0], *farValuesGPUManager, pStagingBufferMemory, config.staging_size,
                                     transferQueue,
-                                    CHUNK_RESOLUTION,
-                                    GRID_SIZE, objSceneMetaData, renderingFence,
+                                    config.chunk_resolution,
+                                    config.grid_size, objSceneMetaData, renderingFence,
                                     transferSemaphore, waitForTransfer, cpuGridValues, camera);
 }
 
 void ComputeShaderApplication::mainLoop() {
     double lastPrint = glfwGetTime();
     while (!glfwWindowShouldClose(window)) {
-        checkChunks(cpuGridValues, camera, CHUNK_RESOLUTION, *dmThreat);
+        checkChunks(cpuGridValues, camera, config.chunk_resolution, *dmThreat);
         processInput();
         glfwPollEvents();
         drawFrame();
@@ -233,97 +216,6 @@ void ComputeShaderApplication::cleanup() {
     glfwDestroyWindow(window);
 
     glfwTerminate();
-}
-
-void ComputeShaderApplication::mouseCallback(GLFWwindow *window, double xpos, double ypos) {
-    auto *app = static_cast<ComputeShaderApplication *>(glfwGetWindowUserPointer(window));
-    if (app) {
-        if (app->lastFrameTime == 0.0f) {
-            app->mouseX = xpos;
-            app->mouseY = ypos;
-            return;
-        }
-
-        float xoffset = xpos - app->mouseX;
-        float yoffset = app->mouseY - ypos;
-        app->mouseX = xpos;
-        app->mouseY = ypos;
-
-        //     std::cout << "X offset:" << xoffset << std::endl;
-        //     std::cout << "Y offset:" << yoffset << std::endl;
-
-        if (!app->mouseFree && (xoffset != 0.0f || yoffset != 0.0f)) {
-            glm::vec3 right = glm::cross(app->camera.direction, app->camera.up);
-            float angleR = glm::radians(yoffset * app->lastFrameTime * app->mouseSensitivity);
-            glm::vec3 rotated = glm::rotate(app->camera.direction, angleR, right);
-
-            // std::cout << "Original direction: X: " << app->camera.direction.x << " Y:" << app->camera.direction.y <<
-            //         " Z:" << app->camera.direction.z << std::endl;
-            // std::cout << "Rotated: X: " << rotated.x << " Y:" << rotated.y << " Z:" << rotated.z << std::endl;
-
-            if (rotated.z <= 0.9 && rotated.z >= -0.9) {
-                app->camera.direction = rotated;
-            }
-
-            angleR = glm::radians(xoffset * app->lastFrameTime * app->mouseSensitivity);
-            app->camera.direction = glm::rotate(app->camera.direction, angleR, app->camera.up);
-        }
-    }
-}
-
-void ComputeShaderApplication::processInput() {
-    glm::vec3 forward = glm::normalize(camera.direction - glm::dot(camera.direction, camera.up) * camera.up);
-    glm::vec3 left = glm::cross(forward, camera.up);
-    if (!mouseFree) {
-        auto multiplier = 0.2f;
-        if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
-            multiplier *= 10.0f;
-        }
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-            glm::vec3 change = forward * multiplier * lastFrameTime;
-            camera.position += change;
-            // camera.lookAt += change;
-        }
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-            glm::vec3 change = forward * -1.0f * multiplier * lastFrameTime;
-            camera.position += change;
-            // camera.lookAt += change;
-        }
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-            glm::vec3 change = left * multiplier * lastFrameTime;
-            camera.position += change;
-            // camera.lookAt += change;
-        }
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-            glm::vec3 change = left * -1.0f * multiplier * lastFrameTime;
-            camera.position += change;
-            // camera.lookAt += change;
-        }
-        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-            glm::vec3 change = camera.up * multiplier * lastFrameTime;
-            camera.position += change;
-            // camera.lookAt += change;
-        }
-        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-            glm::vec3 change = camera.up * -1.0f * multiplier * lastFrameTime;
-            camera.position += change;
-            // camera.lookAt += change;
-        }
-    }
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-        if (!escPressed) {
-            std::cout << "Escape pressed" << std::endl;
-            if (!mouseFree) {
-                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-            } else {
-                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-            }
-            mouseFree = !mouseFree;
-        }
-        escPressed = true;
-    } else if (escPressed) {
-        escPressed = false;
-    }
 }
 
 void ComputeShaderApplication::updateUniformCameraBuffer() {
@@ -1151,8 +1043,8 @@ void ComputeShaderApplication::createComputeImage() {
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageInfo.extent.width = WIDTH;
-    imageInfo.extent.height = HEIGHT;
+    imageInfo.extent.width = config.width;
+    imageInfo.extent.height = config.height;
     imageInfo.extent.depth = 1;
     imageInfo.mipLevels = 1;
     imageInfo.arrayLayers = 1;
@@ -1601,7 +1493,8 @@ void ComputeShaderApplication::recordComputeCommandBuffer(VkCommandBuffer comman
     // --- END BARRIER ---
 #endif
 
-    vkCmdDispatch(commandBuffer, std::ceil(WIDTH / X_GROUPSIZE), std::ceil(HEIGHT / Y_GROUPSIZE), 1);
+    vkCmdDispatch(commandBuffer, std::ceil(config.width / config.x_groupsize),
+                  std::ceil(config.height / config.y_groupsize), 1);
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to record compute command buffer!");

@@ -86,6 +86,8 @@ struct GridInfo {
     alignas(4) uint32_t bufferSize;
     alignas(4) uint32_t gridSize;
 
+    GridInfo() = default;
+
     GridInfo(uint32_t res, uint32_t gridSize);
 };
 

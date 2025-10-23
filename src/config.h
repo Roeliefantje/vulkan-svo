@@ -1,22 +1,33 @@
 //
 // Created by roeld on 01/10/2025.
 //
+#pragma once
 
 #ifndef CONFIG_H
 #define CONFIG_H
 #include <cxxopts.hpp>
 
+
 struct Config {
+    //Whether we use the voxelizer or the heightmap data.
     bool useHeightmapData = true;
-    uint32_t WIDTH = 1920 * 2;
-    uint32_t HEIGHT = 1080;
-    float X_GROUPSIZE = 16;
-    float Y_GROUPSIZE = 16;
+
+    //Output screen size
+    uint32_t width = 1920;
+    uint32_t height = 1080;
+
+    //What value are we using for the gpu compute groups
+    float x_groupsize = 16;
+    float y_groupsize = 16;
     size_t GIGABYTE = (1 << 30);
-    VkDeviceSize STAGING_SIZE = GIGABYTE << 1;
-    uint32_t CHUNK_RESOLUTION = 1024 * 4;
-    uint32_t GRID_SIZE = 6;
-    uint32_t SEED = 12345 * 5;
+
+    VkDeviceSize staging_size = GIGABYTE << 1;
+    uint32_t chunk_resolution = 1024 * 4;
+    uint32_t grid_size = 6;
+    uint32_t seed = 12345 * 5;
+
+    //MouseSensitivity
+    float mouseSensitivity = 0.01f;
 
 
     Config(int argc, char *argv[]) {
