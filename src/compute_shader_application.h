@@ -34,6 +34,7 @@
 
 #include "data_manage_threat.h"
 #include "structures.h"
+#include "scene_metadata.h"
 
 
 const bool useHeightmapData = true;
@@ -226,6 +227,7 @@ private:
     BufferManager *octreeGPUManager;
     BufferManager *farValuesGPUManager;
     DataManageThreat *dmThreat;
+    SceneMetadata objSceneMetaData;
 
 
     void initData();

@@ -19,6 +19,7 @@
 
 
 //TODO: Improve memory usage by only storing the triangles that are inside of a chunk
+int loadSceneMetaData(std::string inputFile, std::string path, Aabb &sceneBounds, int &numTriangles);
 
 int loadObject(std::string inputFile, std::string path, int resolution, int gridSize,
                std::vector<TexturedTriangle> &triangles, float &scale);

@@ -97,7 +97,7 @@ DataManageThreat::DataManageThreat(VkDevice &device, VkCommandPool &cmdPool, VkB
                                    VkDeviceMemory &stagingBufferMemory,
                                    VkDeviceSize bufferSize,
                                    VkQueue &transferQueue, uint32_t maxChunkResolution, uint32_t gridSize,
-                                   std::string objFile, VkFence &renderFence, VkSemaphore &transferSema,
+                                   SceneMetadata sceneData, VkFence &renderFence, VkSemaphore &transferSema,
                                    std::atomic_bool &waitForTransfer, std::vector<CpuChunk> &chunks,
                                    Camera &camera) : stopFlag(false),
                                                      waitForTransfer(waitForTransfer),
@@ -115,14 +115,15 @@ DataManageThreat::DataManageThreat(VkDevice &device, VkCommandPool &cmdPool, VkB
                                                      stagingBufferMemory(stagingBufferMemory),
                                                      transferQueue(transferQueue),
                                                      maxChunkResolution(maxChunkResolution),
-                                                     objFile(objFile),
-                                                     gridSize(gridSize) {
+                                                     gridSize(gridSize),
+                                                     objSceneData(sceneData) {
     std::cout << "Staging buffer size:" << bufferSize;
     workerThread = std::thread([this]() { this->threadLoop(); });
+    objFile = objSceneData.objFile;
     fs::path filePath{objFile};
     this->objDirectory = filePath.parent_path().string();
     this->directory = std::format("{}_{}", (filePath.parent_path() / filePath.stem()).string(), gridSize);
-    loadObj();
+    // loadObj();
     initFence();
     initCommandBuffers();
 }
@@ -373,6 +374,9 @@ void DataManageThreat::loadChunkData(ChunkLoadInfo &job, std::vector<uint32_t> &
     uint32_t nodeAmount = 0;
     if (!loadChunk(directory, maxChunkResolution, job.resolution, job.gridCoord, nodeAmount, chunkOctreeGPU,
                    chunkFarValues)) {
+        if (!sceneLoaded) {
+            loadObj();
+        }
         std::cout << "Chunk not yet created, generating the chunk" << std::endl;
         auto aabb = Aabb{};
         aabb.aa = glm::ivec3(job.gridCoord.x * maxChunkResolution, job.gridCoord.y * maxChunkResolution, 0);

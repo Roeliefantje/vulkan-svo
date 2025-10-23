@@ -125,11 +125,13 @@ void ComputeShaderApplication::initVulkan() {
 void ComputeShaderApplication::initThreads() {
     farValuesGPUManager = new BufferManager(farValuesSBuffers[0], farValues.size());
     octreeGPUManager = new BufferManager(shaderStorageBuffers[0][0], octreeGPU.size());
+    objSceneMetaData = SceneMetadata("./assets/san-miguel-low-poly.obj");
+    std::cout << "ObjFile to be loaded: " << objSceneMetaData.objFile << std::endl;
     dmThreat = new DataManageThreat(device, transferCommandPool, pStagingBuffer, *octreeGPUManager,
                                     gridBuffers[0], *farValuesGPUManager, pStagingBufferMemory, STAGING_SIZE,
                                     transferQueue,
                                     CHUNK_RESOLUTION,
-                                    GRID_SIZE, "./assets/san-miguel-low-poly.obj", renderingFence,
+                                    GRID_SIZE, objSceneMetaData, renderingFence,
                                     transferSemaphore, waitForTransfer, cpuGridValues, camera);
 }
 

@@ -10,6 +10,56 @@
 #include "tiny_obj_loader.h"
 #include "tribox.h"
 
+int loadSceneMetaData(std::string inputFile, std::string path, Aabb &sceneBounds, int &numTriangles) {
+    tinyobj::ObjReaderConfig reader_config;
+    reader_config.mtl_search_path = path;
+
+    tinyobj::ObjReader reader;
+
+    if (!reader.ParseFromFile(inputFile, reader_config)) {
+        if (!reader.Error().empty()) {
+            std::cerr << "TinyObjReader: " << reader.Error();
+        }
+        return 1;
+    }
+
+    if (!reader.Warning().empty()) {
+        std::cout << "TinyObjReader: " << reader.Warning();
+    }
+
+    auto &attrib = reader.GetAttrib();
+    auto &shapes = reader.GetShapes();
+    auto &materials = reader.GetMaterials();
+    numTriangles = shapes.size();
+
+    glm::vec3 bbMin{
+        +std::numeric_limits<float>::infinity(),
+        +std::numeric_limits<float>::infinity(),
+        +std::numeric_limits<float>::infinity()
+    };
+    glm::vec3 bbMax{
+        -std::numeric_limits<float>::infinity(),
+        -std::numeric_limits<float>::infinity(),
+        -std::numeric_limits<float>::infinity()
+    };
+
+    for (size_t v = 0; v < attrib.vertices.size() / 3; v++) {
+        float x = attrib.vertices[3 * v + 0];
+        float y = attrib.vertices[3 * v + 2];
+        float z = attrib.vertices[3 * v + 1];
+        bbMin.x = std::min(bbMin.x, x);
+        bbMax.x = std::max(bbMax.x, x);
+        bbMin.y = std::min(bbMin.y, y);
+        bbMax.y = std::max(bbMax.y, y);
+        bbMin.z = std::min(bbMin.z, z);
+        bbMax.z = std::max(bbMax.z, z);
+    }
+    sceneBounds.aa = bbMin;
+    sceneBounds.bb = bbMax;
+
+    return 0;
+}
+
 
 int loadObject(std::string inputFile, std::string path, int resolution, int gridSize,
                std::vector<TexturedTriangle> &triangles, float &scale) {
@@ -343,6 +393,7 @@ void gridVoxelizeScene(std::vector<Chunk> &gridValues, std::vector<uint32_t> &fa
         stbi_image_free(value.imageData);
     }
 }
+
 
 OctreeNode voxelizeObj(std::string inputFile, std::string path, uint32_t svo_resolution, uint32_t &nodeCount) {
     std::vector<TexturedTriangle> triangles;

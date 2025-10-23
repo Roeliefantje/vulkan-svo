@@ -11,6 +11,7 @@
 
 #include "structures.h"
 #include "voxelizer.h"
+#include "scene_metadata.h"
 
 //TODO: start using paths as func arguments for all the load, unload functionality
 struct ChunkLoadInfo {
@@ -53,7 +54,7 @@ public:
                      VkDeviceMemory &stagingBufferMemory,
                      VkDeviceSize bufferSize,
                      VkQueue &transferQueue, uint32_t maxChunkResolution, uint32_t gridSize,
-                     std::string objFile, VkFence &renderFence, VkSemaphore &transferSema,
+                     SceneMetadata objFile, VkFence &renderFence, VkSemaphore &transferSema,
                      std::atomic_bool &waitForTransfer, std::vector<CpuChunk> &chunks,
                      Camera &camera);
 
@@ -98,6 +99,9 @@ private:
 
     ChunkLoadInfo currentChunk;
     CpuChunk newChunk;
+
+    SceneMetadata objSceneData;
+    bool sceneLoaded = false;
 
     void loadObj();
 
