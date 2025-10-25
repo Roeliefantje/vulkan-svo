@@ -12,6 +12,7 @@
 #include "structures.h"
 #include "voxelizer.h"
 #include "scene_metadata.h"
+#include "config.h"
 
 //TODO: start using paths as func arguments for all the load, unload functionality
 struct ChunkLoadInfo {
@@ -49,13 +50,11 @@ private:
 
 class DataManageThreat {
 public:
-    DataManageThreat(VkDevice &device, VkCommandPool &cmdPool, VkBuffer &stagingBuffer, BufferManager &octreeGPUBuffer,
-                     VkBuffer &chunkBuffer, BufferManager &farValuesBuffer,
-                     VkDeviceMemory &stagingBufferMemory,
-                     VkDeviceSize bufferSize,
-                     VkQueue &transferQueue, uint32_t maxChunkResolution, uint32_t gridSize,
-                     SceneMetadata objFile, VkFence &renderFence, VkSemaphore &transferSema,
-                     std::atomic_bool &waitForTransfer, std::vector<CpuChunk> &chunks,
+    DataManageThreat(VkDevice &device, StagingBufferProperties &stagingBufferProperties, Config &config,
+                     BufferManager &octreeGPUManager,
+                     VkBuffer &chunkBuffer, BufferManager &farValuesManager,
+                     std::optional<SceneMetadata> objFile,
+                     std::vector<CpuChunk> &chunks,
                      Camera &camera);
 
     ~DataManageThreat();
@@ -71,28 +70,20 @@ private:
     std::condition_variable cv;
     bool stopFlag;
 
-    std::atomic_bool &waitForTransfer;
+    Config &config;
+    StagingBufferProperties &stagingBufferProperties;
     std::vector<CpuChunk> &chunks;
     Camera &camera;
-    VkFence &renderingFence;
-    VkFence transferFence;
-    VkFence gridFence;
-    VkSemaphore &transferSemaphore;
-    VkCommandPool &commandPool;
-    VkDeviceSize bufferSize;
     VkDevice &device;
     std::array<VkCommandBuffer, 2> commandBuffers;
-    VkBuffer &stagingBuffer;
-    BufferManager &octreeGPUBuffer;
+    BufferManager &octreeGPUManager;
+    BufferManager &farValuesManager;
     VkBuffer &chunkBuffer;
-    BufferManager &farValuesBuffer;
-    VkDeviceMemory &stagingBufferMemory;
-    VkQueue &transferQueue;
-    uint32_t maxChunkResolution;
     std::string objFile;
     std::string objDirectory;
     std::string directory;
-    uint32_t gridSize;
+    VkFence transferFence;
+    VkFence gridFence;
 
     std::vector<TexturedTriangle> triangles;
     std::map<std::string, LoadedTexture> textures;
@@ -100,7 +91,7 @@ private:
     ChunkLoadInfo currentChunk;
     CpuChunk newChunk;
 
-    SceneMetadata objSceneData;
+    std::optional<SceneMetadata> objSceneData;
     bool sceneLoaded = false;
 
     void loadObj();

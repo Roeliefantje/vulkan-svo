@@ -104,19 +104,6 @@ void ComputeShaderApplication::initVulkan() {
     createSyncObjects();
 }
 
-void ComputeShaderApplication::initThreads() {
-    farValuesGPUManager = new BufferManager(farValuesSBuffers[0], farValues.size());
-    octreeGPUManager = new BufferManager(shaderStorageBuffers[0][0], octreeGPU.size());
-    objSceneMetaData = SceneMetadata("./assets/san-miguel-low-poly.obj");
-    std::cout << "ObjFile to be loaded: " << objSceneMetaData.objFile << std::endl;
-    //TODO: Revamp datamangethreat to be a lot cleaner
-    dmThreat = new DataManageThreat(device, transferCommandPool, pStagingBuffer, *octreeGPUManager,
-                                    gridBuffers[0], *farValuesGPUManager, pStagingBufferMemory, config.staging_size,
-                                    transferQueue,
-                                    config.chunk_resolution,
-                                    config.grid_size, objSceneMetaData, renderingFence,
-                                    transferSemaphore, waitForTransfer, cpuGridValues, camera);
-}
 
 void ComputeShaderApplication::mainLoop() {
     double lastPrint = glfwGetTime();
@@ -202,7 +189,7 @@ void ComputeShaderApplication::cleanup() {
     }
 
     vkDestroyCommandPool(device, commandPool, nullptr);
-    vkDestroyCommandPool(device, transferCommandPool, nullptr);
+    vkDestroyCommandPool(device, stagingBufferProperties.transferCommandPool, nullptr);
 
     vkDestroyDevice(device, nullptr);
 
@@ -390,7 +377,7 @@ void ComputeShaderApplication::createLogicalDevice() {
     vkGetDeviceQueue(device, indices.graphicsAndComputeFamily.value(), 0, &graphicsQueue);
     vkGetDeviceQueue(device, indices.graphicsAndComputeFamily.value(), 0, &computeQueue);
     vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
-    vkGetDeviceQueue(device, indices.transferFamily.value(), 0, &transferQueue);
+    vkGetDeviceQueue(device, indices.transferFamily.value(), 0, &stagingBufferProperties.transferQueue);
 }
 
 void ComputeShaderApplication::getMaxBufferSize() {
@@ -826,15 +813,16 @@ void ComputeShaderApplication::createTransferCommandPool() {
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolInfo.queueFamilyIndex = queueFamilyIndices.transferFamily.value();
 
-    if (vkCreateCommandPool(device, &poolInfo, nullptr, &transferCommandPool) != VK_SUCCESS) {
+    if (vkCreateCommandPool(device, &poolInfo, nullptr, &stagingBufferProperties.transferCommandPool) != VK_SUCCESS) {
         throw std::runtime_error("failed to create transfer command pool!");
     }
 }
 
 void ComputeShaderApplication::createStagingBuffer(VkDeviceSize size) {
     createBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, pStagingBuffer,
-                 pStagingBufferMemory);
+                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                 stagingBufferProperties.pStagingBuffer,
+                 stagingBufferProperties.pStagingBufferMemory);
 }
 
 void ComputeShaderApplication::createShaderStorageBuffer(std::vector<uint32_t> &dataVec,
@@ -1573,7 +1561,7 @@ void ComputeShaderApplication::createSyncObjects() {
         }
     }
 
-    vkCreateSemaphore(device, &semaphoreInfo, nullptr, &transferSemaphore);
+    vkCreateSemaphore(device, &semaphoreInfo, nullptr, &stagingBufferProperties.transferSemaphore);
     vkCreateFence(device, &fenceInfo, nullptr, &renderingFence);
 }
 
@@ -1609,7 +1597,7 @@ void ComputeShaderApplication::drawFrame() {
     if (dmThreat->CheckToWaitAndStartTransfer()) {
         VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
         submitInfo.waitSemaphoreCount = 1;
-        submitInfo.pWaitSemaphores = &transferSemaphore;
+        submitInfo.pWaitSemaphores = &stagingBufferProperties.transferSemaphore;
         submitInfo.pWaitDstStageMask = &waitStage;
     }
 

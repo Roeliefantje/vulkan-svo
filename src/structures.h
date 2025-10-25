@@ -16,12 +16,23 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 // Vulkan types
+#include <atomic>
 #include <vulkan/vulkan.h>
 
 struct DebugValues {
     alignas(4) uint32_t totalSteps;
     alignas(4) uint32_t maxSteps;
     uint32_t pad[2];
+};
+
+struct StagingBufferProperties {
+    VkCommandPool transferCommandPool; //The command pool used to submit transfer commands for the staging buffer.
+    VkQueue transferQueue;
+    VkBuffer pStagingBuffer;
+    VkDeviceMemory pStagingBufferMemory;
+    VkSemaphore transferSemaphore;
+    std::atomic_bool waitForTransfer = false;
+    VkDeviceSize bufferSize;
 };
 
 struct CpuChunk {

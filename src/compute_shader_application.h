@@ -93,6 +93,7 @@ const std::vector<uint16_t> indices = {
     // 0, 1, 2, 2, 3, 0
 };
 
+
 class ComputeShaderApplication {
 public:
     ComputeShaderApplication(Config config);
@@ -118,7 +119,7 @@ private:
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     VkDevice device;
 
-    VkQueue transferQueue;
+
     VkQueue graphicsQueue;
     VkQueue computeQueue;
     VkQueue presentQueue;
@@ -140,7 +141,7 @@ private:
     VkPipeline computePipeline;
 
     VkCommandPool commandPool;
-    VkCommandPool transferCommandPool;
+
 
     std::vector<std::vector<VkBuffer> > shaderStorageBuffers;
     std::vector<VkBuffer> farValuesSBuffers;
@@ -150,11 +151,10 @@ private:
     std::vector<VkDeviceMemory> farValuesSBuffersMemory;
     std::vector<VkDeviceMemory> gridBuffersMemory;
     std::vector<VkDeviceMemory> debugBuffersMemory;
-    VkBuffer pStagingBuffer;
-    VkDeviceMemory pStagingBufferMemory;
+
+    StagingBufferProperties stagingBufferProperties;
+
     //Add the other stuff
-
-
     std::vector<VkBuffer> uniformBuffers;
     std::vector<VkDeviceMemory> uniformBuffersMemory;
     std::vector<void *> uniformBuffersMapped;
@@ -198,8 +198,6 @@ private:
     std::vector<Chunk> gridValues;
     std::vector<CpuChunk> cpuGridValues;
     VkFence renderingFence;
-    VkSemaphore transferSemaphore;
-    std::atomic_bool waitForTransfer = false;
 
 
     bool framebufferResized = false;
@@ -214,7 +212,7 @@ private:
     BufferManager *octreeGPUManager;
     BufferManager *farValuesGPUManager;
     DataManageThreat *dmThreat;
-    SceneMetadata objSceneMetaData;
+    std::optional<SceneMetadata> objSceneMetaData = std::nullopt;
 
 
     void initData();

@@ -25,6 +25,7 @@ void ComputeShaderApplication::initData() {
     gridInfo = GridInfo{config.chunk_resolution, config.grid_size};
 }
 
+
 void ComputeShaderApplication::initCamera() {
     // Initialize the camera position based on the config information.
     //TODO!: If the config includes a json file for the camera position, use it.
@@ -37,4 +38,18 @@ void ComputeShaderApplication::initCamera() {
     } else {
         throw std::runtime_error("Camera initialization not yet implemented with scene!");
     }
+}
+
+void ComputeShaderApplication::initThreads() {
+    //Init the data and threads necessary for gpu chunk stuffs.
+    farValuesGPUManager = new BufferManager(farValuesSBuffers[0], farValues.size());
+    octreeGPUManager = new BufferManager(shaderStorageBuffers[0][0], octreeGPU.size());
+    if (!config.useHeightmapData) {
+        objSceneMetaData = SceneMetadata("./assets/san-miguel-low-poly.obj");
+        std::cout << "ObjFile to be loaded: " << objSceneMetaData->objFile << std::endl;
+    }
+
+    //TODO: Revamp datamangethreat to be a lot cleaner
+    dmThreat = new DataManageThreat(device, stagingBufferProperties, config, *octreeGPUManager,
+                                    gridBuffers[0], *farValuesGPUManager, objSceneMetaData, cpuGridValues, camera);
 }
