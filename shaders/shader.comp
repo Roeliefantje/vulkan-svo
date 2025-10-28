@@ -100,6 +100,9 @@ vec3 voxel(vec3 ro, vec3 rd, vec3 ird, float size)
     return hit;
 }
 
+vec3 positive_mod(vec3 x, vec3 y) {
+    return mod(mod(x, y) + y, y);
+}
 
 layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 void main()
@@ -171,7 +174,8 @@ void main()
             level = 0;
             rayPos = lro + vec3(fro) + vec3(gridCoord * ubo.width);
             gridCoord += ivec3(mask) * irdsign;
-            lro = rayPos - vec3(gridCoord) * ubo.width;
+//            lro = rayPos - vec3(gridCoord) * ubo.width;
+            lro = positive_mod(lro, vec3(ubo.width));
             fro = ivec3(0);
 
             currentChunk = grid[gridCoord.y * ubo.gridSize + gridCoord.x];

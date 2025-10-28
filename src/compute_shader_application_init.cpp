@@ -32,7 +32,8 @@ void ComputeShaderApplication::initCamera() {
     if (config.useHeightmapData) {
         std::cout << "Initializing Camera" << std::endl;
         camera = CPUCamera(
-            glm::vec3(10, 10, 712.5), glm::vec3(20, 20, 710.5), (int) config.width, (int) config.height,
+            glm::vec3(100 + config.chunk_resolution, 100 + config.chunk_resolution, 712.5), glm::vec3(20, 20, 710.5),
+            (int) config.width, (int) config.height,
             glm::radians(30.0f), config
         );
         std::cout << "Finished initializing camera" << std::endl;

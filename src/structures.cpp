@@ -48,14 +48,19 @@ inline glm::ivec3 positive_mod(const glm::ivec3 &a, const glm::ivec3 &b) {
 }
 
 void CPUCamera::updatePosition(glm::vec3 posChange) {
+    //TODO: Current method wont work if camera is moved multiple chunks in one frame.
     gpu_camera.position += posChange;
-    glm::ivec3 new_chunk_coords = glm::ivec3(gpu_camera.position) / int(maxChunkResolution);
-    if (new_chunk_coords != chunk_coords) {
-        gpu_camera.position = glm::mod(gpu_camera.position, glm::vec3(maxChunkResolution));
-        //Update the gpu side tracker of what the "center" chunk is
-        glm::ivec3 diff = new_chunk_coords - chunk_coords;
+    glm::ivec3 highMask = glm::greaterThan(gpu_camera.position, glm::vec3(maxChunkResolution));
+    glm::ivec3 lowMask = glm::lessThan(gpu_camera.position, glm::vec3(0));
+    if (glm::any(glm::notEqual(lowMask, glm::ivec3(0))) || glm::any(glm::notEqual(highMask, glm::ivec3(0)))) {
+        std::cout << "Prior camera grid pos: " << gpu_camera.camera_grid_pos.x << ", " << gpu_camera.camera_grid_pos.y
+                << "\n";
+        glm::ivec3 diff = highMask * 1 + lowMask * -1;
         gpu_camera.camera_grid_pos = positive_mod(gpu_camera.camera_grid_pos + diff, glm::ivec3(gridSize));
-        chunk_coords = new_chunk_coords;
+        gpu_camera.position = glm::mod(gpu_camera.position, glm::vec3(maxChunkResolution));
+        std::cout << "After camera grid pos: " << gpu_camera.camera_grid_pos.x << ", " << gpu_camera.camera_grid_pos.y
+                << "\n";
+        chunk_coords += diff;
     }
 }
 
