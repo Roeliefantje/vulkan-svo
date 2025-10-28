@@ -100,10 +100,11 @@ public:
 
     void run();
 
-    Camera camera;
+    CPUCamera camera;
     Config config;
 
-    float mouseX, mouseY;
+    float mouseX = 0;
+    float mouseY = 0;
     bool escPressed = false;
     bool mouseFree = false;
 

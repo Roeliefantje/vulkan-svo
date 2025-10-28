@@ -18,6 +18,7 @@
 struct ChunkLoadInfo {
     glm::ivec2 gridCoord;
     uint32_t resolution;
+    glm::ivec3 chunkCoord;
 };
 
 namespace fs = std::filesystem;
@@ -55,7 +56,7 @@ public:
                      VkBuffer &chunkBuffer, BufferManager &farValuesManager,
                      std::optional<SceneMetadata> objFile,
                      std::vector<CpuChunk> &chunks,
-                     Camera &camera);
+                     CPUCamera &camera);
 
     ~DataManageThreat();
 
@@ -73,7 +74,7 @@ private:
     Config &config;
     StagingBufferProperties &stagingBufferProperties;
     std::vector<CpuChunk> &chunks;
-    Camera &camera;
+    CPUCamera &camera;
     VkDevice &device;
     std::array<VkCommandBuffer, 2> commandBuffers;
     BufferManager &octreeGPUManager;
@@ -90,6 +91,7 @@ private:
 
     ChunkLoadInfo currentChunk;
     CpuChunk newChunk;
+    glm::ivec2 cameraChunk;
 
     std::optional<SceneMetadata> objSceneData;
     bool sceneLoaded = false;
@@ -113,7 +115,7 @@ private:
 
 
 //Check whether all currently loaded chunks are in the right resolution and queue them to be loaded if not
-void checkChunks(std::vector<CpuChunk> &chunks, Camera &camera, uint32_t maxChunkResolution,
+void checkChunks(std::vector<CpuChunk> &chunks, CPUCamera &camera, uint32_t maxChunkResolution,
                  DataManageThreat &dmThreat);
 
 #endif //DATA_MANAGE_THREAT_H

@@ -23,7 +23,7 @@ struct Config {
 
     VkDeviceSize staging_size = GIGABYTE << 1;
     uint32_t chunk_resolution = 1024 * 4;
-    uint32_t grid_size = 6;
+    uint32_t grid_size = 7;
     uint32_t seed = 12345 * 5;
 
     //MouseSensitivity

@@ -22,7 +22,7 @@ void ComputeShaderApplication::initData() {
     octreeGPU = std::vector<uint32_t>(config.GIGABYTE * 3 / sizeof(uint32_t));
 
     //GPU Ubo object? I think...
-    gridInfo = GridInfo{config.chunk_resolution, config.grid_size};
+    gridInfo = GridInfo(config.chunk_resolution, config.grid_size);
 }
 
 
@@ -31,10 +31,11 @@ void ComputeShaderApplication::initCamera() {
     //TODO!: If the config includes a json file for the camera position, use it.
     if (config.useHeightmapData) {
         std::cout << "Initializing Camera" << std::endl;
-        camera = Camera{
+        camera = CPUCamera(
             glm::vec3(10, 10, 712.5), glm::vec3(20, 20, 710.5), (int) config.width, (int) config.height,
-            glm::radians(30.0f)
-        };
+            glm::radians(30.0f), config
+        );
+        std::cout << "Finished initializing camera" << std::endl;
     } else {
         throw std::runtime_error("Camera initialization not yet implemented with scene!");
     }

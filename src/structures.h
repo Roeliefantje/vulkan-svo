@@ -12,12 +12,16 @@
 #include <iostream>
 
 #define GLM_FORCE_RADIANS
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/integer.hpp>
 
 // Vulkan types
 #include <atomic>
 #include <vulkan/vulkan.h>
+
+#include "config.h"
 
 struct DebugValues {
     alignas(4) uint32_t totalSteps;
@@ -36,16 +40,17 @@ struct StagingBufferProperties {
 };
 
 struct CpuChunk {
-    uint32_t ChunkFarValuesOffset;
-    uint32_t rootNodeIndex;
-    uint32_t resolution;
-    uint32_t chunkSize;
-    uint32_t offsetSize;
+    uint32_t ChunkFarValuesOffset = 0;
+    uint32_t rootNodeIndex = 0;
+    uint32_t resolution = 0;
+    uint32_t chunkSize = 0;
+    uint32_t offsetSize = 0;
+    glm::ivec3 chunk_coords = glm::ivec3{0, 0, 0};
     bool loading = false;
 
     CpuChunk() = default;
 
-    CpuChunk(uint32_t chunkFarValuesOffset, uint32_t rootIndex, uint32_t resolution);
+    CpuChunk(uint32_t chunkFarValuesOffset, uint32_t rootIndex, uint32_t resolution, glm::ivec3 chunk_coords);
 };
 
 struct Chunk {
@@ -73,12 +78,28 @@ struct Camera {
     alignas(16) glm::vec3 position;
     alignas(16) glm::vec3 direction;
     alignas(16) glm::vec3 up;
+    alignas(16) glm::ivec3 camera_grid_pos;
     alignas(8) glm::vec2 resolution;
     alignas(4) float fov;
 
     Camera() = default;
 
-    Camera(glm::vec3 pos, glm::vec3 lookAt, int screenWidth, int screenHeight, float fovRadian);
+    Camera(glm::vec3 pos, glm::vec3 lookAt, int screenWidth, int screenHeight, float fovRadian,
+           glm::ivec3 camera_grid_pos);
+};
+
+struct CPUCamera {
+    Camera gpu_camera;
+    glm::ivec3 chunk_coords;
+    uint32_t gridSize;
+    uint32_t maxChunkResolution;
+
+    CPUCamera() = default;
+
+    CPUCamera(glm::vec3 pos, glm::vec3 lookAt, int screenWidth, int screenHeight, float fovRadian,
+              Config &config);
+
+    void updatePosition(glm::vec3 posChange);
 };
 
 struct OctreeNode {

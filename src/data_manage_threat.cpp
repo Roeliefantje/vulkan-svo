@@ -96,7 +96,7 @@ DataManageThreat::DataManageThreat(VkDevice &device, StagingBufferProperties &st
                                    VkBuffer &chunkBuffer, BufferManager &farValuesManager,
                                    std::optional<SceneMetadata> objFileData,
                                    std::vector<CpuChunk> &chunks,
-                                   Camera &camera)
+                                   CPUCamera &camera)
 
     : stopFlag(false),
       config(config),
@@ -232,8 +232,8 @@ void DataManageThreat::threadLoop() {
 }
 
 void DataManageThreat::loadChunkToGPU(ChunkLoadInfo job) {
-    std::cout << std::format("Chunk Coords to load: {}, {}, Desired resolution: {}", job.gridCoord.x,
-                             job.gridCoord.y,
+    std::cout << std::format("Chunk Coords to load: {}, {}, Desired resolution: {}", job.chunkCoord.x,
+                             job.chunkCoord.y,
                              job.resolution) <<
             std::endl;
     if (!checkChunkResolution(job)) {
@@ -349,7 +349,7 @@ void DataManageThreat::loadChunkToGPU(ChunkLoadInfo job) {
 
     vkCmdCopyBuffer(commandBuffers[1], stagingBufferProperties.pStagingBuffer, chunkBuffer, 1, &copyRegion);
     vkEndCommandBuffer(commandBuffers[1]);
-    newChunk = CpuChunk(farValuesOffset, rootNodeIndex, job.resolution);
+    newChunk = CpuChunk(farValuesOffset, rootNodeIndex, job.resolution, job.chunkCoord);
     newChunk.chunkSize = chunkOctreeGPU.size();
     newChunk.offsetSize = chunkFarValues.size();
     stagingBufferProperties.waitForTransfer = true;
@@ -357,10 +357,9 @@ void DataManageThreat::loadChunkToGPU(ChunkLoadInfo job) {
 
 
 bool DataManageThreat::checkChunkResolution(ChunkLoadInfo &job) {
-    auto cameraChunkCoords = glm::ivec2(floor(camera.position.x / config.chunk_resolution),
-                                        floor(camera.position.y / config.chunk_resolution));
+    auto cameraChunkCoords = camera.chunk_coords;
     uint32_t gridSize = sqrt(chunks.size());
-    int dist = std::max(abs(job.gridCoord.y - cameraChunkCoords.y), abs(job.gridCoord.x - cameraChunkCoords.x));
+    int dist = std::max(abs(job.chunkCoord.y - cameraChunkCoords.y), abs(job.chunkCoord.x - cameraChunkCoords.x));
     uint32_t octreeResolution = calculateChunkResolution(config.chunk_resolution, dist);
 
     return octreeResolution == job.resolution;
@@ -369,14 +368,16 @@ bool DataManageThreat::checkChunkResolution(ChunkLoadInfo &job) {
 void DataManageThreat::loadChunkData(ChunkLoadInfo &job, std::vector<uint32_t> &chunkFarValues,
                                      std::vector<uint32_t> &chunkOctreeGPU) {
     uint32_t nodeAmount = 0;
-    if (!loadChunk(directory, config.chunk_resolution, job.resolution, job.gridCoord, nodeAmount, chunkOctreeGPU,
+    if (!loadChunk(directory, config.chunk_resolution, job.resolution, job.chunkCoord, nodeAmount, chunkOctreeGPU,
                    chunkFarValues)) {
         if (!config.useHeightmapData && !sceneLoaded) {
+            std::cout << "Loading scene" << std::endl;
             loadObj();
+            std::cout << "Finished loading scene" << std::endl;
         }
         std::cout << "Chunk not yet created, generating the chunk" << std::endl;
         auto aabb = Aabb{};
-        aabb.aa = glm::ivec3(job.gridCoord.x * config.chunk_resolution, job.gridCoord.y * config.chunk_resolution, 0);
+        aabb.aa = glm::ivec3(job.chunkCoord.x * config.chunk_resolution, job.chunkCoord.y * config.chunk_resolution, 0);
         aabb.bb = glm::ivec3(aabb.aa.x + config.chunk_resolution, aabb.aa.y + config.chunk_resolution,
                              config.chunk_resolution);
         uint32_t maxDepth = std::ceil(std::log2(job.resolution));
@@ -386,7 +387,7 @@ void DataManageThreat::loadChunkData(ChunkLoadInfo &job, std::vector<uint32_t> &
         std::optional<OctreeNode> node = std::nullopt;
         if (config.useHeightmapData) {
             uint32_t scale = config.chunk_resolution / job.resolution;
-            node = createChunkOctree(job.resolution, config.seed, job.gridCoord, scale, nodeAmount);
+            node = createChunkOctree(job.resolution, config.seed, job.chunkCoord, scale, nodeAmount);
         } else {
             node = createNode(aabb, triangles, allIndices, textures, nodeAmount, maxDepth, 0);
         }
@@ -395,33 +396,40 @@ void DataManageThreat::loadChunkData(ChunkLoadInfo &job, std::vector<uint32_t> &
         if (node) {
             auto shared_node = std::make_shared<OctreeNode>(*node);
             addOctreeGPUdata(chunkOctreeGPU, shared_node, nodeAmount, chunkFarValues);
-            if (!saveChunk(directory, config.chunk_resolution, job.resolution, job.gridCoord, nodeAmount,
+            if (!saveChunk(directory, config.chunk_resolution, job.resolution, job.chunkCoord, nodeAmount,
                            chunkOctreeGPU, chunkFarValues)) {
                 std::cout << "Something went wrong storing Chunk data" << std::endl;
             }
         } else {
-            saveChunk(directory, config.chunk_resolution, job.resolution, job.gridCoord, nodeAmount,
+            saveChunk(directory, config.chunk_resolution, job.resolution, job.chunkCoord, nodeAmount,
                       chunkOctreeGPU, chunkFarValues);
         }
     }
 }
 
+inline int positive_mod(int a, int b) {
+    return (a % b + b) % b;
+}
 
-void checkChunks(std::vector<CpuChunk> &chunks, Camera &camera, uint32_t maxChunkResolution,
+
+void checkChunks(std::vector<CpuChunk> &chunks, CPUCamera &camera, uint32_t maxChunkResolution,
                  DataManageThreat &dmThreat) {
-    auto cameraChunkCoords = glm::ivec2(floor(camera.position.x / maxChunkResolution),
-                                        floor(camera.position.y / maxChunkResolution));
-    //TODO: Schedule so that the chunks around the camera are checked / scheduled first
-    uint32_t gridSize = sqrt(chunks.size());
-    for (int chunkY = 0; chunkY < gridSize; chunkY++) {
-        for (int chunkX = 0; chunkX < gridSize; chunkX++) {
-            int dist = std::max(abs(chunkY - cameraChunkCoords.y), abs(chunkX - cameraChunkCoords.x));
-            uint32_t octreeResolution = calculateChunkResolution(maxChunkResolution, dist);
-            auto gridCoord = glm::ivec2{chunkX, chunkY};
+    auto center = camera.gpu_camera.camera_grid_pos;
+    glm::ivec3 start = center - int(camera.gridSize / 2);
+    for (int chunkY = start.y; chunkY < camera.gridSize; chunkY++) {
+        for (int chunkX = start.x; chunkX < camera.gridSize; chunkX++) {
+            auto gridCoord = glm::ivec2{positive_mod(chunkX, camera.gridSize), positive_mod(chunkY, camera.gridSize)};
+            glm::ivec3 dist = glm::ivec3(chunkX, chunkY, center.z) - center;
+            int single_axis_dist = std::max(abs(chunkY - center.y), abs(chunkX - center.x));
+            uint32_t octreeResolution = calculateChunkResolution(maxChunkResolution, single_axis_dist);
 
-            CpuChunk &chunk = chunks[chunkY * gridSize + chunkX];
-            if (chunk.resolution != octreeResolution && chunk.loading != true) {
-                dmThreat.pushWork(ChunkLoadInfo{gridCoord, octreeResolution});
+            //The cpu chunks location, so not the buffer location we store it in, which is gridCoord, but the coords of the chunk itself.
+            glm::ivec3 chunkCoord = camera.chunk_coords + dist;
+            CpuChunk &chunk = chunks[gridCoord.y * camera.gridSize + gridCoord.x];
+            if (chunk.loading != true && (chunk.chunk_coords != chunkCoord || chunk.resolution != octreeResolution)) {
+                std::cout << "Loading Chunk Coord: {" << chunkCoord.x << ", " << chunkCoord.y << ", " << chunkCoord.z <<
+                        "} In grid location: {" << gridCoord.x << gridCoord.y << "}\n";
+                dmThreat.pushWork(ChunkLoadInfo{gridCoord, octreeResolution, chunkCoord});
                 chunk.loading = true;
             }
         }

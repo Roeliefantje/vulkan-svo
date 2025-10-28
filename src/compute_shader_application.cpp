@@ -206,7 +206,7 @@ void ComputeShaderApplication::cleanup() {
 }
 
 void ComputeShaderApplication::updateUniformCameraBuffer() {
-    memcpy(uniformCameraBuffersMapped[currentFrame], &camera, sizeof(camera));
+    memcpy(uniformCameraBuffersMapped[currentFrame], &camera.gpu_camera, sizeof(Camera));
 }
 
 void ComputeShaderApplication::recreateSwapChain() {

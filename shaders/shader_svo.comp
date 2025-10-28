@@ -115,15 +115,15 @@ void main()
     vec3 deltaDist = abs(vec3(float(nodeSize) * 0.5) / rayDir);
     vec3 sideDist = (sign(rayDir) * (vec3(childCoords) - localPos) + (sign(rayDir) * 0.5) + 0.5) * deltaDist;
 
-    if (any(greaterThan(rayPos / float(nodeSize), vec3(1.0))) || any(greaterThan(vec3(0.0), rayPos / float(nodeSize)))) {
-        vec3 collision;
-        if (intersectGrid(rayDir, rayPos, collision)){
-            rayPos = collision + rayDir * 0.0001f;
-        } else {
-            imageStore(outputImage, ivec2(pixelCoord), vec4(0.01));
-            return;
-        }
-    }
+//    if (any(greaterThan(rayPos / float(nodeSize), vec3(1.0))) || any(greaterThan(vec3(0.0), rayPos / float(nodeSize)))) {
+//        vec3 collision;
+//        if (intersectGrid(rayDir, rayPos, collision)){
+//            rayPos = collision + rayDir * 0.0001f;
+//        } else {
+//            imageStore(outputImage, ivec2(pixelCoord), vec4(0.01));
+//            return;
+//        }
+//    }
 
 
     for (int i = 0; i < MAX_RAY_STEPS; i++){

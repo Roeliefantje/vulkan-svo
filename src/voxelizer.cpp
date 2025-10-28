@@ -315,10 +315,10 @@ int fetchresolution(uint32_t maxChunkResolution, float distance) {
 
 //TODO: Rewrite to save and load chunks
 void gridVoxelizeScene(std::vector<Chunk> &gridValues, std::vector<uint32_t> &farValues,
-                       std::vector<uint32_t> &octreeGPU, Camera &camera,
+                       std::vector<uint32_t> &octreeGPU, CPUCamera &camera,
                        uint32_t maxChunkResolution, uint32_t gridSize, std::string inputFile, std::string path,
                        glm::vec3 cameraPosition, glm::vec3 cameraLookAt,
-                       uint32_t screenWidth, uint32_t screenHeight) {
+                       uint32_t screenWidth, uint32_t screenHeight, Config &config) {
     gridValues = std::vector<Chunk>(gridSize * gridSize);
     farValues = std::vector<uint32_t>();
     octreeGPU = std::vector<uint32_t>();
@@ -334,7 +334,7 @@ void gridVoxelizeScene(std::vector<Chunk> &gridValues, std::vector<uint32_t> &fa
 
     std::cout << "Scale: " << scale << std::endl;
     glm::vec3 scaledCameraPos = cameraPosition * scale;
-    camera = Camera(scaledCameraPos, cameraLookAt * scale, screenWidth, screenHeight, glm::radians(30.0f));
+    camera = CPUCamera(scaledCameraPos, cameraLookAt * scale, screenWidth, screenHeight, glm::radians(30.0f), config);
     std::map<std::string, LoadedTexture> textures;
 
     auto cameraChunkCoords = glm::ivec2(floor(scaledCameraPos.x / maxChunkResolution),

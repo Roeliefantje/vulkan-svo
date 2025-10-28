@@ -2,8 +2,9 @@
 
 #include <queue>
 
-CpuChunk::CpuChunk(uint32_t chunkFarValuesOffset, uint32_t rootIndex, uint32_t resolution)
-    : ChunkFarValuesOffset(chunkFarValuesOffset), rootNodeIndex(rootIndex), resolution(resolution) {
+CpuChunk::CpuChunk(uint32_t chunkFarValuesOffset, uint32_t rootIndex, uint32_t resolution, glm::ivec3 chunk_coords)
+    : ChunkFarValuesOffset(chunkFarValuesOffset), rootNodeIndex(rootIndex), resolution(resolution),
+      chunk_coords(chunk_coords) {
     chunkSize = 0;
     offsetSize = 0;
 }
@@ -12,8 +13,9 @@ Chunk::Chunk(uint32_t chunkFarValuesOffset, uint32_t rootIndex)
     : ChunkFarValuesOffset(chunkFarValuesOffset), rootNodeIndex(rootIndex) {
 }
 
-Camera::Camera(glm::vec3 pos, glm::vec3 lookAt, int screenWidth, int screenHeight, float fovRadian)
-    : position(pos), fov(fovRadian) {
+Camera::Camera(glm::vec3 pos, glm::vec3 lookAt, int screenWidth, int screenHeight, float fovRadian,
+               glm::ivec3 camera_grid_pos)
+    : position(pos), camera_grid_pos(camera_grid_pos), fov(fovRadian) {
     direction = glm::normalize(lookAt - pos);
     up = glm::vec3(0.0, 0.0, 1.0);
     resolution = glm::vec2(screenWidth, screenHeight);
@@ -22,6 +24,41 @@ Camera::Camera(glm::vec3 pos, glm::vec3 lookAt, int screenWidth, int screenHeigh
         throw std::runtime_error("Camera up vector is the same as Camera direction!");
     }
 }
+
+//Config and width can be yoinked from config
+CPUCamera::CPUCamera(glm::vec3 pos, glm::vec3 lookAt, int screenWidth, int screenHeight, float fovRadian,
+                     Config &config) {
+    glm::vec3 chunk_position = glm::mod(pos, glm::vec3(config.chunk_resolution));
+    chunk_coords = glm::ivec3(pos) / int(config.chunk_resolution);
+
+    glm::ivec3 camera_grid_pos = (glm::ivec3(config.grid_size) / 2);
+    camera_grid_pos.z = chunk_coords.z;
+    gridSize = config.grid_size;
+    maxChunkResolution = config.chunk_resolution;
+    gpu_camera = Camera(chunk_position, lookAt, screenWidth, screenHeight, fovRadian, camera_grid_pos);
+}
+
+inline glm::ivec3 positive_mod(const glm::ivec3 &a, const glm::ivec3 &b) {
+    return (a % b + b) % b;
+    return glm::ivec3(
+        (a.x % b.x + b.x) % b.x,
+        (a.y % b.y + b.y) % b.y,
+        (a.z % b.z + b.z) % b.z
+    );
+}
+
+void CPUCamera::updatePosition(glm::vec3 posChange) {
+    gpu_camera.position += posChange;
+    glm::ivec3 new_chunk_coords = glm::ivec3(gpu_camera.position) / int(maxChunkResolution);
+    if (new_chunk_coords != chunk_coords) {
+        gpu_camera.position = glm::mod(gpu_camera.position, glm::vec3(maxChunkResolution));
+        //Update the gpu side tracker of what the "center" chunk is
+        glm::ivec3 diff = new_chunk_coords - chunk_coords;
+        gpu_camera.camera_grid_pos = positive_mod(gpu_camera.camera_grid_pos + diff, glm::ivec3(gridSize));
+        chunk_coords = new_chunk_coords;
+    }
+}
+
 
 OctreeNode::OctreeNode() {
     childMask = 0;
@@ -33,7 +70,7 @@ OctreeNode::OctreeNode(uint8_t childMask, std::array<std::shared_ptr<OctreeNode>
 }
 
 GridInfo::GridInfo(uint32_t res, uint32_t gridSize)
-    : resolution(res), gridSize(gridSize), bufferSize(0), sunPosition(glm::vec3(4000, 4000, 500)) {
+    : sunPosition(glm::vec3(4000, 4000, 500)), resolution(res), bufferSize(0), gridSize(gridSize) {
 }
 
 VkVertexInputBindingDescription Vertex::getBindingDescription() {
