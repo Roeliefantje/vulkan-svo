@@ -425,6 +425,8 @@ void checkChunks(std::vector<CpuChunk> &chunks, CPUCamera &camera, uint32_t maxC
 
             //The cpu chunks location, so not the buffer location we store it in, which is gridCoord, but the coords of the chunk itself.
             glm::ivec3 chunkCoord = camera.chunk_coords + dist;
+            //As we are dealing with a 2d grid on the gpu side, we do not deal with chunkCoord z distance and stuffs.
+            chunkCoord.z = 0;
             CpuChunk &chunk = chunks[gridCoord.y * camera.gridSize + gridCoord.x];
             if (chunk.loading != true && (chunk.chunk_coords != chunkCoord || chunk.resolution != octreeResolution)) {
                 std::cout << "Loading Chunk Coord: {" << chunkCoord.x << ", " << chunkCoord.y << ", " << chunkCoord.z <<

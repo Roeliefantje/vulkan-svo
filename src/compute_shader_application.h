@@ -38,7 +38,7 @@
 #include "scene_metadata.h"
 
 #define SHADERDEBUG 1
-// #define DEBUG 1
+#define DEBUG 1
 
 const int MAX_FRAMES_IN_FLIGHT = 1;
 const int MAX_VOXEL_BUFFERS = 32;

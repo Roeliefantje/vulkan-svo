@@ -54,11 +54,13 @@ void CPUCamera::updatePosition(glm::vec3 posChange) {
     glm::ivec3 lowMask = glm::lessThan(gpu_camera.position, glm::vec3(0));
     if (glm::any(glm::notEqual(lowMask, glm::ivec3(0))) || glm::any(glm::notEqual(highMask, glm::ivec3(0)))) {
         std::cout << "Prior camera grid pos: " << gpu_camera.camera_grid_pos.x << ", " << gpu_camera.camera_grid_pos.y
+                << ", " << gpu_camera.camera_grid_pos.z
                 << "\n";
         glm::ivec3 diff = highMask * 1 + lowMask * -1;
         gpu_camera.camera_grid_pos = positive_mod(gpu_camera.camera_grid_pos + diff, glm::ivec3(gridSize));
         gpu_camera.position = glm::mod(gpu_camera.position, glm::vec3(maxChunkResolution));
         std::cout << "After camera grid pos: " << gpu_camera.camera_grid_pos.x << ", " << gpu_camera.camera_grid_pos.y
+                << ", " << gpu_camera.camera_grid_pos.z
                 << "\n";
         chunk_coords += diff;
     }

@@ -118,7 +118,7 @@ void ComputeShaderApplication::mainLoop() {
         if (elapsed >= 1.0) {
             std::cout << "FPS: " << (frameCounter / elapsed) << "\n";
 #if SHADERDEBUG
-            std::cout << "Average Steps per ray: " << (totalSteps / (float) (WIDTH * HEIGHT)) << "\n";
+            std::cout << "Average Steps per ray: " << (totalSteps / (float) (config.width * config.height)) << "\n";
             std::cout << "Max Steps per ray: " << maxSteps << "\n";
 #endif
 

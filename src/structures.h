@@ -147,6 +147,9 @@ uint32_t addChildren(std::shared_ptr<OctreeNode> node, std::vector<uint32_t> *da
 std::vector<uint32_t> getOctreeGPUdata(std::shared_ptr<OctreeNode> rootNode, uint32_t nodesAmount,
                                        std::vector<uint32_t> &farValues);
 
+void addOctreeGPUdataBF(std::vector<uint32_t> &gpuData, std::shared_ptr<OctreeNode> rootNode, uint32_t nodesAmount,
+                        std::vector<uint32_t> &farValues);
+
 void addOctreeGPUdata(std::vector<uint32_t> &gpuData, std::shared_ptr<OctreeNode> rootNode, uint32_t nodesAmount,
                       std::vector<uint32_t> &farValues);
 

@@ -368,7 +368,7 @@ void gridVoxelizeScene(std::vector<Chunk> &gridValues, std::vector<uint32_t> &fa
                 auto chunkOctreeGPU = std::vector<uint32_t>();
                 if (node) {
                     auto shared_node = std::make_shared<OctreeNode>(*node);
-                    addOctreeGPUdata(chunkOctreeGPU, shared_node, nodeAmount, chunkFarValues);
+                    addOctreeGPUdataBF(chunkOctreeGPU, shared_node, nodeAmount, chunkFarValues);
                     if (!saveChunk(directory, maxChunkResolution, octreeResolution, glm::ivec2(x, y), nodeAmount,
                                    chunkOctreeGPU, chunkFarValues)) {
                         std::cout << "Something went wrong storing Chunk data" << std::endl;
