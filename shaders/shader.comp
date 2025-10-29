@@ -100,8 +100,18 @@ vec3 voxel(vec3 ro, vec3 rd, vec3 ird, float size)
     return hit;
 }
 
-vec3 positive_mod(vec3 x, vec3 y) {
-    return mod(mod(x, y) + y, y);
+//vec3 positive_mod(vec3 x, vec3 y) {
+//    return mod(mod(x, y) + y, y);
+//}
+
+ivec2 positive_mod(ivec2 a, float b) {
+    int x_val = int(a.x - b * floor(a.x / b));
+    int y_val = int(a.y - b * floor(a.y / b));
+
+    return ivec2(
+        x_val < 0 ? x_val + b : x_val,
+        y_val < 0 ? y_val + b : y_val
+    );
 }
 
 layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
@@ -163,6 +173,8 @@ void main()
     int collisions = 0;
     float intensity = 1.0;
     uint steps = 0;
+    ivec3 gridsMoved = ivec3(0);
+    ivec2 gridRD = ivec2(ubo.gridSize / 2, ubo.gridSize / 2);
 
     for(int i = 0; i < MAX_RAY_STEPS; i++) {
         steps += 1;
@@ -177,13 +189,45 @@ void main()
             lro = rayPos - vec3(gridCoord) * ubo.width;
             fro = ivec3(0);
 
-            currentChunk = grid[gridCoord.y * ubo.gridSize + gridCoord.x];
+            int gridSize = int(ubo.gridSize);
+
+//            if (gridCoord.x < 0) {
+//                gridCoord = ivec3(gridCoord.x + gridSize, gridCoord.y, gridCoord.z);
+//            }
+//            if (gridCoord.x >= gridSize) {
+//                gridCoord = ivec3(gridCoord.x - gridSize, gridCoord.y, gridCoord.z);
+//            }
+//            if (gridCoord.y < 0) {
+//                gridCoord = ivec3(gridCoord.x , gridCoord.y + gridSize, gridCoord.z);
+//            }
+//            if (gridCoord.y >= gridSize) {
+//                gridCoord = ivec3(gridCoord.x, gridCoord.y - gridSize, gridCoord.z);
+//            }
+
+            gridCoord = ivec3(positive_mod(gridCoord.xy, gridSize), gridCoord.z);
+            gridsMoved +=  ivec3(mask) * irdsign;; //Keep track of how many grids we have passed
+
+
+            currentChunk = grid[gridCoord.y * gridSize + gridCoord.x];
+//            currentChunk = grid[(positive_mod(gridCoord.y, gridSize) * gridSize) + positive_mod(gridCoord.x, gridSize)];
             currentNode = getNode(currentChunk.rootNodeIndex, currentChunk.farValuesOffset);
+            if (gridCoord.z >= 1) {
+                currentNode = empty;
+            }
             farValueOffset = currentChunk.farValuesOffset;
 
-            if (any(greaterThanEqual(gridCoord, ivec3(ubo.gridSize, ubo.gridSize, 1))) || any(lessThan(gridCoord, ivec3(0)))) {
+            if (any(greaterThan(abs(gridsMoved.xy), gridRD))) {
+//                color = vec3(1.0, 0.0, 0.0);
                 break;
             }
+            if (gridCoord.z >= 1 && rdsign.z > 0) {
+//                color = vec3(0.0, 1.0, 0.0);
+                break;
+            }
+//
+//            if (any(greaterThanEqual(gridCoord, ivec3(ubo.gridSize, ubo.gridSize, 1))) || any(lessThan(gridCoord, ivec3(0)))) {
+//                break;
+//            }
 
             movegrid = false;
             exitoct = false;
@@ -312,6 +356,9 @@ void main()
     #endif
 
     intensity = clamp(intensity, 0.2f, 1.0f);
+
+    //Display grid coords with colors
+//    color *= vec3(gridCoord.x / float(ubo.gridSize), gridCoord.y, 1.0);
 
     imageStore(outputImage, ivec2(pixelCoord), vec4(color * intensity, 1.0));
 }
