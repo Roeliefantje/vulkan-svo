@@ -23,37 +23,29 @@ void ComputeShaderApplication::initData() {
 
     //GPU Ubo object? I think...
     gridInfo = GridInfo(config.chunk_resolution, config.grid_size);
+    if (!config.useHeightmapData) {
+        objSceneMetaData = SceneMetadata("./assets/san-miguel-low-poly.obj", config);
+        std::cout << "ObjFile to be loaded: " << objSceneMetaData->objFile << std::endl;
+    }
 }
 
 
 void ComputeShaderApplication::initCamera() {
     // Initialize the camera position based on the config information.
-    //TODO!: If the config includes a json file for the camera position, use it.
-    if (config.useHeightmapData) {
-        std::cout << "Initializing Camera" << std::endl;
-        camera = CPUCamera(
-            glm::vec3(100 + config.chunk_resolution, 100 + config.chunk_resolution, 712.5), glm::vec3(20, 20, 710.5),
-            (int) config.width, (int) config.height,
-            glm::radians(30.0f), config
-        );
-        std::cout << "Finished initializing camera" << std::endl;
-    } else {
-        camera = CPUCamera(
-            glm::vec3(0, 0, 712.5), glm::vec3(20, 20, 710.5),
-            (int) config.width, (int) config.height,
-            glm::radians(30.0f), config
-        );
-    }
+    glm::vec3 pos = config.useHeightmapData ? config.cameraPosition : config.cameraPosition * objSceneMetaData->scale;
+
+    camera = CPUCamera(
+        pos, config.cameraDirection + pos,
+        (int) config.width, (int) config.height,
+        config.fov, config
+    );
 }
 
 void ComputeShaderApplication::initThreads() {
     //Init the data and threads necessary for gpu chunk stuffs.
     farValuesGPUManager = new BufferManager(farValuesSBuffers[0], farValues.size());
     octreeGPUManager = new BufferManager(shaderStorageBuffers[0][0], octreeGPU.size());
-    if (!config.useHeightmapData) {
-        objSceneMetaData = SceneMetadata("./assets/san-miguel-low-poly.obj", config);
-        std::cout << "ObjFile to be loaded: " << objSceneMetaData->objFile << std::endl;
-    }
+
 
     dmThreat = new DataManageThreat(device, stagingBufferProperties, config, *octreeGPUManager,
                                     gridBuffers[0], *farValuesGPUManager, objSceneMetaData, cpuGridValues, camera);
