@@ -192,19 +192,6 @@ void main()
 
             int gridSize = int(ubo.gridSize);
 
-//            if (gridCoord.x < 0) {
-//                gridCoord = ivec3(gridCoord.x + gridSize, gridCoord.y, gridCoord.z);
-//            }
-//            if (gridCoord.x >= gridSize) {
-//                gridCoord = ivec3(gridCoord.x - gridSize, gridCoord.y, gridCoord.z);
-//            }
-//            if (gridCoord.y < 0) {
-//                gridCoord = ivec3(gridCoord.x , gridCoord.y + gridSize, gridCoord.z);
-//            }
-//            if (gridCoord.y >= gridSize) {
-//                gridCoord = ivec3(gridCoord.x, gridCoord.y - gridSize, gridCoord.z);
-//            }
-
             gridCoord = ivec3(positive_mod(gridCoord.xy, gridSize), gridCoord.z);
             gridsMoved +=  ivec3(mask) * irdsign;; //Keep track of how many grids we have passed
 
@@ -222,7 +209,6 @@ void main()
                 break;
             }
             if (gridCoord.z >= 1 && rdsign.z > 0) {
-//                color = vec3(0.0, 1.0, 0.0);
                 break;
             }
 //
@@ -313,9 +299,7 @@ void main()
                 if (level == 0) {
                     //moving while in the highest level, meaning we are out of the voxelSSBOs[0s.vo
                     movegrid = true;
-                    continue;
                 }
-//                color = level * vec3(0.0, 0.2, 0.0);
                 //Move forward to next child
                 vec3 hit = voxel(lro, rayDir, ird, size);
 

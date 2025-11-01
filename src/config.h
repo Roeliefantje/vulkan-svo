@@ -14,7 +14,7 @@ namespace fs = std::filesystem;
 
 struct Config {
     //Whether we use the voxelizer or the heightmap data.
-    bool useHeightmapData = false;
+    bool useHeightmapData = true;
 
     //Output screen size
     uint32_t width = 1920;
