@@ -11,11 +11,11 @@ using json = nlohmann::json;
 namespace fs = std::filesystem;
 
 
-SceneMetadata::SceneMetadata(std::string objFile) : objFile(objFile) {
-    loadMetaData();
+SceneMetadata::SceneMetadata(std::string objFile, Config &config) : objFile(objFile) {
+    loadMetaData(config);
 }
 
-void SceneMetadata::loadMetaData() {
+void SceneMetadata::loadMetaData(Config &config) {
     fs::path filePath{objFile};
     fs::path jsonPath = filePath.replace_extension(".json");
     if (!fs::exists(jsonPath)) {
@@ -35,6 +35,13 @@ void SceneMetadata::loadMetaData() {
         sceneAabb.bb.z = data["aabb"]["bb"]["z"];
         numTriangles = data["numTriangles"];
     }
+
+
+    auto maxChunkResolution = config.chunk_resolution / config.grid_size;
+    scale = std::min(
+        (config.chunk_resolution) / std::max(float(sceneAabb.bb.x), float(sceneAabb.bb.y)),
+        (float) maxChunkResolution / sceneAabb.bb.z
+    );
 }
 
 void SceneMetadata::saveMetaData() {

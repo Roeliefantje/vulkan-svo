@@ -54,8 +54,8 @@ int loadSceneMetaData(std::string inputFile, std::string path, Aabb &sceneBounds
         bbMin.z = std::min(bbMin.z, z);
         bbMax.z = std::max(bbMax.z, z);
     }
-    sceneBounds.aa = bbMin;
-    sceneBounds.bb = bbMax;
+    sceneBounds.aa = bbMin - bbMin;
+    sceneBounds.bb = bbMax - bbMin;
 
     return 0;
 }

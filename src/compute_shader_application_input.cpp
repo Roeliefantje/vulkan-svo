@@ -40,11 +40,32 @@ void ComputeShaderApplication::mouseCallback(GLFWwindow *window, double xpos, do
     }
 }
 
+void ComputeShaderApplication::printCameraPosition() {
+    glm::vec3 pos = glm::vec3(camera.chunk_coords) * (float) config.chunk_resolution
+                    + camera.gpu_camera.position;
+    glm::vec3 direction = camera.gpu_camera.direction;
+    if (objSceneMetaData) {
+        pos /= objSceneMetaData->scale;
+    }
+
+
+    std::cout << std::format("Camera position: {}, {}, {}", pos.x, pos.y, pos.z) << std::endl;
+    std::cout << std::format("Camera direction: {}, {}, {}", direction.x, direction.y, direction.z) << std::endl;
+}
+
 void ComputeShaderApplication::processInput() {
     glm::vec3 forward = glm::normalize(
         camera.gpu_camera.direction - glm::dot(camera.gpu_camera.direction, camera.gpu_camera.up) * camera.gpu_camera.
         up);
     glm::vec3 left = glm::cross(forward, camera.gpu_camera.up);
+
+    static bool pWasPressed = false;
+    bool pIsPressed = glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS;
+    if (!pWasPressed && pIsPressed) {
+        printCameraPosition();
+    }
+    pWasPressed = pIsPressed;
+
     if (!mouseFree) {
         auto multiplier = 0.2f;
         if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {

@@ -157,7 +157,8 @@ void main()
         currentNode = empty;
     }
 
-    vec3 color = vec3(0.1);
+    //Skyblue color
+    vec3 color = vec3(0.51, 0.784, 0.898);
     bvec3 mask = bvec3(false, false, false);
 
     vec3 lro = rayPos;

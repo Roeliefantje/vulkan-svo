@@ -10,7 +10,7 @@
 
 struct Config {
     //Whether we use the voxelizer or the heightmap data.
-    bool useHeightmapData = true;
+    bool useHeightmapData = false;
 
     //Output screen size
     uint32_t width = 1920;
@@ -22,7 +22,7 @@ struct Config {
     size_t GIGABYTE = (1 << 30);
 
     VkDeviceSize staging_size = GIGABYTE << 1;
-    uint32_t chunk_resolution = 1024 * 4;
+    uint32_t chunk_resolution = 1024;
     uint32_t grid_size = 7;
     uint32_t seed = 12345 * 5;
 
@@ -37,6 +37,7 @@ struct Config {
                 ("voxelize", "Voxelize a scene", cxxopts::value<std::string>())
                 ("g, grid", "The grid size for the scene", cxxopts::value<uint32_t>())
                 ("s, seed", "Seed to use for chunk generation", cxxopts::value<uint32_t>())
+                ("t, test", "Which test scenario to run", cxxopts::value<uint32_t>())
                 // ("c, camera", "Camera position for the float location", cxxopts::value<float>())
                 ("campath", "Make the camera follow a set path");
         // ();

@@ -38,7 +38,11 @@ void ComputeShaderApplication::initCamera() {
         );
         std::cout << "Finished initializing camera" << std::endl;
     } else {
-        throw std::runtime_error("Camera initialization not yet implemented with scene!");
+        camera = CPUCamera(
+            glm::vec3(0, 0, 712.5), glm::vec3(20, 20, 710.5),
+            (int) config.width, (int) config.height,
+            glm::radians(30.0f), config
+        );
     }
 }
 
@@ -47,11 +51,10 @@ void ComputeShaderApplication::initThreads() {
     farValuesGPUManager = new BufferManager(farValuesSBuffers[0], farValues.size());
     octreeGPUManager = new BufferManager(shaderStorageBuffers[0][0], octreeGPU.size());
     if (!config.useHeightmapData) {
-        objSceneMetaData = SceneMetadata("./assets/san-miguel-low-poly.obj");
+        objSceneMetaData = SceneMetadata("./assets/san-miguel-low-poly.obj", config);
         std::cout << "ObjFile to be loaded: " << objSceneMetaData->objFile << std::endl;
     }
 
-    //TODO: Revamp datamangethreat to be a lot cleaner
     dmThreat = new DataManageThreat(device, stagingBufferProperties, config, *octreeGPUManager,
                                     gridBuffers[0], *farValuesGPUManager, objSceneMetaData, cpuGridValues, camera);
 }

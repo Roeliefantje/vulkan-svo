@@ -14,12 +14,13 @@ struct SceneMetadata {
     std::string objFile = "";
     Aabb sceneAabb;
     int numTriangles = 0;
+    float scale = 0;
 
     SceneMetadata() = default;
 
-    SceneMetadata(std::string objFile);
+    SceneMetadata(std::string objFile, Config &config);
 
-    void loadMetaData();
+    void loadMetaData(Config &config);
 
     void saveMetaData();
 };

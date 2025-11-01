@@ -373,6 +373,7 @@ void DataManageThreat::loadChunkData(ChunkLoadInfo &job, std::vector<uint32_t> &
         if (!config.useHeightmapData && !sceneLoaded) {
             std::cout << "Loading scene" << std::endl;
             loadObj();
+            sceneLoaded = true;
             std::cout << "Finished loading scene" << std::endl;
         }
         std::cout << "Chunk not yet created, generating the chunk" << std::endl;

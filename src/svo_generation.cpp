@@ -4,47 +4,72 @@
 #include "svo_generation.h"
 #include <FastNoiseLite.h>
 
-
 std::vector<uint32_t> createNoise(int size, uint32_t seed_value, glm::ivec2 offset, uint32_t scale) {
     std::cout << "Creating Heightmap" << std::endl;
     FastNoiseLite base;
-    // choose ridged for sharp peaks
-    base.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-    base.SetFractalType(FastNoiseLite::FractalType_Ridged);
-    base.SetSeed(seed_value);
-    base.SetFrequency(0.00025f);
-    base.SetFractalOctaves(7);
-    base.SetFractalLacunarity(2.2f);
-    base.SetFractalGain(0.3f);
+    base.SetSeed((int) seed_value);
+    base.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+    base.SetFractalType(FastNoiseLite::FractalType_FBm);
+    base.SetFractalLacunarity(2.0f);
+    base.SetFractalGain(0.5f);
+    base.SetFractalOctaves(6);
+    base.SetFrequency(0.002f);
 
-    FastNoiseLite warp;
-    warp.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-    warp.SetFractalType(FastNoiseLite::FractalType_FBm);
-    warp.SetSeed(seed_value ^ 0x5f3759df);
-    warp.SetFrequency(0.008f);
-    warp.SetFractalOctaves(4);
-    warp.SetFractalGain(0.5f);
-    warp.SetDomainWarpAmp(40.0f);
-
-    std::vector<uint32_t> noiseData(size * size);
     int index = 0;
-
+    std::vector<uint32_t> noiseData(size * size);
     for (int y = 0; y < size; y++) {
         for (int x = 0; x < size; x++) {
-            //Get value between 0 and 2 and * 100
-            float fx = float(x * scale + offset.x), fy = float(y * scale + offset.y);
-            warp.DomainWarp(fx, fy);
+            float fx = float(x * scale + offset.x + 100000), fy = float(y * scale + offset.y + 100000);
             float raw = base.GetNoise(fx, fy); // −1…+1
-            float e = (raw + 1.0f) * 0.5f;
-            e = pow(e * 1.05f, 2.0f); // redistribute: sharper peaks & flat valleys
-            // std::cout << "Noise Value: " << val << std::endl;
-            noiseData[index++] = uint32_t(e * 500) / scale;
+            float e = (raw + 1.0f) * 0.5f; //Make it always a positive height
+            noiseData[index++] = uint32_t(e * 1024) / scale;
         }
     }
-
     std::cout << "Finished creating noise data" << std::endl;
     return noiseData;
 }
+
+
+// std::vector<uint32_t> createNoise(int size, uint32_t seed_value, glm::ivec2 offset, uint32_t scale) {
+//     std::cout << "Creating Heightmap" << std::endl;
+//     FastNoiseLite base;
+//     // choose ridged for sharp peaks
+//     base.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+//     base.SetFractalType(FastNoiseLite::FractalType_Ridged);
+//     base.SetSeed(seed_value);
+//     base.SetFrequency(0.00025f);
+//     base.SetFractalOctaves(7);
+//     base.SetFractalLacunarity(2.2f);
+//     base.SetFractalGain(0.3f);
+//
+//     FastNoiseLite warp;
+//     warp.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+//     warp.SetFractalType(FastNoiseLite::FractalType_FBm);
+//     warp.SetSeed(seed_value ^ 0x5f3759df);
+//     warp.SetFrequency(0.008f);
+//     warp.SetFractalOctaves(4);
+//     warp.SetFractalGain(0.5f);
+//     warp.SetDomainWarpAmp(40.0f);
+//
+//     std::vector<uint32_t> noiseData(size * size);
+//     int index = 0;
+//
+//     for (int y = 0; y < size; y++) {
+//         for (int x = 0; x < size; x++) {
+//             //Get value between 0 and 2 and * 100
+//             float fx = float(x * scale + offset.x), fy = float(y * scale + offset.y);
+//             warp.DomainWarp(fx, fy);
+//             float raw = base.GetNoise(fx, fy); // −1…+1
+//             float e = (raw + 1.0f) * 0.5f;
+//             e = pow(e * 1.05f, 2.0f); // redistribute: sharper peaks & flat valleys
+//             // std::cout << "Noise Value: " << val << std::endl;
+//             noiseData[index++] = uint32_t(e * 500) / scale;
+//         }
+//     }
+//
+//     std::cout << "Finished creating noise data" << std::endl;
+//     return noiseData;
+// }
 
 std::vector<uint32_t> createDepthMap(std::vector<uint32_t> heightMap) {
     std::cout << "Creating Depthmap" << std::endl;
