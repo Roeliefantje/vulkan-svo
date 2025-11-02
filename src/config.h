@@ -27,7 +27,7 @@ struct Config {
 
     VkDeviceSize staging_size = GIGABYTE << 1;
     uint32_t chunk_resolution = 1024;
-    uint32_t grid_size = 7;
+    uint32_t grid_size = 21;
     uint32_t seed = 12345 * 5;
 
     //MouseSensitivity
@@ -37,7 +37,7 @@ struct Config {
     glm::vec3 cameraDirection = glm::vec3(0.5, 0.5, 0);
     float fov = glm::radians(30.0f);
     std::string scene_path = "./assets/san-miguel-low-poly.obj";
-    std::string camera_path = "./camera.json";
+    std::string camera_path = "./camera-hm.json";
 
 
     Config(int argc, char *argv[]) {

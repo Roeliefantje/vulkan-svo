@@ -1,5 +1,6 @@
 #include "structures.h"
 
+#include <format>
 #include <queue>
 
 CpuChunk::CpuChunk(uint32_t chunkFarValuesOffset, uint32_t rootIndex, uint32_t resolution, glm::ivec3 chunk_coords)
@@ -13,20 +14,21 @@ Chunk::Chunk(uint32_t chunkFarValuesOffset, uint32_t rootIndex)
     : ChunkFarValuesOffset(chunkFarValuesOffset), rootNodeIndex(rootIndex) {
 }
 
-Camera::Camera(glm::vec3 pos, glm::vec3 lookAt, int screenWidth, int screenHeight, float fovRadian,
+Camera::Camera(glm::vec3 pos, glm::vec3 direction, int screenWidth, int screenHeight, float fovRadian,
                glm::ivec3 camera_grid_pos)
     : position(pos), camera_grid_pos(camera_grid_pos), fov(fovRadian) {
-    direction = glm::normalize(lookAt - pos);
+    this->direction = glm::normalize(direction);
+    std::cout << std::format("Direction {}, {}, {}", direction.x, direction.y, direction.z) << std::endl;
     up = glm::vec3(0.0, 0.0, 1.0);
     resolution = glm::vec2(screenWidth, screenHeight);
 
-    if (direction == up) {
+    if (this->direction == up) {
         throw std::runtime_error("Camera up vector is the same as Camera direction!");
     }
 }
 
 //Config and width can be yoinked from config
-CPUCamera::CPUCamera(glm::vec3 pos, glm::vec3 lookAt, int screenWidth, int screenHeight, float fovRadian,
+CPUCamera::CPUCamera(glm::vec3 pos, glm::vec3 direction, int screenWidth, int screenHeight, float fovRadian,
                      Config &config) {
     glm::vec3 chunk_position = glm::mod(pos, glm::vec3(config.chunk_resolution));
     chunk_coords = glm::ivec3(pos) / int(config.chunk_resolution);
@@ -35,7 +37,7 @@ CPUCamera::CPUCamera(glm::vec3 pos, glm::vec3 lookAt, int screenWidth, int scree
     camera_grid_pos.z = chunk_coords.z;
     gridSize = config.grid_size;
     maxChunkResolution = config.chunk_resolution;
-    gpu_camera = Camera(chunk_position, lookAt, screenWidth, screenHeight, fovRadian, camera_grid_pos);
+    gpu_camera = Camera(chunk_position, direction, screenWidth, screenHeight, fovRadian, camera_grid_pos);
 }
 
 inline glm::ivec3 positive_mod(const glm::ivec3 &a, const glm::ivec3 &b) {

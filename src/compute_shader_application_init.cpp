@@ -35,10 +35,12 @@ void ComputeShaderApplication::initCamera() {
     glm::vec3 pos = config.useHeightmapData ? config.cameraPosition : config.cameraPosition * objSceneMetaData->scale;
 
     camera = CPUCamera(
-        pos, config.cameraDirection + pos,
+        pos, config.cameraDirection,
         (int) config.width, (int) config.height,
         config.fov, config
     );
+
+    std::cout << "Finished setting up Camera" << std::endl;
 }
 
 void ComputeShaderApplication::initThreads() {

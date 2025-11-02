@@ -26,7 +26,9 @@ add_executable(clion_vulkan main.cpp
         src/scene_metadata.cpp
         src/scene_metadata.h
         src/compute_shader_application_init.cpp
-        src/compute_shader_application_input.cpp)
+        src/compute_shader_application_input.cpp
+        src/chunk_generation_application.cpp
+        src/chunk_generation_application.h)
 
 target_include_directories(clion_vulkan PRIVATE ${Vulkan_INCLUDE_DIRS})
 target_include_directories(clion_vulkan PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)

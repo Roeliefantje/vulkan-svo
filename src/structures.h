@@ -84,7 +84,7 @@ struct Camera {
 
     Camera() = default;
 
-    Camera(glm::vec3 pos, glm::vec3 lookAt, int screenWidth, int screenHeight, float fovRadian,
+    Camera(glm::vec3 pos, glm::vec3 direction, int screenWidth, int screenHeight, float fovRadian,
            glm::ivec3 camera_grid_pos);
 };
 

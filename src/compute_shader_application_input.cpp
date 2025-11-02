@@ -16,9 +16,13 @@ void ComputeShaderApplication::mouseCallback(GLFWwindow *window, double xpos, do
         float yoffset = app->mouseY - ypos;
         app->mouseX = xpos;
         app->mouseY = ypos;
+        if (abs(xoffset) > 100.0) {
+            xoffset = glm::sign(xoffset) * 100.0;
+        }
+        if (abs(yoffset) > 100.0) {
+            yoffset = glm::sign(yoffset) * 100.0;
+        }
 
-        //     std::cout << "X offset:" << xoffset << std::endl;
-        //     std::cout << "Y offset:" << yoffset << std::endl;
 
         if (!app->mouseFree && (xoffset != 0.0f || yoffset != 0.0f)) {
             glm::vec3 right = glm::cross(app->camera.gpu_camera.direction, app->camera.gpu_camera.up);
@@ -29,7 +33,7 @@ void ComputeShaderApplication::mouseCallback(GLFWwindow *window, double xpos, do
             //         " Z:" << app->camera.direction.z << std::endl;
             // std::cout << "Rotated: X: " << rotated.x << " Y:" << rotated.y << " Z:" << rotated.z << std::endl;
 
-            if (rotated.z <= 0.9 && rotated.z >= -0.9) {
+            if (rotated.z <= 0.95 && rotated.z >= -0.95) {
                 app->camera.gpu_camera.direction = rotated;
             }
 
