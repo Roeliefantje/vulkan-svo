@@ -303,16 +303,6 @@ std::optional<OctreeNode> createNode(Aabb aabb, std::vector<TexturedTriangle> &g
     return node;
 }
 
-int fetchresolution(uint32_t maxChunkResolution, float distance) {
-    int lod_reduction = 0;
-
-    if (distance > 10.0f) lod_reduction++;
-    if (distance > 20.0f) lod_reduction++;
-    if (distance > 30.0f) lod_reduction++;
-
-    return std::max(maxChunkResolution >> lod_reduction, 64u);
-}
-
 //TODO: Rewrite to save and load chunks
 void gridVoxelizeScene(std::vector<Chunk> &gridValues, std::vector<uint32_t> &farValues,
                        std::vector<uint32_t> &octreeGPU, CPUCamera &camera,

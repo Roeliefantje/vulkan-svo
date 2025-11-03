@@ -6,6 +6,7 @@
 CpuChunk::CpuChunk(uint32_t chunkFarValuesOffset, uint32_t rootIndex, uint32_t resolution, glm::ivec3 chunk_coords)
     : ChunkFarValuesOffset(chunkFarValuesOffset), rootNodeIndex(rootIndex), resolution(resolution),
       chunk_coords(chunk_coords) {
+    loading = false;
     chunkSize = 0;
     offsetSize = 0;
 }

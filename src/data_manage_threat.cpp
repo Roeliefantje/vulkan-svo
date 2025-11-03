@@ -163,8 +163,8 @@ bool DataManageThreat::CheckToWaitAndStartTransfer() {
         //Todo: queue old data for deletion
         auto chunk_idx = currentChunk.gridCoord.y * config.grid_size + currentChunk.gridCoord.x;
         CpuChunk &chunk = chunks[chunk_idx];
-        chunk.loading = false;
-        chunk.resolution = currentChunk.resolution;
+        // chunk.loading = false;
+        // chunk.resolution = currentChunk.resolution;
 
         if (chunk.rootNodeIndex != 0) {
             octreeGPUManager.freeChunk(chunk.rootNodeIndex);
@@ -416,24 +416,42 @@ inline int positive_mod(int a, int b) {
 void checkChunks(std::vector<CpuChunk> &chunks, CPUCamera &camera, uint32_t maxChunkResolution,
                  DataManageThreat &dmThreat) {
     auto center = camera.gpu_camera.camera_grid_pos;
-    glm::ivec3 start = center - int(camera.gridSize / 2);
-    for (int chunkY = start.y; chunkY < camera.gridSize; chunkY++) {
-        for (int chunkX = start.x; chunkX < camera.gridSize; chunkX++) {
-            auto gridCoord = glm::ivec2{positive_mod(chunkX, camera.gridSize), positive_mod(chunkY, camera.gridSize)};
-            glm::ivec3 dist = glm::ivec3(chunkX, chunkY, center.z) - center;
-            int single_axis_dist = std::max(abs(chunkY - center.y), abs(chunkX - center.x));
-            uint32_t octreeResolution = calculateChunkResolution(maxChunkResolution, single_axis_dist);
+    auto processOffset = [&](int dx, int dy) {
+        auto gridCoord = glm::ivec2{
+            positive_mod(center.x + dx, camera.gridSize),
+            positive_mod(center.y + dy, camera.gridSize)
+        };
+        auto chunkCoord = glm::ivec3{
+            camera.chunk_coords.x + dx,
+            camera.chunk_coords.y + dy,
+            0
+        };
+        auto dist = glm::ivec3(abs(dx), abs(dy), 0);
+        uint32_t octreeResolution = calculateChunkResolution(maxChunkResolution, glm::max(dist.x, dist.y));
 
-            //The cpu chunks location, so not the buffer location we store it in, which is gridCoord, but the coords of the chunk itself.
-            glm::ivec3 chunkCoord = camera.chunk_coords + dist;
-            //As we are dealing with a 2d grid on the gpu side, we do not deal with chunkCoord z distance and stuffs.
-            chunkCoord.z = 0;
-            CpuChunk &chunk = chunks[gridCoord.y * camera.gridSize + gridCoord.x];
-            if (chunk.loading != true && (chunk.chunk_coords != chunkCoord || chunk.resolution != octreeResolution)) {
-                std::cout << "Loading Chunk Coord: {" << chunkCoord.x << ", " << chunkCoord.y << ", " << chunkCoord.z <<
-                        "} In grid location: {" << gridCoord.x << gridCoord.y << "}\n";
-                dmThreat.pushWork(ChunkLoadInfo{gridCoord, octreeResolution, chunkCoord});
-                chunk.loading = true;
+        CpuChunk &chunk = chunks[gridCoord.y * camera.gridSize + gridCoord.x];
+        if (!chunk.loading && (chunk.chunk_coords != chunkCoord || chunk.resolution != octreeResolution)) {
+            std::cout << "Loading Chunk Coord: {" << chunkCoord.x << ", " << chunkCoord.y << ", " << chunkCoord.z
+                    << "} In grid location: {" << gridCoord.x << ", " << gridCoord.y << "}\n";
+            dmThreat.pushWork(ChunkLoadInfo{gridCoord, octreeResolution, chunkCoord});
+            chunk.loading = true;
+        }
+    };
+
+    for (int chunk_distance = 0; chunk_distance <= int(camera.gridSize / 2); chunk_distance++) {
+        int offsets[2] = {-chunk_distance, chunk_distance};
+
+        // Pass 1: vertical strips (left/right)
+        for (int offsets_x_idx = 0; offsets_x_idx < 2; offsets_x_idx++) {
+            for (int offset_y = -chunk_distance; offset_y <= chunk_distance; offset_y++) {
+                processOffset(offsets[offsets_x_idx], offset_y);
+            }
+        }
+
+        // Pass 2: horizontal strips (top/bottom)
+        for (int offsets_y_idx = 0; offsets_y_idx < 2; offsets_y_idx++) {
+            for (int offset_x = -chunk_distance + 1; offset_x <= chunk_distance - 1; offset_x++) {
+                processOffset(offset_x, offsets[offsets_y_idx]);
             }
         }
     }

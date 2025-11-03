@@ -34,8 +34,6 @@ std::optional<OctreeNode> createNode(Aabb aabb, std::vector<TexturedTriangle> &g
                                      std::map<std::string, LoadedTexture> &loadedTextures, uint32_t &nodeCount,
                                      uint32_t &maxDepth, uint32_t currentDepth);
 
-int fetchresolution(uint32_t maxChunkResolution, float distance);
-
 void gridVoxelizeScene(std::vector<Chunk> &gridValues, std::vector<uint32_t> &farValues,
                        std::vector<uint32_t> &octreeGPU, Camera &camera,
                        uint32_t maxChunkResolution, uint32_t gridSize, std::string inputFile, std::string path,
