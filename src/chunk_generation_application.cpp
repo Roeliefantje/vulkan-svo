@@ -7,6 +7,8 @@
 #include <format>
 
 #include "voxelizer.h"
+namespace fs = std::filesystem;
+
 
 ChunkGenerationApplication::ChunkGenerationApplication(Config config) : config(config) {
     if (!config.useHeightmapData) {
@@ -58,20 +60,21 @@ void ChunkGenerationApplication::generateChunk(glm::ivec2 gridCoord, uint32_t re
                              config.chunk_resolution);
         uint32_t maxDepth = std::ceil(std::log2(resolution));
 
-        std::vector<uint32_t> allIndices(triangles.value().size());
-        std::iota(allIndices.begin(), allIndices.end(), 0);
         std::optional<OctreeNode> node = std::nullopt;
         if (config.useHeightmapData) {
+            std::cout << "Get in here as expected" << std::endl;
             uint32_t scale = config.chunk_resolution / resolution;
             node = createChunkOctree(resolution, config.seed, chunkCoord, scale, nodeAmount);
         } else {
+            std::vector<uint32_t> allIndices(triangles.value().size());
+            std::iota(allIndices.begin(), allIndices.end(), 0);
             node = createNode(aabb, triangles.value(), allIndices, textures.value(), nodeAmount, maxDepth, 0);
         }
 
 
         if (node) {
             auto shared_node = std::make_shared<OctreeNode>(*node);
-            addOctreeGPUdata(chunkOctreeGPU, shared_node, nodeAmount, chunkFarValues);
+            addOctreeGPUdataBF(chunkOctreeGPU, shared_node, nodeAmount, chunkFarValues);
             if (!saveChunk(directory, config.chunk_resolution, resolution, chunkCoord, nodeAmount,
                            chunkOctreeGPU, chunkFarValues)) {
                 std::cout << "Something went wrong storing Chunk data" << std::endl;

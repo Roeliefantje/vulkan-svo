@@ -184,9 +184,10 @@ void addOctreeGPUdataBF(std::vector<uint32_t> &gpuData, std::shared_ptr<OctreeNo
     //Instead of the previous structure, we add all the nodes of the tree next to eachother.
     uint32_t startIndex = gpuData.size();
     gpuData.resize(startIndex + nodesAmount);
-    uint32_t index = startIndex + 1;
+    // uint32_t index = startIndex + 1;
     std::queue<QueueNode> q;
     q.push({rootNode, startIndex});
+    startIndex += 1;
 
     while (!q.empty()) {
         auto current = q.front();
