@@ -7,6 +7,7 @@
 #include "svo_generation.h"
 #include "voxelizer.h"
 #include "data_manage_threat.h"
+#include "spdlog/spdlog.h"
 
 VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo,
                                       const VkAllocationCallbacks *pAllocator,
@@ -801,7 +802,7 @@ void ComputeShaderApplication::createShaderStorageBuffer(std::vector<uint32_t> &
     uint32_t elementsPerChunk = maxBufferSize;
     //Get the number of chunks needed, add elementsPerChunk to
     size_t num_chunks = (size_t) ceil(dataVec.size() / ((float) elementsPerChunk));
-    std::cout << "Number of chunks needed to fit Voxel Information: " << num_chunks << std::endl;
+    spdlog::debug("Number of chunks needed to fit Voxel Information: {}", num_chunks);
     buffers.resize(MAX_FRAMES_IN_FLIGHT);
     buffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
 
@@ -814,7 +815,7 @@ void ComputeShaderApplication::createShaderStorageBuffer(std::vector<uint32_t> &
         uint32_t offset = chunk * elementsPerChunk;
         uint32_t chunkSize = std::min(elementsPerChunk, static_cast<uint32_t>(dataVec.size() - offset));
         VkDeviceSize chunkBufferSize = chunkSize * sizeof(uint32_t);
-        std::cout << "Buffer size: " << chunkBufferSize << std::endl;
+        spdlog::debug("Buffer size: ", chunkBufferSize);
 
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
@@ -872,7 +873,7 @@ void ComputeShaderApplication::createSingleShaderStorageBuffer(std::vector<T> &d
                                                                std::vector<VkDeviceMemory> &buffersMemory) {
     VkDeviceSize bufferSize = sizeof(T) * dataVec.size();
     // std::cout << "Grid data size: " << octreeGPU.size() << std::endl;
-    std::cout << "Single Buffer size: " << dataVec.size() * sizeof(T) << std::endl;
+    spdlog::debug("Single Buffer size: {}", dataVec.size() * sizeof(T));
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -912,7 +913,7 @@ void ComputeShaderApplication::createShaderStorageBuffers() {
 void ComputeShaderApplication::createUniformBuffers() {
     //Get max buffer size in gridInfo before we copy it over
     gridInfo.bufferSize = maxBufferSize;
-    std::cout << "Max BufferSize: " << gridInfo.bufferSize << std::endl;
+    spdlog::debug("Max BufferSize: {}", gridInfo.bufferSize);
 
     VkDeviceSize bufferSize = sizeof(GridInfo);
     VkDeviceSize cBufferSize = sizeof(Camera);

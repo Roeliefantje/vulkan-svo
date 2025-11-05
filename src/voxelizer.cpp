@@ -9,6 +9,7 @@
 
 #include "tiny_obj_loader.h"
 #include "tribox.h"
+#include "spdlog/spdlog.h"
 
 int loadSceneMetaData(std::string inputFile, std::string path, Aabb &sceneBounds, int &numTriangles) {
     tinyobj::ObjReaderConfig reader_config;
@@ -18,13 +19,13 @@ int loadSceneMetaData(std::string inputFile, std::string path, Aabb &sceneBounds
 
     if (!reader.ParseFromFile(inputFile, reader_config)) {
         if (!reader.Error().empty()) {
-            std::cerr << "TinyObjReader: " << reader.Error();
+            spdlog::error("TinyObjReader: {}", reader.Error());
         }
         return 1;
     }
 
     if (!reader.Warning().empty()) {
-        std::cout << "TinyObjReader: " << reader.Warning();
+        spdlog::warn("TinyObjReader: {}", reader.Warning());
     }
 
     auto &attrib = reader.GetAttrib();
@@ -70,13 +71,13 @@ int loadObject(std::string inputFile, std::string path, int chunkResolution, int
 
     if (!reader.ParseFromFile(inputFile, reader_config)) {
         if (!reader.Error().empty()) {
-            std::cerr << "TinyObjReader: " << reader.Error();
+            spdlog::error("TinyObjReader: {}", reader.Error());
         }
         return 1;
     }
 
     if (!reader.Warning().empty()) {
-        std::cout << "TinyObjReader: " << reader.Warning();
+        spdlog::warn("TinyObjReader: {}", reader.Warning());
     }
 
     auto &attrib = reader.GetAttrib();
@@ -94,7 +95,7 @@ int loadObject(std::string inputFile, std::string path, int chunkResolution, int
         -std::numeric_limits<float>::infinity()
     };
 
-    std::cout << "Amount of Vertices: " << attrib.vertices.size() << std::endl;
+    spdlog::debug("Amount of Vertices: {}", attrib.vertices.size());
     triangles.reserve(attrib.vertices.size() / 9);
 
 
@@ -110,10 +111,8 @@ int loadObject(std::string inputFile, std::string path, int chunkResolution, int
         bbMax.z = std::max(bbMax.z, z);
     }
 
-    std::cout << "Scene AABB:\n"
-            << "  Min = (" << bbMin.x << ", " << bbMin.y << ", " << bbMin.z << ")\n"
-            << "  Max = (" << bbMax.x << ", " << bbMax.y << ", " << bbMax.z << ")"
-            << std::endl;
+    spdlog::debug("Scene AABB: \n Min = ({}, {}, {})\n Max = ({}, {}, {})", bbMin.x, bbMin.y, bbMin.z, bbMax.x, bbMax.y,
+                  bbMax.z);
     glm::vec3 sceneSize = {bbMax.x - bbMin.x, bbMax.y - bbMin.y, bbMax.z - bbMin.z};
     glm::vec3 offset = bbMin;
     scale = std::min(

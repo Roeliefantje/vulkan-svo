@@ -4,7 +4,7 @@
 #include "config.h"
 
 #include <glm/detail/func_trigonometric.inl>
-
+#include <spdlog/spdlog.h>
 
 Config::Config(int argc, char *argv[]) {
     using json = nlohmann::json;
@@ -22,7 +22,6 @@ Config::Config(int argc, char *argv[]) {
             ("campath", "Make the camera follow a set path")
             ("h, help", "Print how to use the program");
     // ();
-
     auto result = options.parse(argc, argv);
 
     if (result.count("help")) {
@@ -35,7 +34,12 @@ Config::Config(int argc, char *argv[]) {
         auto test_scene = result["test"].as<uint32_t>();
         switch (test_scene) {
             case 0:
-                std::cout << "Test Scene 0 Benchmark!" << std::endl;
+                camera_path = "./camera_positions/camera_location_test0.json";
+                printChunkDebug = false;
+                allowUserInput = false;
+                spdlog::info("Test Scene 0 Benchmark!");
+                loglevel = spdlog::level::info;
+                // std::cout << "Test Scene 0 Benchmark!" << std::endl;
                 break;
             default:
                 std::cout << "Unknown test scene Benchmark!" << std::endl;

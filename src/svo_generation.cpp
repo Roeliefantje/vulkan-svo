@@ -4,8 +4,10 @@
 #include "svo_generation.h"
 #include <FastNoiseLite.h>
 
+#include "spdlog/spdlog.h"
+
 std::vector<uint32_t> createNoise(int size, uint32_t seed_value, glm::ivec2 offset, uint32_t scale) {
-    std::cout << "Creating Heightmap" << std::endl;
+    spdlog::debug("Creating Heightmap");
     FastNoiseLite base;
     base.SetSeed((int) seed_value);
     base.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
@@ -25,7 +27,7 @@ std::vector<uint32_t> createNoise(int size, uint32_t seed_value, glm::ivec2 offs
             noiseData[index++] = uint32_t(e * 1024) / scale;
         }
     }
-    std::cout << "Finished creating noise data" << std::endl;
+    spdlog::debug("Finished creating noise data");
     return noiseData;
 }
 
@@ -72,10 +74,10 @@ std::vector<uint32_t> createNoise(int size, uint32_t seed_value, glm::ivec2 offs
 // }
 
 std::vector<uint32_t> createDepthMap(std::vector<uint32_t> heightMap) {
-    std::cout << "Creating Depthmap" << std::endl;
+    spdlog::debug("Creating Depthmap");
     std::vector<uint32_t> depthMap(heightMap.size());
     uint32_t size = std::sqrt(heightMap.size());
-    std::cout << "Size: " << size << std::endl;
+    spdlog::debug("Size: {}", size);
 
     //Could split it into a y scan and an x scan for faster performance.
     for (int y = 0; y < size; y++) {
@@ -90,7 +92,7 @@ std::vector<uint32_t> createDepthMap(std::vector<uint32_t> heightMap) {
         }
     }
 
-    std::cout << "Finished creating Depthmap" << std::endl;
+    spdlog::debug("Finished creating Depthmap");
     return depthMap;
 }
 

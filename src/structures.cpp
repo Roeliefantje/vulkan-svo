@@ -3,6 +3,8 @@
 #include <format>
 #include <queue>
 
+#include "spdlog/spdlog.h"
+
 CpuChunk::CpuChunk(uint32_t chunkFarValuesOffset, uint32_t rootIndex, uint32_t resolution, glm::ivec3 chunk_coords)
     : ChunkFarValuesOffset(chunkFarValuesOffset), rootNodeIndex(rootIndex), resolution(resolution),
       chunk_coords(chunk_coords) {
@@ -19,7 +21,7 @@ Camera::Camera(glm::vec3 pos, glm::vec3 direction, int screenWidth, int screenHe
                glm::ivec3 camera_grid_pos)
     : position(pos), camera_grid_pos(camera_grid_pos), fov(fovRadian) {
     this->direction = glm::normalize(direction);
-    std::cout << std::format("Direction {}, {}, {}", direction.x, direction.y, direction.z) << std::endl;
+    spdlog::debug("Direction {}, {}, {}", direction.x, direction.y, direction.z);
     up = glm::vec3(0.0, 0.0, 1.0);
     resolution = glm::vec2(screenWidth, screenHeight);
 
@@ -56,15 +58,14 @@ void CPUCamera::updatePosition(glm::vec3 posChange) {
     glm::ivec3 highMask = glm::greaterThan(gpu_camera.position, glm::vec3(maxChunkResolution));
     glm::ivec3 lowMask = glm::lessThan(gpu_camera.position, glm::vec3(0));
     if (glm::any(glm::notEqual(lowMask, glm::ivec3(0))) || glm::any(glm::notEqual(highMask, glm::ivec3(0)))) {
-        std::cout << "Prior camera grid pos: " << gpu_camera.camera_grid_pos.x << ", " << gpu_camera.camera_grid_pos.y
-                << ", " << gpu_camera.camera_grid_pos.z
-                << "\n";
+        spdlog::debug("Prior camera grid pos: {}, {}, {}", gpu_camera.camera_grid_pos.x, gpu_camera.camera_grid_pos.y,
+                      gpu_camera.camera_grid_pos.z);
+
         glm::ivec3 diff = highMask * 1 + lowMask * -1;
         gpu_camera.camera_grid_pos = positive_mod(gpu_camera.camera_grid_pos + diff, glm::ivec3(gridSize));
         gpu_camera.position = glm::mod(gpu_camera.position, glm::vec3(maxChunkResolution));
-        std::cout << "After camera grid pos: " << gpu_camera.camera_grid_pos.x << ", " << gpu_camera.camera_grid_pos.y
-                << ", " << gpu_camera.camera_grid_pos.z
-                << "\n";
+        spdlog::debug("After camera grid pos: {}, {}, {}", gpu_camera.camera_grid_pos.x, gpu_camera.camera_grid_pos.y,
+                      gpu_camera.camera_grid_pos.z);
         chunk_coords += diff;
     }
 }
@@ -124,11 +125,10 @@ uint32_t createGPUData(uint8_t childMask, uint32_t color, uint32_t index, std::v
     if (childMask == 0) {
         return color & ((1 << 24) - 1);
     }
-
-    bool far = false;
+    bool farValue = false;
     uint32_t usedIndex = index;
     if (index > (1 << 23) - 1) {
-        far = true;
+        farValue = true;
         usedIndex = farValues.size();
         if (usedIndex > (1 << 23) - 1) {
             throw std::runtime_error("Too many far values, exceeds pointer for far value!");
@@ -167,11 +167,11 @@ uint32_t addChildren(std::shared_ptr<OctreeNode> node, std::vector<uint32_t> *da
 
 std::vector<uint32_t> getOctreeGPUdata(std::shared_ptr<OctreeNode> rootNode, uint32_t nodesAmount,
                                        std::vector<uint32_t> &farValues) {
-    std::cout << "Nodes amount: " << nodesAmount << std::endl;
+    spdlog::debug("Nodes amount: {}", nodesAmount);
     auto data = std::vector<uint32_t>(nodesAmount);
     uint32_t index = 1;
     data[0] = addChildren(rootNode, &data, &index, 0, farValues);
-    std::cout << "Total nodes: " << data.size() << std::endl;
+    spdlog::debug("Total Nodes: {}", data.size());
     return data;
 }
 

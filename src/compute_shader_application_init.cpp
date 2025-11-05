@@ -2,6 +2,7 @@
 // Created by roeld on 23/10/2025.
 //
 #include "compute_shader_application.h"
+#include "spdlog/spdlog.h"
 
 ComputeShaderApplication::ComputeShaderApplication(Config config) : config(config) {
     initData();
@@ -24,8 +25,8 @@ void ComputeShaderApplication::initData() {
     //GPU Ubo object? I think...
     gridInfo = GridInfo(config.chunk_resolution, config.grid_size);
     if (!config.useHeightmapData) {
-        objSceneMetaData = SceneMetadata("./assets/san-miguel-low-poly.obj", config);
-        std::cout << "ObjFile to be loaded: " << objSceneMetaData->objFile << std::endl;
+        objSceneMetaData = SceneMetadata(config.scene_path, config);
+        spdlog::debug("ObjFile to be loaded: {}", objSceneMetaData->objFile);
     }
 }
 
@@ -40,7 +41,7 @@ void ComputeShaderApplication::initCamera() {
         config.fov, config
     );
 
-    std::cout << "Finished setting up Camera" << std::endl;
+    spdlog::debug("Finished setting up Camera");
 }
 
 void ComputeShaderApplication::initThreads() {

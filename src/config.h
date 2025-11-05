@@ -12,6 +12,8 @@
 #include <nlohmann/json.hpp>
 #include <vulkan/vulkan_core.h>
 
+#include "spdlog/common.h"
+
 
 struct Config {
     //Whether we use the voxelizer or the heightmap data.
@@ -40,6 +42,9 @@ struct Config {
     std::string scene_path = "./assets/san-miguel-low-poly.obj";
     std::string camera_path = "./camera.json";
     bool chunkgen = false;
+    bool allowUserInput = true;
+    bool printChunkDebug = true;
+    spdlog::level::level_enum loglevel = spdlog::level::debug;
 
     Config(int argc, char *argv[]);
 };

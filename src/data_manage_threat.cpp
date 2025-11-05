@@ -16,6 +16,7 @@
 
 
 #include "svo_generation.h"
+#include "spdlog/spdlog.h"
 
 BufferManager::BufferManager(VkBuffer &buffer, VkDeviceSize bufferSize) : buffer(buffer), bufferSize(bufferSize) {
     this->chunks = std::vector<DataChunk>();
@@ -108,7 +109,7 @@ DataManageThreat::DataManageThreat(VkDevice &device, StagingBufferProperties &st
       farValuesManager(farValuesManager),
       chunkBuffer(chunkBuffer),
       objSceneData(objFileData) {
-    std::cout << "Staging buffer size:" << stagingBufferProperties.bufferSize;
+    spdlog::debug("Staging buffer size: {}", stagingBufferProperties.bufferSize);
     workerThread = std::thread([this]() { this->threadLoop(); });
     if (objSceneData.has_value()) {
         objFile = objSceneData->objFile;
@@ -231,10 +232,12 @@ void DataManageThreat::threadLoop() {
 }
 
 void DataManageThreat::loadChunkToGPU(ChunkLoadInfo job) {
-    std::cout << std::format("Chunk Coords to load: {}, {}, Desired resolution: {}", job.chunkCoord.x,
-                             job.chunkCoord.y,
-                             job.resolution) <<
-            std::endl;
+    if (config.printChunkDebug) {
+        spdlog::debug("Chunk Coords to load: {}, {}, Desired resolution: {}", job.chunkCoord.x,
+                      job.chunkCoord.y,
+                      job.resolution);
+    }
+
     if (!checkChunkResolution(job)) {
         //Chunk is not in the right resolution for the camera position, cancel
         chunks[job.gridCoord.y * config.grid_size + job.gridCoord.x].loading = false;
@@ -257,7 +260,7 @@ void DataManageThreat::loadChunkToGPU(ChunkLoadInfo job) {
     if (chunkFarValues.size() > 0) {
         farValuesOffset = farValuesManager.allocateChunk(chunkFarValues.size());
         if (farValuesOffset == 0) {
-            std::cerr << "Far Values Buffer has no memory to be allocated!" << std::endl;
+            spdlog::error("Far Values Buffer has no memory to be allocated!");
             chunks[job.gridCoord.y * config.grid_size + job.gridCoord.x].loading = false;
             return;
         }
@@ -276,7 +279,7 @@ void DataManageThreat::loadChunkToGPU(ChunkLoadInfo job) {
     }
 
     if (stagingBufferProperties.waitForTransfer) {
-        std::cout << "Waiting for transfer" << std::endl;
+        // std::cout << "Waiting for transfer" << std::endl;
         stagingBufferProperties.waitForTransfer.wait(true);
     }
     currentChunk = job;
@@ -370,10 +373,10 @@ void DataManageThreat::loadChunkData(ChunkLoadInfo &job, std::vector<uint32_t> &
     if (!loadChunk(directory, config.chunk_resolution, job.resolution, job.chunkCoord, nodeAmount, chunkOctreeGPU,
                    chunkFarValues)) {
         if (!config.useHeightmapData && !sceneLoaded) {
-            std::cout << "Loading scene" << std::endl;
+            spdlog::debug("Loading scene");
             loadObj();
             sceneLoaded = true;
-            std::cout << "Finished loading scene" << std::endl;
+            spdlog::debug("Finished loading scene");
         }
         std::cout << "Chunk not yet created, generating the chunk" << std::endl;
         auto aabb = Aabb{};
@@ -430,8 +433,6 @@ void checkChunks(std::vector<CpuChunk> &chunks, CPUCamera &camera, uint32_t maxC
 
         CpuChunk &chunk = chunks[gridCoord.y * camera.gridSize + gridCoord.x];
         if (!chunk.loading && (chunk.chunk_coords != chunkCoord || chunk.resolution != octreeResolution)) {
-            std::cout << "Loading Chunk Coord: {" << chunkCoord.x << ", " << chunkCoord.y << ", " << chunkCoord.z
-                    << "} In grid location: {" << gridCoord.x << ", " << gridCoord.y << "}\n";
             dmThreat.pushWork(ChunkLoadInfo{gridCoord, octreeResolution, chunkCoord});
             chunk.loading = true;
         }

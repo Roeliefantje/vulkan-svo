@@ -30,7 +30,8 @@ add_executable(clion_vulkan main.cpp
         src/chunk_generation_application.cpp
         src/chunk_generation_application.h
         src/config.cpp
-        src/compute_shader_application_loop.cpp)
+        src/compute_shader_application_loop.cpp
+)
 
 target_include_directories(clion_vulkan PRIVATE ${Vulkan_INCLUDE_DIRS})
 target_include_directories(clion_vulkan PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)

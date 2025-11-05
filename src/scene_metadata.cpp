@@ -6,6 +6,7 @@
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include "voxelizer.h"
+#include "spdlog/spdlog.h"
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
@@ -19,12 +20,12 @@ void SceneMetadata::loadMetaData(Config &config) {
     fs::path filePath{objFile};
     fs::path jsonPath = filePath.replace_extension(".json");
     if (!fs::exists(jsonPath)) {
-        std::cout << "Json metadata file does not exist yet, loading scene for meta data." << std::endl;
+        spdlog::debug("Json metadata file does not exist yet, loading scene for meta data.");
         auto directory = filePath.parent_path().string();;
         loadSceneMetaData(objFile, directory, sceneAabb, numTriangles);
         saveMetaData();
     } else {
-        std::cout << "Loading Scene Meta Data from json" << std::endl;
+        spdlog::debug("Loading Scene Meta Data from json");
         std::ifstream f(jsonPath.string());
         json data = json::parse(f);
         sceneAabb.aa.x = data["aabb"]["aa"]["x"];
