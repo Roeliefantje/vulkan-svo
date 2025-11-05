@@ -8,7 +8,9 @@ void ComputeShaderApplication::mainLoop() {
     double lastPrint = glfwGetTime();
     while (!glfwWindowShouldClose(window)) {
         checkChunks(cpuGridValues, camera, config.chunk_resolution, *dmThreat);
-        processInput();
+        if (config.allowUserInput) {
+            processInput();
+        }
         glfwPollEvents();
         drawFrame();
         double currentTime = glfwGetTime();

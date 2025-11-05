@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.31)
 project(clion_vulkan)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -static-libgcc -static-libstdc++")
+
 
 find_package(Vulkan REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)

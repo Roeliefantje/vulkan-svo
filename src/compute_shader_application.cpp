@@ -52,8 +52,10 @@ void ComputeShaderApplication::initWindow() {
 
     lastTime = glfwGetTime();
     glfwSetWindowUserPointer(window, this);
-    glfwSetCursorPosCallback(window, mouseCallback);
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    if (config.allowUserInput) {
+        glfwSetCursorPosCallback(window, mouseCallback);
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    }
 }
 
 void ComputeShaderApplication::framebufferResizeCallback(GLFWwindow *window, int width, int height) {

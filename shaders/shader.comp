@@ -271,7 +271,7 @@ void main()
                     rdsign = sign(rayDir);
                     irdsign = ivec3(rdsign);
                     ird = 1.0/max(abs(rayDir), 0.001);
-//                    break;
+                    break;
                 } else {
                     intensity = 0.2f;
                     break;

@@ -52,7 +52,7 @@ const std::vector<const char *> deviceExtensions = {
     VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME
 };
 
-#define NDEBUG
+// #define NDEBUG
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
 #else
