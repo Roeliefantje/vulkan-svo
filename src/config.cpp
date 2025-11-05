@@ -6,6 +6,35 @@
 #include <glm/detail/func_trigonometric.inl>
 #include <spdlog/spdlog.h>
 
+#include "structures.h"
+
+void Config::read_keyframes() {
+    using json = nlohmann::json;
+    namespace fs = std::filesystem;
+    auto kfs = std::vector<CameraKeyFrame>();
+    std::ifstream f(camera_keyframe_path);
+    json data = json::parse(f);
+    if (data.contains("direction")) {
+        cameraDirection.x = data["direction"]["x"];
+        cameraDirection.y = data["direction"]["y"];
+        cameraDirection.z = data["direction"]["z"];
+    }
+
+    if (data.contains("keyframes")) {
+        for (const auto &item: data["keyframes"]) {
+            CameraKeyFrame kf;
+            kf.time = item.at("time").get<float>();
+            auto pos = item.at("position");
+            auto direction = item.at("direction");
+            kf.position = glm::vec3(pos[0], pos[1], pos[2]);
+            kf.direction = glm::vec3(direction[0], direction[1], direction[2]);
+            kfs.push_back(kf);
+        }
+    }
+
+    cameraKeyFrames = kfs;
+}
+
 Config::Config(int argc, char *argv[]) {
     using json = nlohmann::json;
     namespace fs = std::filesystem;
@@ -30,16 +59,19 @@ Config::Config(int argc, char *argv[]) {
     }
     chunkgen = result["chunkgen"].as<bool>();
     if (result.count("test")) {
+        printChunkDebug = false;
+        allowUserInput = false;
+        loglevel = spdlog::level::info;
         //Setup camera stuff
-        auto test_scene = result["test"].as<uint32_t>();
-        switch (test_scene) {
+        switch (auto test_scene = result["test"].as<uint32_t>()) {
             case 0:
                 camera_path = "./camera_positions/camera_location_test0.json";
-                printChunkDebug = false;
-                allowUserInput = false;
                 spdlog::info("Test Scene 0 Benchmark!");
-                loglevel = spdlog::level::info;
-                // std::cout << "Test Scene 0 Benchmark!" << std::endl;
+                break;
+            case 1:
+                cameraKeyFrames = std::vector<CameraKeyFrame>();
+                camera_keyframe_path = "./camera_positions/camera_path_test2.json";
+                read_keyframes();
                 break;
             default:
                 std::cout << "Unknown test scene Benchmark!" << std::endl;

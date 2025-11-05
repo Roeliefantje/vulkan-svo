@@ -367,6 +367,17 @@ bool DataManageThreat::checkChunkResolution(ChunkLoadInfo &job) {
     return octreeResolution == job.resolution;
 }
 
+inline bool sceneInChunk(const Aabb &scene, const Aabb &chunk) {
+    return (
+        chunk.aa.x < scene.bb.x &&
+        chunk.bb.x >= scene.aa.x &&
+        chunk.aa.y < scene.bb.y &&
+        chunk.bb.y >= scene.aa.y &&
+        chunk.aa.z < scene.bb.z &&
+        chunk.bb.z >= scene.aa.z
+    );
+}
+
 void DataManageThreat::loadChunkData(ChunkLoadInfo &job, std::vector<uint32_t> &chunkFarValues,
                                      std::vector<uint32_t> &chunkOctreeGPU) {
     uint32_t nodeAmount = 0;
@@ -391,7 +402,7 @@ void DataManageThreat::loadChunkData(ChunkLoadInfo &job, std::vector<uint32_t> &
         if (config.useHeightmapData) {
             uint32_t scale = config.chunk_resolution / job.resolution;
             node = createChunkOctree(job.resolution, config.seed, job.chunkCoord, scale, nodeAmount);
-        } else {
+        } else if (sceneInChunk(objSceneData->sceneAabb, aabb)) {
             node = createNode(aabb, triangles, allIndices, textures, nodeAmount, maxDepth, 0);
         }
 

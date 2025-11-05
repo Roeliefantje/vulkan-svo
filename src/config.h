@@ -14,6 +14,11 @@
 
 #include "spdlog/common.h"
 
+struct CameraKeyFrame {
+    float time; //Seconds since start
+    glm::vec3 position;
+    glm::vec3 direction;
+};
 
 struct Config {
     //Whether we use the voxelizer or the heightmap data.
@@ -29,9 +34,10 @@ struct Config {
     size_t GIGABYTE = (1 << 30);
 
     VkDeviceSize staging_size = GIGABYTE << 1;
-    uint32_t chunk_resolution = 1024 * 2;
-    uint32_t grid_size = 7;
+    uint32_t chunk_resolution = 1024;
+    uint32_t grid_size = 11;
     uint32_t seed = 12345 * 6;
+    std::optional<std::vector<CameraKeyFrame> > cameraKeyFrames;
 
     //MouseSensitivity
     float mouseSensitivity = 0.01f;
@@ -41,12 +47,16 @@ struct Config {
     float fov = 0.52359; //30 degrees in radians
     std::string scene_path = "./assets/san-miguel-low-poly.obj";
     std::string camera_path = "./camera.json";
+    std::string camera_keyframe_path = "./camera_path.json";
+
     bool chunkgen = false;
     bool allowUserInput = true;
     bool printChunkDebug = true;
     spdlog::level::level_enum loglevel = spdlog::level::debug;
 
     Config(int argc, char *argv[]);
+
+    void read_keyframes();
 };
 
 #endif //CONFIG_H

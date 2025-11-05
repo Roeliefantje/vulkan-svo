@@ -7,6 +7,7 @@
 #include <format>
 
 #include "voxelizer.h"
+#include "spdlog/spdlog.h"
 namespace fs = std::filesystem;
 
 
@@ -47,13 +48,24 @@ inline uint32_t calculateChunkResolution(uint32_t maxChunkResolution, int dist) 
     return maxChunkResolution >> (dist);
 }
 
+inline bool sceneInChunk(const Aabb &scene, const Aabb &chunk) {
+    return (
+        chunk.aa.x < scene.bb.x &&
+        chunk.bb.x >= scene.aa.x &&
+        chunk.aa.y < scene.bb.y &&
+        chunk.bb.y >= scene.aa.y &&
+        chunk.aa.z < scene.bb.z &&
+        chunk.bb.z >= scene.aa.z
+    );
+}
+
 void ChunkGenerationApplication::generateChunk(glm::ivec2 gridCoord, uint32_t resolution, glm::ivec2 chunkCoord) {
     uint32_t nodeAmount = 0;
     auto chunkFarValues = std::vector<uint32_t>();
     auto chunkOctreeGPU = std::vector<uint32_t>();
     if (!loadChunk(directory, config.chunk_resolution, resolution, chunkCoord, nodeAmount, chunkOctreeGPU,
                    chunkFarValues)) {
-        std::cout << "Chunk not yet created, generating the chunk" << std::endl;
+        spdlog::debug("Chunk not yet created, generating the chunk");
         auto aabb = Aabb{};
         aabb.aa = glm::ivec3(chunkCoord.x * config.chunk_resolution, chunkCoord.y * config.chunk_resolution, 0);
         aabb.bb = glm::ivec3(aabb.aa.x + config.chunk_resolution, aabb.aa.y + config.chunk_resolution,
@@ -62,10 +74,9 @@ void ChunkGenerationApplication::generateChunk(glm::ivec2 gridCoord, uint32_t re
 
         std::optional<OctreeNode> node = std::nullopt;
         if (config.useHeightmapData) {
-            std::cout << "Get in here as expected" << std::endl;
             uint32_t scale = config.chunk_resolution / resolution;
             node = createChunkOctree(resolution, config.seed, chunkCoord, scale, nodeAmount);
-        } else {
+        } else if (sceneInChunk(objSceneMetaData->sceneAabb, aabb)) {
             std::vector<uint32_t> allIndices(triangles.value().size());
             std::iota(allIndices.begin(), allIndices.end(), 0);
             node = createNode(aabb, triangles.value(), allIndices, textures.value(), nodeAmount, maxDepth, 0);
