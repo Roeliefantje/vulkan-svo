@@ -188,9 +188,8 @@ bool DataManageThreat::CheckToWaitAndStartTransfer() {
 
 
 void DataManageThreat::loadObj() {
-    int totalResolution = config.chunk_resolution * config.grid_size;
     float _scale;
-    int result = loadObject(objFile, objDirectory, totalResolution, config.grid_size, triangles, _scale);
+    int result = loadObject(objFile, objDirectory, config.chunk_resolution, config.grid_size, triangles, _scale);
 }
 
 void DataManageThreat::initFence() {

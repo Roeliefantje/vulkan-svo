@@ -61,7 +61,7 @@ int loadSceneMetaData(std::string inputFile, std::string path, Aabb &sceneBounds
 }
 
 
-int loadObject(std::string inputFile, std::string path, int resolution, int gridSize,
+int loadObject(std::string inputFile, std::string path, int chunkResolution, int gridSize,
                std::vector<TexturedTriangle> &triangles, float &scale) {
     tinyobj::ObjReaderConfig reader_config;
     reader_config.mtl_search_path = path;
@@ -116,10 +116,9 @@ int loadObject(std::string inputFile, std::string path, int resolution, int grid
             << std::endl;
     glm::vec3 sceneSize = {bbMax.x - bbMin.x, bbMax.y - bbMin.y, bbMax.z - bbMin.z};
     glm::vec3 offset = bbMin;
-    auto maxChunkResolution = resolution / gridSize;
     scale = std::min(
-        (resolution) / std::max(sceneSize.x, sceneSize.y),
-        (float) maxChunkResolution / sceneSize.z
+        (chunkResolution * gridSize) / std::max(sceneSize.x, sceneSize.y),
+        chunkResolution / sceneSize.z
     );
     // float scale = resolution / std::max({sceneSize.x, sceneSize.y, sceneSize.z});
     // float scaleZ = scale / gridSize; //Compensate for the grid
@@ -153,10 +152,6 @@ int loadObject(std::string inputFile, std::string path, int resolution, int grid
                 tri.v[v].x = (attrib.vertices[3 * idx.vertex_index + 0] - offset.x) * scale;
                 tri.v[v].y = (attrib.vertices[3 * idx.vertex_index + 2] - offset.y) * scale;
                 tri.v[v].z = (attrib.vertices[3 * idx.vertex_index + 1] - offset.z) * scale;
-
-                if (tri.v[v].z > (resolution / gridSize)) {
-                    std::cout << "Z is wrong!" << std::endl;
-                }
 
                 // Texcoord (might be missing)
                 if (idx.texcoord_index >= 0) {
@@ -314,10 +309,9 @@ void gridVoxelizeScene(std::vector<Chunk> &gridValues, std::vector<uint32_t> &fa
     octreeGPU = std::vector<uint32_t>();
 
     std::vector<TexturedTriangle> triangles;
-    int totalResolution = maxChunkResolution * gridSize;
     float scale;
 
-    int result = loadObject(inputFile, path, totalResolution, gridSize, triangles, scale);
+    int result = loadObject(inputFile, path, maxChunkResolution, gridSize, triangles, scale);
 
     std::vector<uint32_t> allIndices(triangles.size());
     std::iota(allIndices.begin(), allIndices.end(), 0);
@@ -382,34 +376,4 @@ void gridVoxelizeScene(std::vector<Chunk> &gridValues, std::vector<uint32_t> &fa
     for (const auto &[key, value]: textures) {
         stbi_image_free(value.imageData);
     }
-}
-
-
-OctreeNode voxelizeObj(std::string inputFile, std::string path, uint32_t svo_resolution, uint32_t &nodeCount) {
-    std::vector<TexturedTriangle> triangles;
-    float scale;
-    int result = loadObject(inputFile, path, svo_resolution, svo_resolution, triangles, scale);
-
-    auto aabb = Aabb{};
-    aabb.aa = glm::ivec3(0, 0, 0);
-    aabb.bb = glm::ivec3(svo_resolution, svo_resolution, svo_resolution);
-    uint32_t maxDepth = std::ceil(std::log2(svo_resolution));
-
-    std::vector<uint32_t> allIndices(triangles.size());
-    std::iota(allIndices.begin(), allIndices.end(), 0);
-
-    std::map<std::string, LoadedTexture> textures;
-    std::cout << "Creating nodes" << std::endl;
-    auto node = createNode(aabb, triangles, allIndices, textures, nodeCount, maxDepth, 0);
-    std::cout << "Finished creating nodes " << triangles.size() << std::endl;
-
-    for (const auto &[key, value]: textures) {
-        stbi_image_free(value.imageData);
-    }
-
-    if (node) {
-        return *node;
-    }
-
-    return OctreeNode();
 }

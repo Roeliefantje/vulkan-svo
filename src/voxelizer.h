@@ -40,7 +40,4 @@ void gridVoxelizeScene(std::vector<Chunk> &gridValues, std::vector<uint32_t> &fa
                        glm::vec3 cameraPosition, glm::vec3 cameraLookAt,
                        uint32_t screenWidth, uint32_t screenHeight);
 
-
-OctreeNode voxelizeObj(std::string inputFile, std::string path, uint32_t svo_resolution, uint32_t &nodeCount);
-
 #endif //VOXELIZER_H

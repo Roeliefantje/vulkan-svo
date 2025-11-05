@@ -15,7 +15,7 @@
 
 struct Config {
     //Whether we use the voxelizer or the heightmap data.
-    bool useHeightmapData = true;
+    bool useHeightmapData = false;
 
     //Output screen size
     uint32_t width = 1920;
@@ -27,8 +27,8 @@ struct Config {
     size_t GIGABYTE = (1 << 30);
 
     VkDeviceSize staging_size = GIGABYTE << 1;
-    uint32_t chunk_resolution = 1024;
-    uint32_t grid_size = 21;
+    uint32_t chunk_resolution = 1024 * 2;
+    uint32_t grid_size = 7;
     uint32_t seed = 12345 * 6;
 
     //MouseSensitivity
@@ -38,7 +38,7 @@ struct Config {
     glm::vec3 cameraDirection = glm::vec3(0.5, 0.5, 0);
     float fov = 0.52359; //30 degrees in radians
     std::string scene_path = "./assets/san-miguel-low-poly.obj";
-    std::string camera_path = "./camera-hm.json";
+    std::string camera_path = "./camera.json";
     bool chunkgen = false;
 
     Config(int argc, char *argv[]);

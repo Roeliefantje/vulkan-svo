@@ -133,7 +133,7 @@ uint32_t createGPUData(uint8_t childMask, uint32_t color, uint32_t index, std::v
         if (usedIndex > (1 << 23) - 1) {
             throw std::runtime_error("Too many far values, exceeds pointer for far value!");
         }
-        std::cout << "Used index: " << usedIndex << std::endl;
+        // std::cout << "Used index: " << usedIndex << std::endl;
         farValues.push_back(index);
     }
 

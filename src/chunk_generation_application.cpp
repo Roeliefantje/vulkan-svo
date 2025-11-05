@@ -31,11 +31,11 @@ ChunkGenerationApplication::ChunkGenerationApplication(Config config) : config(c
     );
 
     if (!config.useHeightmapData) {
-        int totalResolution = config.chunk_resolution * config.grid_size;
         float _scale;
         textures = std::map<std::string, LoadedTexture>();
         triangles = std::vector<TexturedTriangle>();
-        int result = loadObject(objFile, objDirectory, totalResolution, config.grid_size, triangles.value(), _scale);
+        int result = loadObject(objFile, objDirectory, config.chunk_resolution, config.grid_size, triangles.value(),
+                                _scale);
     }
 }
 
