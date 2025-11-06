@@ -15,6 +15,8 @@ public:
 
     void generateChunk(glm::ivec2 gridCoord, uint32_t resolution, glm::ivec2 chunkCoord);
 
+    void generateChunksForCameraPosition();
+
     void genererateChunks();
 
 

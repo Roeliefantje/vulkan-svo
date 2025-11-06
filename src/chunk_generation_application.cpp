@@ -48,14 +48,14 @@ inline uint32_t calculateChunkResolution(uint32_t maxChunkResolution, int dist) 
     return maxChunkResolution >> (dist);
 }
 
-inline bool sceneInChunk(const Aabb &scene, const Aabb &chunk) {
+inline bool sceneInChunk(const Aabb &scene, const Aabb &chunk, const float &scale) {
     return (
-        chunk.aa.x < scene.bb.x &&
-        chunk.bb.x >= scene.aa.x &&
-        chunk.aa.y < scene.bb.y &&
-        chunk.bb.y >= scene.aa.y &&
-        chunk.aa.z < scene.bb.z &&
-        chunk.bb.z >= scene.aa.z
+        chunk.aa.x < (scene.bb.x * scale) &&
+        chunk.bb.x >= (scene.aa.x * scale) &&
+        chunk.aa.y < (scene.bb.y * scale) &&
+        chunk.bb.y >= (scene.aa.y * scale) &&
+        chunk.aa.z < (scene.bb.z * scale) &&
+        chunk.bb.z >= (scene.aa.z * scale)
     );
 }
 
@@ -74,9 +74,9 @@ void ChunkGenerationApplication::generateChunk(glm::ivec2 gridCoord, uint32_t re
 
         std::optional<OctreeNode> node = std::nullopt;
         if (config.useHeightmapData) {
-            uint32_t scale = config.chunk_resolution / resolution;
+            int scale = config.chunk_resolution / resolution;
             node = createChunkOctree(resolution, config.seed, chunkCoord, scale, nodeAmount);
-        } else if (sceneInChunk(objSceneMetaData->sceneAabb, aabb)) {
+        } else if (sceneInChunk(objSceneMetaData->sceneAabb, aabb, objSceneMetaData->scale)) {
             std::vector<uint32_t> allIndices(triangles.value().size());
             std::iota(allIndices.begin(), allIndices.end(), 0);
             node = createNode(aabb, triangles.value(), allIndices, textures.value(), nodeAmount, maxDepth, 0);
@@ -97,7 +97,7 @@ void ChunkGenerationApplication::generateChunk(glm::ivec2 gridCoord, uint32_t re
     }
 }
 
-void ChunkGenerationApplication::genererateChunks() {
+void ChunkGenerationApplication::generateChunksForCameraPosition() {
     auto center = camera.gpu_camera.camera_grid_pos;
     glm::ivec3 start = center - int(camera.gridSize / 2);
     for (int chunkY = start.y; chunkY < camera.gridSize; chunkY++) {
@@ -113,5 +113,25 @@ void ChunkGenerationApplication::genererateChunks() {
             chunkCoord.z = 0;
             generateChunk(gridCoord, octreeResolution, chunkCoord);
         }
+    }
+}
+
+void ChunkGenerationApplication::genererateChunks() {
+    if (config.cameraKeyFrames) {
+        const auto start = config.cameraKeyFrames.value().front().time;
+        const auto end = config.cameraKeyFrames.value().back().time;
+        constexpr float timeBetweenFrames = (1.0 / 60.0);
+        for (float t = start; t < (end + timeBetweenFrames); t += timeBetweenFrames) {
+            auto kf = interpolateCamera(config.cameraKeyFrames.value(), t);
+            if (objSceneMetaData) {
+                camera.setPosition(kf.position * objSceneMetaData->scale);
+            } else {
+                camera.setPosition(kf.position);
+            }
+            camera.gpu_camera.direction = glm::normalize(kf.direction);
+            generateChunksForCameraPosition();
+        }
+    } else {
+        generateChunksForCameraPosition();
     }
 }

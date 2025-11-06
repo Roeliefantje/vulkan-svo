@@ -32,7 +32,7 @@ Camera::Camera(glm::vec3 pos, glm::vec3 direction, int screenWidth, int screenHe
 
 //Config and width can be yoinked from config
 CPUCamera::CPUCamera(glm::vec3 pos, glm::vec3 direction, int screenWidth, int screenHeight, float fovRadian,
-                     Config &config) {
+                     Config &config) : absolute_location(pos) {
     glm::vec3 chunk_position = glm::mod(pos, glm::vec3(config.chunk_resolution));
     chunk_coords = glm::ivec3(pos) / int(config.chunk_resolution);
 
@@ -54,6 +54,7 @@ inline glm::ivec3 positive_mod(const glm::ivec3 &a, const glm::ivec3 &b) {
 
 void CPUCamera::updatePosition(glm::vec3 posChange) {
     //TODO: Current method wont work if camera is moved multiple chunks in one frame.
+    absolute_location += posChange;
     gpu_camera.position += posChange;
     glm::ivec3 highMask = glm::greaterThan(gpu_camera.position, glm::vec3(maxChunkResolution));
     glm::ivec3 lowMask = glm::lessThan(gpu_camera.position, glm::vec3(0));
@@ -68,6 +69,14 @@ void CPUCamera::updatePosition(glm::vec3 posChange) {
                       gpu_camera.camera_grid_pos.z);
         chunk_coords += diff;
     }
+}
+
+void CPUCamera::setPosition(glm::vec3 newPosition) {
+    gpu_camera.position = glm::mod(newPosition, glm::vec3(maxChunkResolution));
+    glm::ivec3 new_chunk_coords = glm::ivec3(newPosition) / int(maxChunkResolution);
+    glm::ivec3 diff = chunk_coords - new_chunk_coords;
+    gpu_camera.camera_grid_pos = positive_mod(gpu_camera.camera_grid_pos + diff, glm::ivec3(gridSize));
+    chunk_coords = new_chunk_coords;
 }
 
 

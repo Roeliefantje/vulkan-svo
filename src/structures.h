@@ -90,6 +90,7 @@ struct Camera {
 
 struct CPUCamera {
     Camera gpu_camera;
+    glm::vec3 absolute_location;
     glm::ivec3 chunk_coords;
     uint32_t gridSize;
     uint32_t maxChunkResolution;
@@ -100,6 +101,8 @@ struct CPUCamera {
               Config &config);
 
     void updatePosition(glm::vec3 posChange);
+
+    void setPosition(glm::vec3 newPosition);
 };
 
 struct OctreeNode {

@@ -3,7 +3,8 @@
 //
 #include "config.h"
 
-#include <glm/detail/func_trigonometric.inl>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/rotate_vector.hpp>
 #include <spdlog/spdlog.h>
 
 #include "structures.h"
@@ -14,15 +15,13 @@ void Config::read_keyframes() {
     auto kfs = std::vector<CameraKeyFrame>();
     std::ifstream f(camera_keyframe_path);
     json data = json::parse(f);
-    if (data.contains("direction")) {
-        cameraDirection.x = data["direction"]["x"];
-        cameraDirection.y = data["direction"]["y"];
-        cameraDirection.z = data["direction"]["z"];
+    if (data.contains("fov")) {
+        fov = glm::radians(data["fov"].get<float>());
     }
 
     if (data.contains("keyframes")) {
         for (const auto &item: data["keyframes"]) {
-            CameraKeyFrame kf;
+            CameraKeyFrame kf{};
             kf.time = item.at("time").get<float>();
             auto pos = item.at("position");
             auto direction = item.at("direction");
@@ -30,6 +29,9 @@ void Config::read_keyframes() {
             kf.direction = glm::vec3(direction[0], direction[1], direction[2]);
             kfs.push_back(kf);
         }
+
+        cameraPosition = kfs[0].position;
+        cameraDirection = kfs[0].direction;
     }
 
     cameraKeyFrames = kfs;
@@ -68,7 +70,7 @@ Config::Config(int argc, char *argv[]) {
                 camera_path = "./camera_positions/camera_location_test0.json";
                 spdlog::info("Test Scene 0 Benchmark!");
                 break;
-            case 1:
+            case 2:
                 cameraKeyFrames = std::vector<CameraKeyFrame>();
                 camera_keyframe_path = "./camera_positions/camera_path_test2.json";
                 read_keyframes();
@@ -104,4 +106,26 @@ Config::Config(int argc, char *argv[]) {
     if (data.contains("fov")) {
         fov = glm::radians(data["fov"].get<float>());
     }
+}
+
+//TODO: Move this to a more proper place.
+CameraKeyFrame interpolateCamera(const std::vector<CameraKeyFrame> &keyframes, const float currentTime) {
+    if (keyframes.empty()) return {};
+    if (currentTime <= keyframes.front().time) return keyframes.front();
+    if (currentTime >= keyframes.back().time) return keyframes.back();
+
+    // Find interval [i, i+1]
+    for (size_t i = 0; i < keyframes.size() - 1; ++i) {
+        const auto &kf1 = keyframes[i];
+        const auto &kf2 = keyframes[i + 1];
+
+        if (currentTime >= kf1.time && currentTime <= kf2.time) {
+            float t = (currentTime - kf1.time) / (kf2.time - kf1.time);
+            glm::vec3 position = glm::mix(kf1.position, kf2.position, t);
+            glm::vec3 direction = glm::slerp(kf1.direction, kf2.direction, t);
+            return {currentTime, position, direction};
+        }
+    }
+
+    return keyframes.back();
 }
