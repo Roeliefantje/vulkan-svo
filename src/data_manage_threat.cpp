@@ -257,7 +257,7 @@ void DataManageThreat::loadChunkToGPU(ChunkLoadInfo job) {
         rootNodeIndex = octreeGPUManager.allocateChunk(chunkOctreeGPU.size());
         if (rootNodeIndex == 0) {
             std::cerr << "Octree GPU Buffer has no memory to be allocated!" << std::endl;
-            // chunks[job.gridCoord.y * gridSize + job.gridCoord.x].loading = false;
+            // chunks[job.gridCoord.y * config.grid_size + job.gridCoord.x].loading = false;
             return;
         }
     }
@@ -265,7 +265,7 @@ void DataManageThreat::loadChunkToGPU(ChunkLoadInfo job) {
         farValuesOffset = farValuesManager.allocateChunk(chunkFarValues.size());
         if (farValuesOffset == 0) {
             spdlog::error("Far Values Buffer has no memory to be allocated!");
-            chunks[job.gridCoord.y * config.grid_size + job.gridCoord.x].loading = false;
+            // chunks[job.gridCoord.y * config.grid_size + job.gridCoord.x].loading = false;
             return;
         }
     }
@@ -350,7 +350,8 @@ void DataManageThreat::loadChunkToGPU(ChunkLoadInfo job) {
 
     // Copy Grid
     copyRegion.srcOffset = farValuesSize + octreeSize;
-    copyRegion.dstOffset = (job.gridCoord.y * config.grid_size + job.gridCoord.x) * sizeof(Chunk);
+    copyRegion.dstOffset = ((job.gridCoord.z * config.grid_size * config.grid_size) + (
+                                job.gridCoord.y * config.grid_size) + job.gridCoord.x) * sizeof(Chunk);
     copyRegion.size = chunkSize;
 
     vkCmdCopyBuffer(commandBuffers[1], stagingBufferProperties.pStagingBuffer, chunkBuffer, 1, &copyRegion);
@@ -435,7 +436,7 @@ void checkChunks(std::vector<CpuChunk> &chunks, CPUCamera &camera, uint32_t maxC
                  DataManageThreat &dmThreat) {
     auto center = camera.gpu_camera.camera_grid_pos;
     auto processOffset = [&](int dx, int dy, int dz) {
-        if ((center.z + dz) < 0 || center.z + dz >= static_cast<int>(camera.gridHeight)) {
+        if ((center.z + dz) < 0 || (center.z + dz) >= static_cast<int>(camera.gridHeight)) {
             return;
         }
 
@@ -464,33 +465,29 @@ void checkChunks(std::vector<CpuChunk> &chunks, CPUCamera &camera, uint32_t maxC
         }
     };
 
+    int rd = int((camera.gridSize - 1) / 2);
 
-    for (int chunk_distance = 0; chunk_distance <= int(camera.gridSize / 2); chunk_distance++) {
-        int offsets[2] = {-chunk_distance, chunk_distance};
-
-        // Pass 1: yz plane
-        for (int offsets_x_idx = 0; offsets_x_idx < 2; offsets_x_idx++) {
-            for (int offset_y = -chunk_distance; offset_y <= chunk_distance; offset_y++) {
-                for (int offset_z = -chunk_distance; offset_z <= chunk_distance; offset_z++) {
-                    processOffset(offsets[offsets_x_idx], offset_y, offset_z);
-                }
+    for (int chunk_distance = 0; chunk_distance <= std::max(rd, int(camera.gridHeight));
+         chunk_distance++) {
+        for (int dz = -chunk_distance; dz <= chunk_distance; ++dz) {
+            if (dz > int(camera.gridHeight)) {
+                break;
             }
-        }
-
-        // Pass 2: xz plane
-        for (int offsets_y_idx = 0; offsets_y_idx < 2; offsets_y_idx++) {
-            for (int offset_x = -chunk_distance; offset_x <= chunk_distance; offset_x++) {
-                for (int offset_z = -chunk_distance; offset_z <= chunk_distance; offset_z++) {
-                    processOffset(offset_x, offsets[offsets_y_idx], offset_z);
+            for (int dy = -chunk_distance; dy <= chunk_distance; ++dy) {
+                if (abs(dy) > rd) {
+                    continue;
                 }
-            }
-        }
+                for (int dx = -chunk_distance; dx <= chunk_distance; ++dx) {
+                    if (abs(dx) > rd) {
+                        continue;
+                    }
+                    // Only process the *outer shell* at this distance
+                    if (abs(dx) != chunk_distance &&
+                        abs(dy) != chunk_distance &&
+                        abs(dz) != chunk_distance)
+                        continue;
 
-        // Pass 3: xy plane
-        for (int offsets_z_idx = 0; offsets_z_idx < 2; offsets_z_idx++) {
-            for (int offset_x = -chunk_distance; offset_x <= chunk_distance; offset_x++) {
-                for (int offset_y = -chunk_distance; offset_y <= chunk_distance; offset_y++) {
-                    processOffset(offset_x, offset_y, offsets[offsets_z_idx]);
+                    processOffset(dx, dy, dz);
                 }
             }
         }

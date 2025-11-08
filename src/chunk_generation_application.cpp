@@ -41,7 +41,7 @@ ChunkGenerationApplication::ChunkGenerationApplication(Config config) : config(c
     }
 }
 
-inline int positive_mod(int a, int b) {
+inline int positive_mod(const int a, const int b) {
     return (a % b + b) % b;
 }
 
@@ -101,7 +101,7 @@ void ChunkGenerationApplication::generateChunk(glm::ivec3 gridCoord, uint32_t re
 
 void ChunkGenerationApplication::generateChunksForCameraPosition() {
     auto center = camera.gpu_camera.camera_grid_pos;
-    glm::ivec3 start = center - int(camera.gridSize / 2);
+    glm::ivec3 start = center - int((camera.gridSize - 1) / 2);
     for (int chunkZ = 0; chunkZ < camera.gridHeight; chunkZ++) {
         for (int chunkY = start.y; chunkY < camera.gridSize; chunkY++) {
             for (int chunkX = start.x; chunkX < camera.gridSize; chunkX++) {

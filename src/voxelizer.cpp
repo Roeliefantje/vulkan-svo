@@ -56,7 +56,10 @@ int loadSceneMetaData(std::string inputFile, std::string path, Aabb &sceneBounds
         bbMax.z = std::max(bbMax.z, z);
     }
     sceneBounds.aa = bbMin - bbMin;
-    sceneBounds.bb = bbMax - bbMin;
+    const glm::vec3 bb = bbMax - bbMin;
+    sceneBounds.bb = glm::ivec3(
+        static_cast<int>(std::ceil(bb.x)), static_cast<int>(std::ceil(bb.y)), static_cast<int>(std::ceil(bb.z))
+    );
 
     return 0;
 }
@@ -114,10 +117,14 @@ int loadObject(std::string inputFile, std::string path, int chunkResolution, int
     spdlog::debug("Scene AABB: \n Min = ({}, {}, {})\n Max = ({}, {}, {})", bbMin.x, bbMin.y, bbMin.z, bbMax.x, bbMax.y,
                   bbMax.z);
     glm::vec3 sceneSize = {bbMax.x - bbMin.x, bbMax.y - bbMin.y, bbMax.z - bbMin.z};
+    glm::ivec3 sceneSizeI = {
+        static_cast<int>(std::ceil(sceneSize.x)), static_cast<int>(std::ceil(sceneSize.y)),
+        static_cast<int>(std::ceil(sceneSize.z))
+    };
     glm::vec3 offset = bbMin;
     scale = std::min(
-        (chunkResolution * gridSize) / std::max(sceneSize.x, sceneSize.y),
-        (chunkResolution * gridHeight) / sceneSize.z
+        (chunkResolution * gridSize * 0.5f) / static_cast<float>(std::max(sceneSizeI.x, sceneSizeI.y)),
+        (chunkResolution * gridHeight) / static_cast<float>(sceneSizeI.z)
     );
     // float scale = resolution / std::max({sceneSize.x, sceneSize.y, sceneSize.z});
     // float scaleZ = scale / gridSize; //Compensate for the grid

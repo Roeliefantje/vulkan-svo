@@ -48,6 +48,10 @@ inline glm::ivec2 positive_mod(const glm::ivec2 &a, const glm::ivec2 &b) {
     return (a % b + b) % b;
 }
 
+inline glm::vec3 positive_mod(const glm::vec3 &a, const glm::vec3 &b) {
+    return glm::mod(glm::mod(a, b) + b, b);
+}
+
 void CPUCamera::updatePosition(glm::vec3 posChange) {
     //TODO: Current method wont work if camera is moved multiple chunks in one frame.
     absolute_location += posChange;
@@ -65,7 +69,7 @@ void CPUCamera::updatePosition(glm::vec3 posChange) {
         gpu_camera.camera_grid_pos.x = gridxy.x;
         gpu_camera.camera_grid_pos.y = gridxy.y;
         // gpu_camera.camera_grid_pos = positive_mod(gpu_camera.camera_grid_pos + diff, glm::ivec3(gridSize));
-        gpu_camera.position = glm::mod(gpu_camera.position, glm::vec3(static_cast<float>(maxChunkResolution)));
+        gpu_camera.position = positive_mod(gpu_camera.position, glm::vec3(static_cast<float>(maxChunkResolution)));
         spdlog::debug("After camera grid pos: {}, {}, {}", gpu_camera.camera_grid_pos.x, gpu_camera.camera_grid_pos.y,
                       gpu_camera.camera_grid_pos.z);
         chunk_coords += diff;
@@ -73,7 +77,7 @@ void CPUCamera::updatePosition(glm::vec3 posChange) {
 }
 
 void CPUCamera::setPosition(glm::vec3 newPosition) {
-    gpu_camera.position = glm::mod(newPosition, glm::vec3(maxChunkResolution));
+    gpu_camera.position = positive_mod(newPosition, glm::vec3(maxChunkResolution));
     glm::ivec3 new_chunk_coords = glm::ivec3(newPosition) / int(maxChunkResolution);
     glm::ivec3 diff = chunk_coords - new_chunk_coords;
 
