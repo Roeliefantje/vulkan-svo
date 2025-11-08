@@ -17,7 +17,7 @@ std::vector<float> createNoise(int chunkResolution, uint32_t seed_value, glm::iv
     base.SetFractalLacunarity(2.0f);
     base.SetFractalGain(0.5f);
     base.SetFractalOctaves(6);
-    base.SetFrequency(0.002f);
+    base.SetFrequency(0.0005f);
 
     int index = 0;
     std::vector<float> noiseData(chunkResolution * chunkResolution);
