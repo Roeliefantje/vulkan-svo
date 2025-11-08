@@ -146,10 +146,10 @@ uint32_t createGPUData(uint8_t childMask, uint32_t color, uint32_t index, std::v
     if (childMask == 0) {
         return color & ((1 << 24) - 1);
     }
-    bool farValue = false;
+    bool isFarValue = false;
     uint32_t usedIndex = index;
     if (index > (1 << 23) - 1) {
-        farValue = true;
+        isFarValue = true;
         usedIndex = farValues.size();
         if (usedIndex > (1 << 23) - 1) {
             throw std::runtime_error("Too many far values, exceeds pointer for far value!");
@@ -159,7 +159,7 @@ uint32_t createGPUData(uint8_t childMask, uint32_t color, uint32_t index, std::v
     }
 
     return ((uint32_t(childMask) & 0xFFu) << 24) |
-           ((uint32_t(far) & 0x1u) << 23) |
+           ((uint32_t(isFarValue) & 0x1u) << 23) |
            (usedIndex & 0x007FFFFFu);
 }
 

@@ -57,6 +57,21 @@ void ComputeShaderApplication::printCameraPosition() {
     std::cout << std::format("Camera direction: {}, {}, {}", direction.x, direction.y, direction.z) << std::endl;
 }
 
+void ComputeShaderApplication::printGridInformation() {
+    for (int z = 0; z < config.grid_height; z++) {
+        std::cout << "Layer: " << z << std::endl;
+        for (int y = 0; y < config.grid_size; y++) {
+            std::cout << std::endl;
+            for (int x = 0; x < config.grid_size; x++) {
+                CpuChunk &chunk = cpuGridValues[z * config.grid_size * config.grid_size + y * config.grid_size + x];
+                std::cout << std::format(" [{}, {}, {}] ", chunk.chunk_coords.x, chunk.chunk_coords.y,
+                                         chunk.chunk_coords.z);
+            }
+        }
+    }
+    std::cout << std::endl;
+}
+
 void ComputeShaderApplication::processInput() {
     glm::vec3 forward = glm::normalize(
         camera.gpu_camera.direction - glm::dot(camera.gpu_camera.direction, camera.gpu_camera.up) * camera.gpu_camera.

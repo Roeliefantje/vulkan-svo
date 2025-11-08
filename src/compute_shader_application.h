@@ -356,6 +356,8 @@ private:
 
     void printCameraPosition();
 
+    void printGridInformation();
+
     static std::vector<char> readFile(const std::string &filename);
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,

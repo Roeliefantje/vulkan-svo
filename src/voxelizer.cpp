@@ -134,7 +134,7 @@ int loadObject(std::string inputFile, std::string path, int chunkResolution, int
         // Loop over faces(polygon)
         size_t index_offset = 0;
         for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
-            size_t fv = size_t(shapes[s].mesh.num_face_vertices[f]);
+            size_t fv = shapes[s].mesh.num_face_vertices[f];
             if (fv != 3) {
                 std::cerr << "Non-triangle face found; skipping\n";
                 index_offset += fv;
@@ -142,7 +142,7 @@ int loadObject(std::string inputFile, std::string path, int chunkResolution, int
             }
             TexturedTriangle tri;
             int matID = shapes[s].mesh.material_ids[f]; // -1 if no material
-            if (matID >= 0 && matID < (int) materials.size()) {
+            if (matID >= 0 && matID < static_cast<int>(materials.size())) {
                 tri.diffuse_texname = materials[matID].diffuse_texname;
                 tri.diffuse = glm::vec3(materials[matID].diffuse[0], materials[matID].diffuse[1],
                                         materials[matID].diffuse[2]);
