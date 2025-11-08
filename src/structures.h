@@ -93,6 +93,7 @@ struct CPUCamera {
     glm::vec3 absolute_location;
     glm::ivec3 chunk_coords;
     uint32_t gridSize;
+    uint32_t gridHeight;
     uint32_t maxChunkResolution;
 
     CPUCamera() = default;
@@ -120,10 +121,11 @@ struct GridInfo {
     alignas(4) uint32_t resolution;
     alignas(4) uint32_t bufferSize;
     alignas(4) uint32_t gridSize;
+    alignas(4) uint32_t gridHeight;
 
     GridInfo() = default;
 
-    GridInfo(uint32_t res, uint32_t gridSize);
+    GridInfo(uint32_t res, uint32_t gridSize, uint32_t gridHeight);
 };
 
 struct Vertex {

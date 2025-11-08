@@ -8,7 +8,7 @@
 
 #include "chunk_management.h"
 
-bool saveChunk(const std::string &scenePath, uint32_t max_resolution, uint32_t svo_resolution, glm::ivec2 gridCoords,
+bool saveChunk(const std::string &scenePath, uint32_t max_resolution, uint32_t svo_resolution, glm::ivec3 gridCoords,
                uint32_t &nodeCount,
                std::vector<uint32_t> &gpuData, std::vector<uint32_t> &farValues) {
     namespace fs = std::filesystem;
@@ -17,7 +17,7 @@ bool saveChunk(const std::string &scenePath, uint32_t max_resolution, uint32_t s
         fs::path dirPath(scenePath);
         auto max_resolution_string = std::format("max_scene_resolution_{}", max_resolution);
         auto chunk_resolution_string = std::format("chunk_resolution_{}", svo_resolution);
-        auto file_name = std::format("x{},y{}.svo", gridCoords.x, gridCoords.y);
+        auto file_name = std::format("x{},y{},z{}.svo", gridCoords.x, gridCoords.y, gridCoords.z);
         fs::path fullDirPath = dirPath / max_resolution_string / chunk_resolution_string;
         fs::create_directories(fullDirPath);
         fs::path filePath = fullDirPath / file_name;
@@ -44,7 +44,7 @@ bool saveChunk(const std::string &scenePath, uint32_t max_resolution, uint32_t s
 }
 
 
-bool loadChunk(const std::string &scenePath, uint32_t max_resolution, uint32_t svo_resolution, glm::ivec2 gridCoords,
+bool loadChunk(const std::string &scenePath, uint32_t max_resolution, uint32_t svo_resolution, glm::ivec3 gridCoords,
                uint32_t &nodeCount,
                std::vector<uint32_t> &gpuData, std::vector<uint32_t> &farValues) {
     namespace fs = std::filesystem;
@@ -53,7 +53,7 @@ bool loadChunk(const std::string &scenePath, uint32_t max_resolution, uint32_t s
         fs::path dirPath(scenePath);
         auto max_resolution_string = std::format("max_scene_resolution_{}", max_resolution);
         auto chunk_resolution_string = std::format("chunk_resolution_{}", svo_resolution);
-        auto file_name = std::format("x{},y{}.svo", gridCoords.x, gridCoords.y);
+        auto file_name = std::format("x{},y{},z{}.svo", gridCoords.x, gridCoords.y, gridCoords.z);
         fs::path fullDirPath = dirPath / max_resolution_string / chunk_resolution_string;
         fs::create_directories(fullDirPath);
         fs::path filePath = fullDirPath / file_name;

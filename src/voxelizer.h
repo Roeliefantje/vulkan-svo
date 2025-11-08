@@ -21,7 +21,7 @@
 //TODO: Improve memory usage by only storing the triangles that are inside of a chunk
 int loadSceneMetaData(std::string inputFile, std::string path, Aabb &sceneBounds, int &numTriangles);
 
-int loadObject(std::string inputFile, std::string path, int resolution, int gridSize,
+int loadObject(std::string inputFile, std::string path, int resolution, int gridSize, int gridHeight,
                std::vector<TexturedTriangle> &triangles, float &scale);
 
 
@@ -33,11 +33,5 @@ std::optional<OctreeNode> createNode(Aabb aabb, std::vector<TexturedTriangle> &g
                                      std::vector<uint32_t> &parentTriIndices,
                                      std::map<std::string, LoadedTexture> &loadedTextures, uint32_t &nodeCount,
                                      uint32_t &maxDepth, uint32_t currentDepth);
-
-void gridVoxelizeScene(std::vector<Chunk> &gridValues, std::vector<uint32_t> &farValues,
-                       std::vector<uint32_t> &octreeGPU, Camera &camera,
-                       uint32_t maxChunkResolution, uint32_t gridSize, std::string inputFile, std::string path,
-                       glm::vec3 cameraPosition, glm::vec3 cameraLookAt,
-                       uint32_t screenWidth, uint32_t screenHeight);
 
 #endif //VOXELIZER_H

@@ -39,17 +39,13 @@ CPUCamera::CPUCamera(glm::vec3 pos, glm::vec3 direction, int screenWidth, int sc
     glm::ivec3 camera_grid_pos = (glm::ivec3(config.grid_size) / 2);
     camera_grid_pos.z = chunk_coords.z;
     gridSize = config.grid_size;
+    gridHeight = config.grid_height;
     maxChunkResolution = config.chunk_resolution;
     gpu_camera = Camera(chunk_position, direction, screenWidth, screenHeight, fovRadian, camera_grid_pos);
 }
 
-inline glm::ivec3 positive_mod(const glm::ivec3 &a, const glm::ivec3 &b) {
+inline glm::ivec2 positive_mod(const glm::ivec2 &a, const glm::ivec2 &b) {
     return (a % b + b) % b;
-    return glm::ivec3(
-        (a.x % b.x + b.x) % b.x,
-        (a.y % b.y + b.y) % b.y,
-        (a.z % b.z + b.z) % b.z
-    );
 }
 
 void CPUCamera::updatePosition(glm::vec3 posChange) {
@@ -63,8 +59,13 @@ void CPUCamera::updatePosition(glm::vec3 posChange) {
                       gpu_camera.camera_grid_pos.z);
 
         glm::ivec3 diff = highMask * 1 + lowMask * -1;
-        gpu_camera.camera_grid_pos = positive_mod(gpu_camera.camera_grid_pos + diff, glm::ivec3(gridSize));
-        gpu_camera.position = glm::mod(gpu_camera.position, glm::vec3(maxChunkResolution));
+        gpu_camera.camera_grid_pos += diff;
+        glm::ivec2 gridxy = positive_mod(glm::ivec2(gpu_camera.camera_grid_pos.x, gpu_camera.camera_grid_pos.y),
+                                         glm::ivec2(gridSize));
+        gpu_camera.camera_grid_pos.x = gridxy.x;
+        gpu_camera.camera_grid_pos.y = gridxy.y;
+        // gpu_camera.camera_grid_pos = positive_mod(gpu_camera.camera_grid_pos + diff, glm::ivec3(gridSize));
+        gpu_camera.position = glm::mod(gpu_camera.position, glm::vec3(static_cast<float>(maxChunkResolution)));
         spdlog::debug("After camera grid pos: {}, {}, {}", gpu_camera.camera_grid_pos.x, gpu_camera.camera_grid_pos.y,
                       gpu_camera.camera_grid_pos.z);
         chunk_coords += diff;
@@ -75,7 +76,13 @@ void CPUCamera::setPosition(glm::vec3 newPosition) {
     gpu_camera.position = glm::mod(newPosition, glm::vec3(maxChunkResolution));
     glm::ivec3 new_chunk_coords = glm::ivec3(newPosition) / int(maxChunkResolution);
     glm::ivec3 diff = chunk_coords - new_chunk_coords;
-    gpu_camera.camera_grid_pos = positive_mod(gpu_camera.camera_grid_pos + diff, glm::ivec3(gridSize));
+
+    gpu_camera.camera_grid_pos += diff;
+    glm::ivec2 gridxy = positive_mod(glm::ivec2(gpu_camera.camera_grid_pos.x, gpu_camera.camera_grid_pos.y),
+                                     glm::ivec2(gridSize));
+    gpu_camera.camera_grid_pos.x = gridxy.x;
+    gpu_camera.camera_grid_pos.y = gridxy.y;
+
     chunk_coords = new_chunk_coords;
 }
 
@@ -89,8 +96,9 @@ OctreeNode::OctreeNode(uint8_t childMask, std::array<std::shared_ptr<OctreeNode>
     : childMask(childMask), children(children), color(0) {
 }
 
-GridInfo::GridInfo(uint32_t res, uint32_t gridSize)
-    : sunPosition(glm::vec3(4000, 4000, 500)), resolution(res), bufferSize(0), gridSize(gridSize) {
+GridInfo::GridInfo(uint32_t res, uint32_t gridSize, uint32_t gridHeight)
+    : sunPosition(glm::vec3(4000, 4000, 500)), resolution(res), bufferSize(0), gridSize(gridSize),
+      gridHeight(gridHeight) {
 }
 
 VkVertexInputBindingDescription Vertex::getBindingDescription() {

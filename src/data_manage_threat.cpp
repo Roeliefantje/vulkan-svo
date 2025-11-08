@@ -162,7 +162,8 @@ bool DataManageThreat::CheckToWaitAndStartTransfer() {
         vkQueueSubmit(stagingBufferProperties.transferQueue, 1, &submitInfo, gridFence);
         //Update cpu side chunk info
         //Todo: queue old data for deletion
-        auto chunk_idx = currentChunk.gridCoord.y * config.grid_size + currentChunk.gridCoord.x;
+        auto chunk_idx = (currentChunk.gridCoord.z * config.grid_size * config.grid_size) +
+                         (currentChunk.gridCoord.y * config.grid_size) + currentChunk.gridCoord.x;
         CpuChunk &chunk = chunks[chunk_idx];
         // chunk.loading = false;
         // chunk.resolution = currentChunk.resolution;
@@ -190,7 +191,8 @@ bool DataManageThreat::CheckToWaitAndStartTransfer() {
 
 void DataManageThreat::loadObj() {
     float _scale;
-    int result = loadObject(objFile, objDirectory, config.chunk_resolution, config.grid_size, triangles, _scale);
+    int result = loadObject(objFile, objDirectory, config.chunk_resolution, config.grid_size, config.grid_height,
+                            triangles, _scale);
 }
 
 void DataManageThreat::initFence() {
@@ -215,7 +217,7 @@ void DataManageThreat::initCommandBuffers() {
 
 void DataManageThreat::threadLoop() {
     while (true) {
-        ChunkLoadInfo job; {
+        ChunkLoadInfo job{}; {
             std::unique_lock<std::mutex> lock(queueMutex);
             cv.wait(lock, [this] { return stopFlag || !workQueue.empty(); });
 
@@ -233,14 +235,16 @@ void DataManageThreat::threadLoop() {
 
 void DataManageThreat::loadChunkToGPU(ChunkLoadInfo job) {
     if (config.printChunkDebug) {
-        spdlog::debug("Chunk Coords to load: {}, {}, Desired resolution: {}", job.chunkCoord.x,
-                      job.chunkCoord.y,
+        spdlog::debug("Chunk Coords to load: {}, {}, {}, Desired resolution: {}", job.chunkCoord.x,
+                      job.chunkCoord.y, job.chunkCoord.z,
                       job.resolution);
     }
 
     if (!checkChunkResolution(job)) {
         //Chunk is not in the right resolution for the camera position, cancel
-        chunks[job.gridCoord.y * config.grid_size + job.gridCoord.x].loading = false;
+        chunks[job.gridCoord.z * config.grid_size * config.grid_size
+               + job.gridCoord.y * config.grid_size
+               + job.gridCoord.x].loading = false;
         return;
     }
     // std::this_thread::sleep_for(std::chrono::seconds(5));
@@ -249,7 +253,7 @@ void DataManageThreat::loadChunkToGPU(ChunkLoadInfo job) {
     loadChunkData(job, chunkFarValues, chunkOctreeGPU);
     uint32_t rootNodeIndex = 0;
     uint32_t farValuesOffset = 0;
-    if (chunkOctreeGPU.size() > 0) {
+    if (!chunkOctreeGPU.empty()) {
         rootNodeIndex = octreeGPUManager.allocateChunk(chunkOctreeGPU.size());
         if (rootNodeIndex == 0) {
             std::cerr << "Octree GPU Buffer has no memory to be allocated!" << std::endl;
@@ -257,7 +261,7 @@ void DataManageThreat::loadChunkToGPU(ChunkLoadInfo job) {
             return;
         }
     }
-    if (chunkFarValues.size() > 0) {
+    if (!chunkFarValues.empty()) {
         farValuesOffset = farValuesManager.allocateChunk(chunkFarValues.size());
         if (farValuesOffset == 0) {
             spdlog::error("Far Values Buffer has no memory to be allocated!");
@@ -358,10 +362,10 @@ void DataManageThreat::loadChunkToGPU(ChunkLoadInfo job) {
 }
 
 
-bool DataManageThreat::checkChunkResolution(ChunkLoadInfo &job) {
+bool DataManageThreat::checkChunkResolution(const ChunkLoadInfo &job) {
     auto cameraChunkCoords = camera.chunk_coords;
-    uint32_t gridSize = sqrt(chunks.size());
-    int dist = std::max(abs(job.chunkCoord.y - cameraChunkCoords.y), abs(job.chunkCoord.x - cameraChunkCoords.x));
+    glm::ivec3 diff = job.chunkCoord - cameraChunkCoords;
+    int dist = std::max(abs(diff.x), std::max(abs(diff.y), abs(diff.z)));
     uint32_t octreeResolution = calculateChunkResolution(config.chunk_resolution, dist);
 
     return octreeResolution == job.resolution;
@@ -391,9 +395,10 @@ void DataManageThreat::loadChunkData(ChunkLoadInfo &job, std::vector<uint32_t> &
         }
         std::cout << "Chunk not yet created, generating the chunk" << std::endl;
         auto aabb = Aabb{};
-        aabb.aa = glm::ivec3(job.chunkCoord.x * config.chunk_resolution, job.chunkCoord.y * config.chunk_resolution, 0);
+        aabb.aa = glm::ivec3(job.chunkCoord.x * config.chunk_resolution, job.chunkCoord.y * config.chunk_resolution,
+                             job.chunkCoord.z * config.chunk_resolution);
         aabb.bb = glm::ivec3(aabb.aa.x + config.chunk_resolution, aabb.aa.y + config.chunk_resolution,
-                             config.chunk_resolution);
+                             aabb.aa.z + config.chunk_resolution);
         uint32_t maxDepth = std::ceil(std::log2(job.resolution));
 
         std::vector<uint32_t> allIndices(triangles.size());
@@ -429,40 +434,64 @@ inline int positive_mod(int a, int b) {
 void checkChunks(std::vector<CpuChunk> &chunks, CPUCamera &camera, uint32_t maxChunkResolution,
                  DataManageThreat &dmThreat) {
     auto center = camera.gpu_camera.camera_grid_pos;
-    auto processOffset = [&](int dx, int dy) {
-        auto gridCoord = glm::ivec2{
-            positive_mod(center.x + dx, camera.gridSize),
-            positive_mod(center.y + dy, camera.gridSize)
+    auto processOffset = [&](int dx, int dy, int dz) {
+        if ((center.z + dz) < 0 || center.z + dz >= static_cast<int>(camera.gridHeight)) {
+            return;
+        }
+
+        auto gridCoord = glm::ivec3{
+            positive_mod(center.x + dx, static_cast<int>(camera.gridSize)),
+            positive_mod(center.y + dy, static_cast<int>(camera.gridSize)),
+            center.z + dz
         };
+
         auto chunkCoord = glm::ivec3{
             camera.chunk_coords.x + dx,
             camera.chunk_coords.y + dy,
-            0
+            center.z + dz
         };
-        auto dist = glm::ivec3(abs(dx), abs(dy), 0);
-        uint32_t octreeResolution = calculateChunkResolution(maxChunkResolution, glm::max(dist.x, dist.y));
 
-        CpuChunk &chunk = chunks[gridCoord.y * camera.gridSize + gridCoord.x];
+        auto dist = glm::ivec3(abs(dx), abs(dy), abs(dz));
+        uint32_t octreeResolution = calculateChunkResolution(maxChunkResolution,
+                                                             glm::max(dist.x, glm::max(dist.y, dist.z)));
+
+        CpuChunk &chunk = chunks[gridCoord.z * camera.gridSize * camera.gridSize +
+                                 gridCoord.y * camera.gridSize
+                                 + gridCoord.x];
         if (!chunk.loading && (chunk.chunk_coords != chunkCoord || chunk.resolution != octreeResolution)) {
             dmThreat.pushWork(ChunkLoadInfo{gridCoord, octreeResolution, chunkCoord});
             chunk.loading = true;
         }
     };
 
+
     for (int chunk_distance = 0; chunk_distance <= int(camera.gridSize / 2); chunk_distance++) {
         int offsets[2] = {-chunk_distance, chunk_distance};
 
-        // Pass 1: vertical strips (left/right)
+        // Pass 1: yz plane
         for (int offsets_x_idx = 0; offsets_x_idx < 2; offsets_x_idx++) {
             for (int offset_y = -chunk_distance; offset_y <= chunk_distance; offset_y++) {
-                processOffset(offsets[offsets_x_idx], offset_y);
+                for (int offset_z = -chunk_distance; offset_z <= chunk_distance; offset_z++) {
+                    processOffset(offsets[offsets_x_idx], offset_y, offset_z);
+                }
             }
         }
 
-        // Pass 2: horizontal strips (top/bottom)
+        // Pass 2: xz plane
         for (int offsets_y_idx = 0; offsets_y_idx < 2; offsets_y_idx++) {
-            for (int offset_x = -chunk_distance + 1; offset_x <= chunk_distance - 1; offset_x++) {
-                processOffset(offset_x, offsets[offsets_y_idx]);
+            for (int offset_x = -chunk_distance; offset_x <= chunk_distance; offset_x++) {
+                for (int offset_z = -chunk_distance; offset_z <= chunk_distance; offset_z++) {
+                    processOffset(offset_x, offsets[offsets_y_idx], offset_z);
+                }
+            }
+        }
+
+        // Pass 3: xy plane
+        for (int offsets_z_idx = 0; offsets_z_idx < 2; offsets_z_idx++) {
+            for (int offset_x = -chunk_distance; offset_x <= chunk_distance; offset_x++) {
+                for (int offset_y = -chunk_distance; offset_y <= chunk_distance; offset_y++) {
+                    processOffset(offset_x, offset_y, offsets[offsets_z_idx]);
+                }
             }
         }
     }

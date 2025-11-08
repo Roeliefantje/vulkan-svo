@@ -106,6 +106,11 @@ Config::Config(int argc, char *argv[]) {
     if (data.contains("fov")) {
         fov = glm::radians(data["fov"].get<float>());
     }
+
+    if (grid_height > grid_size / 2) {
+        //Todo!: Fix chunkload logic to properly account for any gridheight :)
+        spdlog::error("Grid Height is too high compared to grid Size, might not load every chunk properly!");
+    }
 }
 
 //TODO: Move this to a more proper place.

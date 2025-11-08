@@ -16,7 +16,7 @@
 
 //TODO: start using paths as func arguments for all the load, unload functionality
 struct ChunkLoadInfo {
-    glm::ivec2 gridCoord;
+    glm::ivec3 gridCoord;
     uint32_t resolution;
     glm::ivec3 chunkCoord;
 };
@@ -107,7 +107,7 @@ private:
 
     void loadChunkToGPU(ChunkLoadInfo job);
 
-    bool checkChunkResolution(ChunkLoadInfo &job);
+    bool checkChunkResolution(const ChunkLoadInfo &job);
 
     void loadChunkData(ChunkLoadInfo &job, std::vector<uint32_t> &chunkFarValues,
                        std::vector<uint32_t> &chunkOctreeGPU);

@@ -62,7 +62,7 @@ int loadSceneMetaData(std::string inputFile, std::string path, Aabb &sceneBounds
 }
 
 
-int loadObject(std::string inputFile, std::string path, int chunkResolution, int gridSize,
+int loadObject(std::string inputFile, std::string path, int chunkResolution, int gridSize, int gridHeight,
                std::vector<TexturedTriangle> &triangles, float &scale) {
     tinyobj::ObjReaderConfig reader_config;
     reader_config.mtl_search_path = path;
@@ -117,7 +117,7 @@ int loadObject(std::string inputFile, std::string path, int chunkResolution, int
     glm::vec3 offset = bbMin;
     scale = std::min(
         (chunkResolution * gridSize) / std::max(sceneSize.x, sceneSize.y),
-        chunkResolution / sceneSize.z
+        (chunkResolution * gridHeight) / sceneSize.z
     );
     // float scale = resolution / std::max({sceneSize.x, sceneSize.y, sceneSize.z});
     // float scaleZ = scale / gridSize; //Compensate for the grid
@@ -295,84 +295,4 @@ std::optional<OctreeNode> createNode(Aabb aabb, std::vector<TexturedTriangle> &g
 
     nodeCount++;
     return node;
-}
-
-//TODO: Rewrite to save and load chunks
-void gridVoxelizeScene(std::vector<Chunk> &gridValues, std::vector<uint32_t> &farValues,
-                       std::vector<uint32_t> &octreeGPU, CPUCamera &camera,
-                       uint32_t maxChunkResolution, uint32_t gridSize, std::string inputFile, std::string path,
-                       glm::vec3 cameraPosition, glm::vec3 cameraLookAt,
-                       uint32_t screenWidth, uint32_t screenHeight, Config &config) {
-    gridValues = std::vector<Chunk>(gridSize * gridSize);
-    farValues = std::vector<uint32_t>();
-    octreeGPU = std::vector<uint32_t>();
-
-    std::vector<TexturedTriangle> triangles;
-    float scale;
-
-    int result = loadObject(inputFile, path, maxChunkResolution, gridSize, triangles, scale);
-
-    std::vector<uint32_t> allIndices(triangles.size());
-    std::iota(allIndices.begin(), allIndices.end(), 0);
-
-    std::cout << "Scale: " << scale << std::endl;
-    glm::vec3 scaledCameraPos = cameraPosition * scale;
-    camera = CPUCamera(scaledCameraPos, cameraLookAt * scale, screenWidth, screenHeight, glm::radians(30.0f), config);
-    std::map<std::string, LoadedTexture> textures;
-
-    auto cameraChunkCoords = glm::ivec2(floor(scaledCameraPos.x / maxChunkResolution),
-                                        floor(scaledCameraPos.y / maxChunkResolution));
-
-    std::filesystem::path filePath{inputFile};
-    auto directory = std::format("{}_{}", (filePath.parent_path() / filePath.stem()).string(), gridSize);
-
-    for (int y = 0; y < gridSize; y++) {
-        for (int x = 0; x < gridSize; x++) {
-            auto aabb = Aabb{};
-            int dist = std::max(abs(y - cameraChunkCoords.y), abs(x - cameraChunkCoords.x));
-            int octreeResolution = maxChunkResolution >> dist;
-            std::cout << "Octree resolution: " << octreeResolution << std::endl;
-
-
-            aabb.aa = glm::ivec3(x * maxChunkResolution, y * maxChunkResolution, 0);
-            aabb.bb = glm::ivec3(aabb.aa.x + maxChunkResolution, aabb.aa.y + maxChunkResolution, maxChunkResolution);
-            uint32_t maxDepth = std::ceil(std::log2(octreeResolution));
-
-            uint32_t nodeAmount = 0;
-            uint32_t farValuesOffset = farValues.size();
-            uint32_t rootNodeIndex = octreeGPU.size();
-
-            if (!loadChunk(directory, maxChunkResolution, octreeResolution, glm::ivec2(x, y), nodeAmount, octreeGPU,
-                           farValues)) {
-                std::cout << "Chunk not yet created, generating the chunk" << std::endl;
-                auto node = createNode(aabb, triangles, allIndices, textures, nodeAmount, maxDepth, 0);
-                // std::cout << "Finished creating nodes " << triangles.size() << std::endl;
-                auto chunkFarValues = std::vector<uint32_t>();
-                auto chunkOctreeGPU = std::vector<uint32_t>();
-                if (node) {
-                    auto shared_node = std::make_shared<OctreeNode>(*node);
-                    addOctreeGPUdataBF(chunkOctreeGPU, shared_node, nodeAmount, chunkFarValues);
-                    if (!saveChunk(directory, maxChunkResolution, octreeResolution, glm::ivec2(x, y), nodeAmount,
-                                   chunkOctreeGPU, chunkFarValues)) {
-                        std::cout << "Something went wrong storing Chunk data" << std::endl;
-                    }
-
-                    octreeGPU.insert(octreeGPU.end(), chunkOctreeGPU.begin(), chunkOctreeGPU.end());
-                    farValues.insert(farValues.end(), chunkFarValues.begin(), chunkFarValues.end());
-                } else {
-                    rootNodeIndex = 0;
-                    saveChunk(directory, maxChunkResolution, octreeResolution, glm::ivec2(x, y), nodeAmount,
-                              chunkOctreeGPU, chunkFarValues);
-                }
-            }
-
-
-            gridValues[y * gridSize + x] = Chunk{farValuesOffset, rootNodeIndex};
-        }
-    }
-    std::cout << "Total far values: " << farValues.size() << std::endl;
-
-    for (const auto &[key, value]: textures) {
-        stbi_image_free(value.imageData);
-    }
 }

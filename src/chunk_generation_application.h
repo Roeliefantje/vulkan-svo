@@ -11,9 +11,9 @@
 
 class ChunkGenerationApplication {
 public:
-    ChunkGenerationApplication(Config config);
+    explicit ChunkGenerationApplication(Config config);
 
-    void generateChunk(glm::ivec2 gridCoord, uint32_t resolution, glm::ivec2 chunkCoord);
+    void generateChunk(glm::ivec3 gridCoord, uint32_t resolution, glm::ivec3 chunkCoord);
 
     void generateChunksForCameraPosition();
 

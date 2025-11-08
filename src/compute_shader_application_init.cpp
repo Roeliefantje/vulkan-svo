@@ -17,13 +17,13 @@ void ComputeShaderApplication::initData() {
     // This function initializes all the vectors that get copied over onto the GPU,
     // as we are loading in everything after the initial setup through the staging buffer,
     // we actually dont do anything other than setting the size of those buffers here.
-    gridValues = std::vector<Chunk>(config.grid_size * config.grid_size);
-    cpuGridValues = std::vector<CpuChunk>(config.grid_size * config.grid_size);
+    gridValues = std::vector<Chunk>(config.grid_height * config.grid_size * config.grid_size);
+    cpuGridValues = std::vector<CpuChunk>(config.grid_height * config.grid_size * config.grid_size);
     farValues = std::vector<uint32_t>(config.GIGABYTE / sizeof(uint32_t));
     octreeGPU = std::vector<uint32_t>(config.GIGABYTE * 3 / sizeof(uint32_t));
 
     //GPU Ubo object? I think...
-    gridInfo = GridInfo(config.chunk_resolution, config.grid_size);
+    gridInfo = GridInfo(config.chunk_resolution, config.grid_size, config.grid_height);
     if (!config.useHeightmapData) {
         objSceneMetaData = SceneMetadata(config.scene_path, config);
         spdlog::debug("ObjFile to be loaded: {}", objSceneMetaData->objFile);

@@ -35,7 +35,8 @@ ChunkGenerationApplication::ChunkGenerationApplication(Config config) : config(c
         float _scale;
         textures = std::map<std::string, LoadedTexture>();
         triangles = std::vector<TexturedTriangle>();
-        int result = loadObject(objFile, objDirectory, config.chunk_resolution, config.grid_size, triangles.value(),
+        int result = loadObject(objFile, objDirectory, config.chunk_resolution, config.grid_size, config.grid_height,
+                                triangles.value(),
                                 _scale);
     }
 }
@@ -59,7 +60,7 @@ inline bool sceneInChunk(const Aabb &scene, const Aabb &chunk, const float &scal
     );
 }
 
-void ChunkGenerationApplication::generateChunk(glm::ivec2 gridCoord, uint32_t resolution, glm::ivec2 chunkCoord) {
+void ChunkGenerationApplication::generateChunk(glm::ivec3 gridCoord, uint32_t resolution, glm::ivec3 chunkCoord) {
     uint32_t nodeAmount = 0;
     auto chunkFarValues = std::vector<uint32_t>();
     auto chunkOctreeGPU = std::vector<uint32_t>();
@@ -67,9 +68,10 @@ void ChunkGenerationApplication::generateChunk(glm::ivec2 gridCoord, uint32_t re
                    chunkFarValues)) {
         spdlog::debug("Chunk not yet created, generating the chunk");
         auto aabb = Aabb{};
-        aabb.aa = glm::ivec3(chunkCoord.x * config.chunk_resolution, chunkCoord.y * config.chunk_resolution, 0);
+        aabb.aa = glm::ivec3(chunkCoord.x * config.chunk_resolution, chunkCoord.y * config.chunk_resolution,
+                             chunkCoord.z * config.chunk_resolution);
         aabb.bb = glm::ivec3(aabb.aa.x + config.chunk_resolution, aabb.aa.y + config.chunk_resolution,
-                             config.chunk_resolution);
+                             aabb.aa.z + config.chunk_resolution);
         uint32_t maxDepth = std::ceil(std::log2(resolution));
 
         std::optional<OctreeNode> node = std::nullopt;
@@ -100,18 +102,22 @@ void ChunkGenerationApplication::generateChunk(glm::ivec2 gridCoord, uint32_t re
 void ChunkGenerationApplication::generateChunksForCameraPosition() {
     auto center = camera.gpu_camera.camera_grid_pos;
     glm::ivec3 start = center - int(camera.gridSize / 2);
-    for (int chunkY = start.y; chunkY < camera.gridSize; chunkY++) {
-        for (int chunkX = start.x; chunkX < camera.gridSize; chunkX++) {
-            auto gridCoord = glm::ivec2{positive_mod(chunkX, camera.gridSize), positive_mod(chunkY, camera.gridSize)};
-            glm::ivec3 dist = glm::ivec3(chunkX, chunkY, center.z) - center;
-            int single_axis_dist = std::max(abs(chunkY - center.y), abs(chunkX - center.x));
-            uint32_t octreeResolution = calculateChunkResolution(config.chunk_resolution, single_axis_dist);
+    for (int chunkZ = 0; chunkZ < camera.gridHeight; chunkZ++) {
+        for (int chunkY = start.y; chunkY < camera.gridSize; chunkY++) {
+            for (int chunkX = start.x; chunkX < camera.gridSize; chunkX++) {
+                auto gridCoord = glm::ivec3{
+                    positive_mod(chunkX, camera.gridSize), positive_mod(chunkY, camera.gridSize), chunkZ
+                };
+                glm::ivec3 dist = glm::ivec3(chunkX, chunkY, center.z) - center;
+                int single_axis_dist = std::max(abs(chunkY - center.y), abs(chunkX - center.x));
+                uint32_t octreeResolution = calculateChunkResolution(config.chunk_resolution, single_axis_dist);
 
-            //The cpu chunks location, so not the buffer location we store it in, which is gridCoord, but the coords of the chunk itself.
-            glm::ivec3 chunkCoord = camera.chunk_coords + dist;
-            //As we are dealing with a 2d grid on the gpu side, we do not deal with chunkCoord z distance and stuffs.
-            chunkCoord.z = 0;
-            generateChunk(gridCoord, octreeResolution, chunkCoord);
+                //The cpu chunks location, so not the buffer location we store it in, which is gridCoord, but the coords of the chunk itself.
+                glm::ivec3 chunkCoord = camera.chunk_coords + dist;
+                //As we are dealing with a 2d grid on the gpu side, we do not deal with chunkCoord z distance and stuffs.
+                chunkCoord.z = 0;
+                generateChunk(gridCoord, octreeResolution, chunkCoord);
+            }
         }
     }
 }
