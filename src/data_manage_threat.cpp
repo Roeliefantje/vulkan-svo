@@ -394,7 +394,7 @@ void DataManageThreat::loadChunkData(ChunkLoadInfo &job, std::vector<uint32_t> &
             sceneLoaded = true;
             spdlog::debug("Finished loading scene");
         }
-        std::cout << "Chunk not yet created, generating the chunk" << std::endl;
+        spdlog::debug("Chunk not yet created, generating the chunk");
         auto aabb = Aabb{};
         aabb.aa = glm::ivec3(job.chunkCoord.x * config.chunk_resolution, job.chunkCoord.y * config.chunk_resolution,
                              job.chunkCoord.z * config.chunk_resolution);
@@ -402,14 +402,15 @@ void DataManageThreat::loadChunkData(ChunkLoadInfo &job, std::vector<uint32_t> &
                              aabb.aa.z + config.chunk_resolution);
         uint32_t maxDepth = std::ceil(std::log2(job.resolution));
 
-        std::vector<uint32_t> allIndices(triangles.size());
-        std::iota(allIndices.begin(), allIndices.end(), 0);
+
         std::optional<OctreeNode> node = std::nullopt;
         if (config.useHeightmapData) {
             // uint32_t scale = config.chunk_resolution / job.resolution;
             node = createChunkOctree(job.resolution, config.seed, job.chunkCoord, config.chunk_resolution,
                                      config.grid_height, nodeAmount);
         } else if (sceneInChunk(objSceneData->sceneAabb, aabb, objSceneData->scale)) {
+            std::vector<uint32_t> allIndices(triangles.size());
+            std::iota(allIndices.begin(), allIndices.end(), 0);
             node = createNode(aabb, triangles, allIndices, textures, nodeAmount, maxDepth, 0);
         }
 

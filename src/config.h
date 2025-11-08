@@ -22,7 +22,7 @@ struct CameraKeyFrame {
 
 struct Config {
     //Whether we use the voxelizer or the heightmap data.
-    bool useHeightmapData = true;
+    bool useHeightmapData = false;
 
     //Output screen size
     uint32_t width = 1920;
@@ -47,7 +47,7 @@ struct Config {
     glm::vec3 cameraDirection = glm::vec3(0.5, 0.5, 0);
     float fov = 0.52359; //30 degrees in radians
     std::string scene_path = "./assets/san-miguel-low-poly.obj";
-    std::string camera_path = "./camera-hm.json";
+    std::string camera_path = "./camera.json";
     std::string camera_keyframe_path = "./camera_path.json";
 
     bool chunkgen = false;
