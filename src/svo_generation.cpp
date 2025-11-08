@@ -6,7 +6,9 @@
 
 #include "spdlog/spdlog.h"
 
-std::vector<uint32_t> createNoise(int size, uint32_t seed_value, glm::ivec2 offset, uint32_t scale) {
+std::vector<float> createNoise(int chunkResolution, uint32_t seed_value, glm::ivec2 offset,
+                               uint32_t maxChunkResolution) {
+    float scale = maxChunkResolution / chunkResolution;
     spdlog::debug("Creating Heightmap");
     FastNoiseLite base;
     base.SetSeed((int) seed_value);
@@ -18,60 +20,20 @@ std::vector<uint32_t> createNoise(int size, uint32_t seed_value, glm::ivec2 offs
     base.SetFrequency(0.002f);
 
     int index = 0;
-    std::vector<uint32_t> noiseData(size * size);
-    for (int y = 0; y < size; y++) {
-        for (int x = 0; x < size; x++) {
+    std::vector<float> noiseData(chunkResolution * chunkResolution);
+    for (int y = 0; y < chunkResolution; y++) {
+        for (int x = 0; x < chunkResolution; x++) {
+            //+ 100000 because negative values dont generate anything proper
             float fx = float(x * scale + offset.x + 100000), fy = float(y * scale + offset.y + 100000);
             float raw = base.GetNoise(fx, fy); // −1…+1
             float e = (raw + 1.0f) * 0.5f; //Make it always a positive height
-            noiseData[index++] = uint32_t(e * 1024) / scale;
+            noiseData[index++] = e;
         }
     }
     spdlog::debug("Finished creating noise data");
     return noiseData;
 }
 
-
-// std::vector<uint32_t> createNoise(int size, uint32_t seed_value, glm::ivec2 offset, uint32_t scale) {
-//     std::cout << "Creating Heightmap" << std::endl;
-//     FastNoiseLite base;
-//     // choose ridged for sharp peaks
-//     base.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-//     base.SetFractalType(FastNoiseLite::FractalType_Ridged);
-//     base.SetSeed(seed_value);
-//     base.SetFrequency(0.00025f);
-//     base.SetFractalOctaves(7);
-//     base.SetFractalLacunarity(2.2f);
-//     base.SetFractalGain(0.3f);
-//
-//     FastNoiseLite warp;
-//     warp.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-//     warp.SetFractalType(FastNoiseLite::FractalType_FBm);
-//     warp.SetSeed(seed_value ^ 0x5f3759df);
-//     warp.SetFrequency(0.008f);
-//     warp.SetFractalOctaves(4);
-//     warp.SetFractalGain(0.5f);
-//     warp.SetDomainWarpAmp(40.0f);
-//
-//     std::vector<uint32_t> noiseData(size * size);
-//     int index = 0;
-//
-//     for (int y = 0; y < size; y++) {
-//         for (int x = 0; x < size; x++) {
-//             //Get value between 0 and 2 and * 100
-//             float fx = float(x * scale + offset.x), fy = float(y * scale + offset.y);
-//             warp.DomainWarp(fx, fy);
-//             float raw = base.GetNoise(fx, fy); // −1…+1
-//             float e = (raw + 1.0f) * 0.5f;
-//             e = pow(e * 1.05f, 2.0f); // redistribute: sharper peaks & flat valleys
-//             // std::cout << "Noise Value: " << val << std::endl;
-//             noiseData[index++] = uint32_t(e * 500) / scale;
-//         }
-//     }
-//
-//     std::cout << "Finished creating noise data" << std::endl;
-//     return noiseData;
-// }
 
 std::vector<uint32_t> createDepthMap(std::vector<uint32_t> heightMap) {
     spdlog::debug("Creating Depthmap");
@@ -97,8 +59,8 @@ std::vector<uint32_t> createDepthMap(std::vector<uint32_t> heightMap) {
 }
 
 
-std::optional<OctreeNode> createNode(int size, Aabb aabb, std::vector<uint32_t> &noise, uint32_t &nodeCount,
-                                     int chunk_scale) {
+std::optional<OctreeNode> createNode(int size, Aabb aabb, std::vector<float> &noise, uint32_t &nodeCount,
+                                     int height_scale) {
     //Get aabb,
     auto node = OctreeNode();
 
@@ -109,7 +71,7 @@ std::optional<OctreeNode> createNode(int size, Aabb aabb, std::vector<uint32_t> 
     for (int x = aabb.aa.x; x < aabb.bb.x; x++) {
         if (shouldBreak) break;
         for (int y = aabb.aa.y; y < aabb.bb.y; y++) {
-            int z = noise[y * size + x];
+            int z = noise[y * size + x] * height_scale;
             if (z >= aabb.aa.z) {
                 isEmpty = false;
             }
@@ -124,7 +86,7 @@ std::optional<OctreeNode> createNode(int size, Aabb aabb, std::vector<uint32_t> 
     }
 
     if (isSolid) {
-        node.color = getColor(aabb.bb.z, aabb.bb.x, aabb.bb.y, chunk_scale);
+        node.color = getColor(noise[aabb.aa.y * size + aabb.aa.x], aabb.bb.x, aabb.bb.y);
         nodeCount++;
         return node;
     }
@@ -151,7 +113,7 @@ std::optional<OctreeNode> createNode(int size, Aabb aabb, std::vector<uint32_t> 
                 };
 
 
-                auto child = createNode(size, childaabb, noise, nodeCount, chunk_scale);
+                auto child = createNode(size, childaabb, noise, nodeCount, height_scale);
                 if (child) {
                     int childIndex = z * 4 + y * 2 + x;
                     node.childMask |= 1u << (7 - childIndex);
@@ -196,7 +158,7 @@ std::optional<OctreeNode> createHollowNode(int size, Aabb aabb, std::vector<uint
     }
 
     if (isSolid) {
-        node.color = getColor(aabb.bb.z, aabb.bb.x, aabb.bb.y, 1.0);
+        node.color = getColor(aabb.bb.z, aabb.bb.x, aabb.bb.y);
         nodeCount++;
         return node;
     }
@@ -237,67 +199,45 @@ std::optional<OctreeNode> createHollowNode(int size, Aabb aabb, std::vector<uint
     return node;
 }
 
-OctreeNode createChunkOctree(int size, uint32_t seed_value, glm::ivec2 chunk_coords, int chunk_scale,
-                             uint32_t &nodeCount) {
-    glm::vec2 offset = size * chunk_scale * chunk_coords;
-    auto noise = createNoise(size, seed_value, offset, chunk_scale);
+std::optional<OctreeNode> createChunkOctree(int chunkResolution, uint32_t seed_value, glm::ivec3 chunk_coords,
+                                            int maxChunkResolution,
+                                            int grid_height,
+                                            uint32_t &nodeCount) {
+    glm::vec2 offset = maxChunkResolution * chunk_coords;
+    auto noise = createNoise(chunkResolution, seed_value, offset, maxChunkResolution);
     auto aabb = Aabb{};
-    aabb.aa = glm::ivec3(0, 0, 0);
-    aabb.bb = glm::ivec3(size, size, size);
+    aabb.aa = glm::ivec3(0, 0, chunk_coords.z * maxChunkResolution);
+    aabb.bb = glm::ivec3(chunkResolution, chunkResolution, aabb.aa.z + maxChunkResolution);
+    int heightScale = maxChunkResolution * grid_height;
 
-    auto node = createNode(size, aabb, noise, nodeCount, chunk_scale);
+    auto node = createNode(chunkResolution, aabb, noise, nodeCount, heightScale);
 
     if (node) {
         return *node;
     }
 
     //Todo!: dont return leaf node if thing is empty
-    return OctreeNode();
+    return std::nullopt;
 }
 
-OctreeNode createOctree(int size, uint32_t seed_value, uint32_t &nodeCount) {
-    return createChunkOctree(size, seed_value, glm::ivec2(0), 1, nodeCount);
-}
+// OctreeNode createHollowOctree(int size, uint32_t seed_value, uint32_t &nodeCount) {
+//     auto heightMap = createNoise(size, seed_value, glm::vec2(0), 1);
+//     auto depthMap = createDepthMap(heightMap);
+//     assert(heightMap.size() == size * size);
+//     assert(depthMap.size() == size * size);
+//
+//     auto aabb = Aabb{};
+//     aabb.aa = glm::ivec3(0, 0, 0);
+//     aabb.bb = glm::ivec3(size, size, size);
+//
+//     std::cout << "Creating hollow nodes" << std::endl;
+//     auto node = createHollowNode(size, aabb, heightMap, depthMap, nodeCount);
+//     std::cout << "Finished creating hollow nodes" << std::endl;
+//     if (node) {
+//         return *node;
+//     }
+//
+//     //Todo!: dont return leaf node if thing is empty
+//     return OctreeNode();
+// }
 
-OctreeNode createHollowOctree(int size, uint32_t seed_value, uint32_t &nodeCount) {
-    auto heightMap = createNoise(size, seed_value, glm::vec2(0), 1);
-    auto depthMap = createDepthMap(heightMap);
-    assert(heightMap.size() == size * size);
-    assert(depthMap.size() == size * size);
-
-    auto aabb = Aabb{};
-    aabb.aa = glm::ivec3(0, 0, 0);
-    aabb.bb = glm::ivec3(size, size, size);
-
-    std::cout << "Creating hollow nodes" << std::endl;
-    auto node = createHollowNode(size, aabb, heightMap, depthMap, nodeCount);
-    std::cout << "Finished creating hollow nodes" << std::endl;
-    if (node) {
-        return *node;
-    }
-
-    //Todo!: dont return leaf node if thing is empty
-    return OctreeNode();
-}
-
-void constructGrid(std::vector<Chunk> &gridValues, std::vector<uint32_t> &farValues, std::vector<uint32_t> &octreeGPU,
-                   uint32_t maxChunkResolution, uint32_t gridSize, uint32_t seed) {
-    gridValues = std::vector<Chunk>(gridSize * gridSize);
-    farValues = std::vector<uint32_t>();
-    octreeGPU = std::vector<uint32_t>();
-
-    for (int y = 0; y < gridSize; y++) {
-        for (int x = 0; x < gridSize; x++) {
-            uint32_t nodeAmount = 0;
-            auto octreeResolution = std::max(maxChunkResolution >> int(std::sqrt(std::max(y, x))), 64u);
-            auto octreeScale = maxChunkResolution / octreeResolution;
-            std::cout << "Octree resolution: " << octreeResolution << std::endl;
-            auto node = std::make_shared<OctreeNode>(
-                createChunkOctree(octreeResolution, seed, glm::ivec2(x, y), octreeScale, nodeAmount));
-            uint32_t rootNodeIndex = octreeGPU.size();
-            std::cout << "Root node Index: " << rootNodeIndex << std::endl;
-            addOctreeGPUdata(octreeGPU, node, nodeAmount, farValues);
-            gridValues[y * gridSize + x] = Chunk{maxChunkResolution, rootNodeIndex};
-        }
-    }
-}

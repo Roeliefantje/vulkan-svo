@@ -46,7 +46,7 @@ inline int positive_mod(const int a, const int b) {
 }
 
 inline uint32_t calculateChunkResolution(uint32_t maxChunkResolution, int dist) {
-    return maxChunkResolution >> (dist);
+    return std::max(maxChunkResolution >> (dist), 1u);
 }
 
 inline bool sceneInChunk(const Aabb &scene, const Aabb &chunk, const float &scale) {
@@ -76,8 +76,8 @@ void ChunkGenerationApplication::generateChunk(glm::ivec3 gridCoord, uint32_t re
 
         std::optional<OctreeNode> node = std::nullopt;
         if (config.useHeightmapData) {
-            int scale = config.chunk_resolution / resolution;
-            node = createChunkOctree(resolution, config.seed, chunkCoord, scale, nodeAmount);
+            node = createChunkOctree(resolution, config.seed, chunkCoord, config.chunk_resolution, config.grid_height,
+                                     nodeAmount);
         } else if (sceneInChunk(objSceneMetaData->sceneAabb, aabb, objSceneMetaData->scale)) {
             std::vector<uint32_t> allIndices(triangles.value().size());
             std::iota(allIndices.begin(), allIndices.end(), 0);

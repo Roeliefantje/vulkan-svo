@@ -406,8 +406,9 @@ void DataManageThreat::loadChunkData(ChunkLoadInfo &job, std::vector<uint32_t> &
         std::iota(allIndices.begin(), allIndices.end(), 0);
         std::optional<OctreeNode> node = std::nullopt;
         if (config.useHeightmapData) {
-            uint32_t scale = config.chunk_resolution / job.resolution;
-            node = createChunkOctree(job.resolution, config.seed, job.chunkCoord, scale, nodeAmount);
+            // uint32_t scale = config.chunk_resolution / job.resolution;
+            node = createChunkOctree(job.resolution, config.seed, job.chunkCoord, config.chunk_resolution,
+                                     config.grid_height, nodeAmount);
         } else if (sceneInChunk(objSceneData->sceneAabb, aabb, objSceneData->scale)) {
             node = createNode(aabb, triangles, allIndices, textures, nodeAmount, maxDepth, 0);
         }

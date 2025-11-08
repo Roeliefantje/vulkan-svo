@@ -24,7 +24,7 @@ struct ChunkLoadInfo {
 namespace fs = std::filesystem;
 
 inline uint32_t calculateChunkResolution(uint32_t maxChunkResolution, int dist) {
-    return maxChunkResolution >> (dist);
+    return std::max(maxChunkResolution >> (dist), 1u);
 }
 
 class BufferManager {

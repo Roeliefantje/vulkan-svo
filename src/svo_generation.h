@@ -8,16 +8,16 @@
 #include <optional>
 
 
-inline uint32_t getColor(int height, int x, int y, int chunk_scale) {
+inline uint32_t getColor(float height, int x, int y) {
     // Simple hash function for coordinate-based randomness
-    uint32_t hash = ((x * 73856093) ^ (y * 19349663)) & 255;
-    int jitter = (hash % 11) - 5; // Jitter between -5 and +5
+    // uint32_t hash = ((x * 73856093) ^ (y * 19349663)) & 255;
+    // int jitter = (hash % 11) - 5; // Jitter between -5 and +5
 
-    int h = height * chunk_scale + jitter;
+    float h = height;
 
-    if (h > 480) {
+    if (h > 0.7f) {
         return 0xFFFFFF; // Snow
-    } else if (h > 400) {
+    } else if (h > 0.1f) {
         return 0xD9D9D9; // Rock
     } else if (h > 220) {
         return 0x7F8386; // Gray rocky terrain
@@ -36,7 +36,8 @@ inline uint32_t getColor(int height, int x, int y, int chunk_scale) {
     }
 }
 
-std::vector<uint32_t> createNoise(int size, uint32_t seed_value, glm::ivec2 offset, uint32_t scale);
+std::vector<float> createNoise(int chunkResolution, uint32_t seed_value, glm::ivec2 offset,
+                               uint32_t maxChunkResolution);
 
 std::vector<uint32_t> createDepthMap(std::vector<uint32_t> heightMap);
 
@@ -46,21 +47,19 @@ struct Aabb {
 };
 
 
-std::optional<OctreeNode> createNode(int size, Aabb aabb, std::vector<uint32_t> &noise, uint32_t &nodeCount,
-                                     int chunk_scale);
+std::optional<OctreeNode> createNode(int size, Aabb aabb, std::vector<float> &noise, uint32_t &nodeCount,
+                                     int height_scale);
 
 std::optional<OctreeNode> createHollowNode(int size, Aabb aabb, std::vector<uint32_t> &heightMap,
                                            std::vector<uint32_t> &depthMap, uint32_t &nodeCount);
 
 
-OctreeNode createChunkOctree(int size, uint32_t seed_value, glm::ivec2 chunk_coords, int chunk_scale,
-                             uint32_t &nodeCount);
+std::optional<OctreeNode> createChunkOctree(int chunkResolution, uint32_t seed_value, glm::ivec3 chunk_coords,
+                                            int maxChunkResolution,
+                                            int grid_height,
+                                            uint32_t &nodeCount);
 
-OctreeNode createOctree(int size, uint32_t seed_value, uint32_t &nodeCount);
+// OctreeNode createHollowOctree(int size, uint32_t seed_value, uint32_t &nodeCount);
 
-OctreeNode createHollowOctree(int size, uint32_t seed_value, uint32_t &nodeCount);
-
-void constructGrid(std::vector<Chunk> &gridValues, std::vector<uint32_t> &farValues, std::vector<uint32_t> &octreeGPU,
-                   uint32_t maxChunkResolution, uint32_t gridSize, uint32_t seed);
 
 #endif //SVO_GENERATION_H

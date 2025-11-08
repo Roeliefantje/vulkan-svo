@@ -1,6 +1,6 @@
 ### Things to be done:
 
-- Make the grid 3D
+- Make the grid 3D done diddly do
 - Make a path camera thing that follows the terrain
 - Investigate voxelizer performance?
 
