@@ -108,14 +108,12 @@ void ChunkGenerationApplication::generateChunksForCameraPosition() {
                 auto gridCoord = glm::ivec3{
                     positive_mod(chunkX, camera.gridSize), positive_mod(chunkY, camera.gridSize), chunkZ
                 };
-                glm::ivec3 dist = glm::ivec3(chunkX, chunkY, center.z) - center;
-                int single_axis_dist = std::max(abs(chunkY - center.y), abs(chunkX - center.x));
+                glm::ivec3 dist = glm::ivec3(chunkX, chunkY, chunkZ) - center;
+                int single_axis_dist = std::max(dist.x, std::max(dist.y, dist.z));
                 uint32_t octreeResolution = calculateChunkResolution(config.chunk_resolution, single_axis_dist);
 
                 //The cpu chunks location, so not the buffer location we store it in, which is gridCoord, but the coords of the chunk itself.
                 glm::ivec3 chunkCoord = camera.chunk_coords + dist;
-                //As we are dealing with a 2d grid on the gpu side, we do not deal with chunkCoord z distance and stuffs.
-                chunkCoord.z = 0;
                 generateChunk(gridCoord, octreeResolution, chunkCoord);
             }
         }
