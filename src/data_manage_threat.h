@@ -90,7 +90,9 @@ private:
     std::vector<CpuChunk> &chunks;
     CPUCamera &camera;
     VkDevice &device;
-    std::array<VkCommandBuffer, 2> commandBuffers;
+    VkCommandPool threadCommandPool;
+    VkCommandBuffer threadCommandBuffer;
+    // std::array<VkCommandBuffer, 2> commandBuffers;
     BufferManager &stagingBufferManager;
     BufferManager &octreeGPUManager;
     BufferManager &farValuesManager;

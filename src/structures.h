@@ -32,11 +32,14 @@ struct DebugValues {
 struct StagingBufferProperties {
     VkCommandPool transferCommandPool; //The command pool used to submit transfer commands for the staging buffer.
     VkQueue transferQueue;
+    std::mutex queueMut;
     VkBuffer pStagingBuffer;
     VkDeviceMemory pStagingBufferMemory;
     VkSemaphore transferSemaphore;
     std::atomic_bool waitForTransfer = false;
     VkDeviceSize bufferSize;
+    uint32_t transferQueueIndex;
+    VkCommandBuffer transferCommandBuffer;
 };
 
 struct CpuChunk {

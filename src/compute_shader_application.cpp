@@ -785,10 +785,19 @@ void ComputeShaderApplication::createTransferCommandPool() {
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolInfo.queueFamilyIndex = queueFamilyIndices.transferFamily.value();
-
+    stagingBufferProperties.transferQueueIndex = queueFamilyIndices.transferFamily.value();
     if (vkCreateCommandPool(device, &poolInfo, nullptr, &stagingBufferProperties.transferCommandPool) != VK_SUCCESS) {
         throw std::runtime_error("failed to create transfer command pool!");
     }
+
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandPool = stagingBufferProperties.transferCommandPool;
+    allocInfo.commandBufferCount = 1;
+
+    // VkCommandBuffer commandBuffer;
+    vkAllocateCommandBuffers(device, &allocInfo, &stagingBufferProperties.transferCommandBuffer);
 }
 
 void ComputeShaderApplication::createStagingBuffer(VkDeviceSize size) {
