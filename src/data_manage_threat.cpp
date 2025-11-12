@@ -18,10 +18,28 @@
 #include "svo_generation.h"
 #include "spdlog/spdlog.h"
 
-BufferManager::BufferManager(VkBuffer &buffer, VkDeviceSize bufferSize) : buffer(buffer), bufferSize(bufferSize) {
+BufferManager::BufferManager(VkBuffer &buffer, VkDeviceSize bufferSize, const std::string &name,
+                             size_t itemSize) : buffer(buffer),
+                                                bufferSize(bufferSize), name(name), itemSize(itemSize) {
     this->chunks = std::vector<DataChunk>();
     //Initial offset is 1, so 0 can be reserved as a special value
     this->chunks.emplace_back(1, bufferSize - 1, false);
+}
+
+void BufferManager::printBufferInfo() {
+    size_t occupied_memory = 0;
+    size_t free_memory = 0;
+    for (auto it = chunks.begin(); it != chunks.end(); ++it) {
+        if (it->occupied) {
+            occupied_memory += it->elementSize * itemSize;
+        } else {
+            free_memory += it->elementSize * itemSize;
+        }
+    }
+    size_t totalSize = occupied_memory + free_memory;
+    float percentage_free = occupied_memory / static_cast<float>(totalSize) * 100.0f;
+    spdlog::info("{} Memory used: {}, Memory Free: {}, Percentage used {:.2f}%", name, occupied_memory, free_memory,
+                 percentage_free);
 }
 
 size_t BufferManager::allocateChunk(size_t size) {

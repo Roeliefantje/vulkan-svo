@@ -38,11 +38,13 @@ class BufferManager {
 public:
     VkBuffer &buffer;
 
-    BufferManager(VkBuffer &buffer, VkDeviceSize bufferSize);
+    BufferManager(VkBuffer &buffer, VkDeviceSize bufferSize, const std::string &name, size_t itemSize);
 
     size_t allocateChunk(size_t size);
 
     void freeChunk(size_t offset);
+
+    void printBufferInfo();
 
 private:
     struct DataChunk {
@@ -55,6 +57,8 @@ private:
     uint32_t bufferSize;
     std::vector<DataChunk> chunks;
     std::mutex mut;
+    const std::string name;
+    size_t itemSize;
 };
 
 struct TransferInformation {

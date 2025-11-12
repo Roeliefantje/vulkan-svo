@@ -54,6 +54,7 @@ void Config::generate_keyframes() {
         CameraKeyFrame kf{};
         kf.time = currentTime;
         kf.position = glm::vec3(currentCameraPos.x, currentCameraPos.y, totalHeight * height + 20);
+        spdlog::debug("Position: {}, {}, {}", kf.position.x, kf.position.y, kf.position.z);
         kf.direction = cameraDirection;
         kfs.push_back(kf);
 
@@ -113,6 +114,11 @@ Config::Config(int argc, char *argv[]) {
                 camera_keyframe_path = "./camera_positions/camera_path_test2.json";
                 read_keyframes();
                 break;
+            case 3:
+                useHeightmapData = true;
+                cameraKeyFrames = std::vector<CameraKeyFrame>();
+                generate_keyframes();
+                break;
             default:
                 std::cout << "Unknown test scene Benchmark!" << std::endl;
                 exit(0);
@@ -120,7 +126,7 @@ Config::Config(int argc, char *argv[]) {
     }
 
     if (result.count("camera")) {
-        camera_path = result["voxelize"].as<std::string>();
+        camera_path = result["camera"].as<std::string>();
     }
 
     if (result.count("voxelize")) {

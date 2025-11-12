@@ -46,9 +46,12 @@ void ComputeShaderApplication::initCamera() {
 
 void ComputeShaderApplication::initThreads() {
     //Init the data and threads necessary for gpu chunk stuffs.
-    farValuesGPUManager = new BufferManager(farValuesSBuffers[0], farValues.size());
-    octreeGPUManager = new BufferManager(shaderStorageBuffers[0][0], octreeGPU.size());
-    stagingBufferManager = new BufferManager(shaderStorageBuffers[0][0], config.staging_size);
+    farValuesGPUManager = new BufferManager(farValuesSBuffers[0], farValues.size(),
+                                            "Far Values Buffer", sizeof(uint32_t));
+    octreeGPUManager = new BufferManager(shaderStorageBuffers[0][0], octreeGPU.size(),
+                                         "Octree Nodes Buffer", sizeof(uint32_t));
+    stagingBufferManager = new BufferManager(shaderStorageBuffers[0][0], config.staging_size,
+                                             "Staging Buffer", 1);
 
 
     dmThreat = new DataManageThreat(device, stagingBufferProperties, config, *octreeGPUManager, *stagingBufferManager,

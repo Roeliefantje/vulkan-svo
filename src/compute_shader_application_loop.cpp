@@ -14,6 +14,7 @@ void ComputeShaderApplication::mainLoop() {
             if (objSceneMetaData) {
                 camera.setPosition(kf.position * objSceneMetaData->scale);
             } else {
+                spdlog::debug("Position:, {}, {}, {}", kf.position.x, kf.position.y, kf.position.z);
                 camera.setPosition(kf.position);
             }
             camera.gpu_camera.direction = glm::normalize(kf.direction);
@@ -31,6 +32,9 @@ void ComputeShaderApplication::mainLoop() {
         if (elapsed >= 1.0) {
             // printCameraPosition();
             spdlog::info("FPS: {}, msPf: {}", (frameCounter / elapsed), 1000 / (frameCounter / elapsed));
+            farValuesGPUManager->printBufferInfo();
+            octreeGPUManager->printBufferInfo();
+            stagingBufferManager->printBufferInfo();
 #if SHADERDEBUG
             spdlog::info("Average Steps per ray: {}", (totalSteps / (float) (config.width * config.height)));
             spdlog::info("Max Steps per ray: {}", maxSteps);
