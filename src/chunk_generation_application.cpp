@@ -46,7 +46,14 @@ inline int positive_mod(const int a, const int b) {
 }
 
 inline uint32_t calculateChunkResolution(uint32_t maxChunkResolution, int dist) {
-    return std::max(maxChunkResolution >> (dist), 1u);
+    int lodLevel;
+    if (dist < 2) lodLevel = 0;
+    else if (dist < 5) lodLevel = 1;
+    else if (dist < 10) lodLevel = 2;
+    else if (dist < 20) lodLevel = 3;
+    else lodLevel = 4;
+
+    return std::max(maxChunkResolution >> lodLevel, 1u);
 }
 
 inline bool sceneInChunk(const Aabb &scene, const Aabb &chunk, const float &scale) {

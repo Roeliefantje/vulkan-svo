@@ -25,6 +25,7 @@ BufferManager::BufferManager(VkBuffer &buffer, VkDeviceSize bufferSize) : buffer
 }
 
 size_t BufferManager::allocateChunk(size_t size) {
+    std::lock_guard<std::mutex> lock(mut);
     if (size == 0) {
         std::cerr << "Tried allocating 0 memory!" << std::endl;
         return 0;
@@ -57,6 +58,7 @@ size_t BufferManager::allocateChunk(size_t size) {
 }
 
 void BufferManager::freeChunk(size_t offset) {
+    std::lock_guard<std::mutex> lock(mut);
     auto chunk = chunks.end();
     for (auto it = chunks.begin(); it != chunks.end(); ++it) {
         if (it->offset == offset) {
@@ -93,7 +95,7 @@ void BufferManager::freeChunk(size_t offset) {
 
 
 DataManageThreat::DataManageThreat(VkDevice &device, StagingBufferProperties &stagingBufferProperties, Config &config,
-                                   BufferManager &octreeGPUManager,
+                                   BufferManager &octreeGPUManager, BufferManager &stagingBufferManager,
                                    VkBuffer &chunkBuffer, BufferManager &farValuesManager,
                                    std::optional<SceneMetadata> objFileData,
                                    std::vector<CpuChunk> &chunks,
@@ -105,6 +107,7 @@ DataManageThreat::DataManageThreat(VkDevice &device, StagingBufferProperties &st
       chunks(chunks),
       camera(camera),
       device(device),
+      stagingBufferManager(stagingBufferManager),
       octreeGPUManager(octreeGPUManager),
       farValuesManager(farValuesManager),
       chunkBuffer(chunkBuffer),
@@ -123,6 +126,9 @@ DataManageThreat::DataManageThreat(VkDevice &device, StagingBufferProperties &st
     // loadObj();
     initFence();
     initCommandBuffers();
+
+    vkMapMemory(device, stagingBufferProperties.pStagingBufferMemory, 0, stagingBufferProperties.bufferSize, 0,
+                &gpuDataPointer);
 }
 
 DataManageThreat::~DataManageThreat() {
@@ -150,37 +156,55 @@ void DataManageThreat::pushWork(ChunkLoadInfo job) { {
 }
 
 bool DataManageThreat::CheckToWaitAndStartTransfer() {
-    if (stagingBufferProperties.waitForTransfer) {
-        //CommandBuffer is prepped and needs to be submitted
+    if (!chunkDeleteQueue.empty()) {
+        //Free the memory on the staging buffer for the chunks that got transfered in the previous frame.
+        //Shouldnt be possible but wait before freeing from staging buffer just in case.
+        vkWaitForFences(device, 1, &gridFence, VK_TRUE, UINT64_MAX);
+        vkResetFences(device, 1, &gridFence);
+        while (!chunkDeleteQueue.empty()) {
+            TransferInformation info = chunkDeleteQueue.front();
+            chunkDeleteQueue.pop();
+            stagingBufferManager.freeChunk(info.staging_offset);
+        }
+    }
+
+    std::lock_guard<std::mutex> lock(transferQueueMutex);
+    if (!transferQueue.empty()) {
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        vkResetCommandBuffer(commandBuffers[1], 0);
+        vkBeginCommandBuffer(commandBuffers[1], &beginInfo);
+
+        while (!transferQueue.empty()) {
+            TransferInformation info = transferQueue.front();
+            transferQueue.pop();
+            VkBufferCopy copyRegion{};
+            copyRegion.srcOffset = info.staging_offset;
+            copyRegion.dstOffset = info.chunk_idx * sizeof(Chunk);
+            copyRegion.size = sizeof(Chunk);
+            vkCmdCopyBuffer(commandBuffers[1], stagingBufferProperties.pStagingBuffer, chunkBuffer, 1, &copyRegion);
+
+            CpuChunk &chunk = chunks[info.chunk_idx];
+
+            if (chunk.rootNodeIndex != 0) {
+                octreeGPUManager.freeChunk(chunk.rootNodeIndex);
+            }
+            if (chunk.ChunkFarValuesOffset != 0) {
+                farValuesManager.freeChunk(chunk.ChunkFarValuesOffset);
+            }
+            chunks[info.chunk_idx] = info.newChunk;
+            chunkDeleteQueue.push(info);
+        }
+        vkEndCommandBuffer(commandBuffers[1]);
+
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &commandBuffers[1];
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = &stagingBufferProperties.transferSemaphore;
-
         vkQueueSubmit(stagingBufferProperties.transferQueue, 1, &submitInfo, gridFence);
-        //Update cpu side chunk info
-        //Todo: queue old data for deletion
-        auto chunk_idx = (currentChunk.gridCoord.z * config.grid_size * config.grid_size) +
-                         (currentChunk.gridCoord.y * config.grid_size) + currentChunk.gridCoord.x;
-        CpuChunk &chunk = chunks[chunk_idx];
-        // chunk.loading = false;
-        // chunk.resolution = currentChunk.resolution;
-
-        if (chunk.rootNodeIndex != 0) {
-            octreeGPUManager.freeChunk(chunk.rootNodeIndex);
-        }
-        if (chunk.ChunkFarValuesOffset != 0) {
-            farValuesManager.freeChunk(chunk.ChunkFarValuesOffset);
-        }
-
-        chunks[chunk_idx] = newChunk;
-
-        //Tell data manage threat its okay to use staging buffer again.
-        stagingBufferProperties.waitForTransfer.store(false);
-        stagingBufferProperties.waitForTransfer.notify_one();
-
 
         return true;
     }
@@ -200,7 +224,7 @@ void DataManageThreat::initFence() {
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = 0;
     vkCreateFence(device, &fenceInfo, nullptr, &transferFence);
-    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    // fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
     vkCreateFence(device, &fenceInfo, nullptr, &gridFence);
 }
 
@@ -239,12 +263,13 @@ void DataManageThreat::loadChunkToGPU(ChunkLoadInfo job) {
                       job.chunkCoord.y, job.chunkCoord.z,
                       job.resolution);
     }
-
+    uint32_t chunkIdx = job.gridCoord.z * config.grid_size * config.grid_size
+                        + job.gridCoord.y * config.grid_size
+                        + job.gridCoord.x;
+    //Load stuff to be copied onto the GPU
     if (!checkChunkResolution(job)) {
         //Chunk is not in the right resolution for the camera position, cancel
-        chunks[job.gridCoord.z * config.grid_size * config.grid_size
-               + job.gridCoord.y * config.grid_size
-               + job.gridCoord.x].loading = false;
+        chunks[chunkIdx].loading = false;
         return;
     }
     // std::this_thread::sleep_for(std::chrono::seconds(5));
@@ -257,7 +282,7 @@ void DataManageThreat::loadChunkToGPU(ChunkLoadInfo job) {
         rootNodeIndex = octreeGPUManager.allocateChunk(chunkOctreeGPU.size());
         if (rootNodeIndex == 0) {
             std::cerr << "Octree GPU Buffer has no memory to be allocated!" << std::endl;
-            // chunks[job.gridCoord.y * config.grid_size + job.gridCoord.x].loading = false;
+            chunks[chunkIdx].loading = false;
             return;
         }
     }
@@ -265,7 +290,7 @@ void DataManageThreat::loadChunkToGPU(ChunkLoadInfo job) {
         farValuesOffset = farValuesManager.allocateChunk(chunkFarValues.size());
         if (farValuesOffset == 0) {
             spdlog::error("Far Values Buffer has no memory to be allocated!");
-            // chunks[job.gridCoord.y * config.grid_size + job.gridCoord.x].loading = false;
+            chunks[chunkIdx].loading = false;;
             return;
         }
     }
@@ -282,53 +307,59 @@ void DataManageThreat::loadChunkToGPU(ChunkLoadInfo job) {
         return;
     }
 
-    if (stagingBufferProperties.waitForTransfer) {
-        // std::cout << "Waiting for transfer" << std::endl;
-        stagingBufferProperties.waitForTransfer.wait(true);
-    }
-    currentChunk = job;
-    //Wait until all the data on the staging buffer is used before we use it again.
-    vkWaitForFences(device, 1, &gridFence, VK_TRUE, UINT64_MAX);
-
-    vkResetFences(device, 1, &gridFence);
-
-    void *data;
-    vkMapMemory(device, stagingBufferProperties.pStagingBufferMemory, 0, totalSize, 0, &data);
-
-    auto *dst = reinterpret_cast<uint8_t *>(data);
-
-    memcpy(dst, chunkFarValues.data(), (size_t) farValuesSize);
-    dst += farValuesSize;
-    memcpy(dst, chunkOctreeGPU.data(), (size_t) octreeSize);
-    dst += octreeSize;
-    memcpy(dst, &chunkGpu, (size_t) chunkSize);
-
-    vkUnmapMemory(device, stagingBufferProperties.pStagingBufferMemory);
-
+    auto *dst = static_cast<uint8_t *>(gpuDataPointer);
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     vkResetCommandBuffer(commandBuffers[0], 0);
     vkBeginCommandBuffer(commandBuffers[0], &beginInfo);
-
-    VkBufferCopy copyRegion{};
-    // Copy octree
-    if (octreeSize > 0) {
-        // VkBufferCopy copyRegion{};
-        copyRegion.srcOffset = farValuesSize;
-        copyRegion.dstOffset = rootNodeIndex * sizeof(uint32_t);
-        copyRegion.size = octreeSize;
-        vkCmdCopyBuffer(commandBuffers[0], stagingBufferProperties.pStagingBuffer, octreeGPUManager.buffer, 1,
-                        &copyRegion);
-    }
-    // Copy farvalues
+    size_t farValueIndex = 0;
+    size_t octreeIndex = 0;
     if (farValuesSize > 0) {
-        copyRegion.srcOffset = 0;
+        farValueIndex = stagingBufferManager.allocateChunk(farValuesSize);
+        if (farValueIndex == 0) {
+            spdlog::error("Ran out of memory in the staging buffer while copying farvalues!");
+            chunks[chunkIdx].loading = false;
+            return;
+        }
+        memcpy(dst + farValueIndex, chunkFarValues.data(), farValuesSize);
+
+        VkBufferCopy copyRegion{};
+        copyRegion.srcOffset = farValueIndex;
         copyRegion.dstOffset = farValuesOffset * sizeof(uint32_t);
         copyRegion.size = farValuesSize;
         vkCmdCopyBuffer(commandBuffers[0], stagingBufferProperties.pStagingBuffer, farValuesManager.buffer, 1,
                         &copyRegion);
     }
+
+    if (octreeSize > 0) {
+        octreeIndex = stagingBufferManager.allocateChunk(octreeSize);
+        if (octreeIndex == 0) {
+            spdlog::error("Ran out of memory in the staging buffer while copying octree!");
+            stagingBufferManager.freeChunk(farValueIndex);
+            chunks[chunkIdx].loading = false;
+            return;
+        }
+        memcpy(dst + octreeIndex, chunkOctreeGPU.data(), octreeSize);
+        VkBufferCopy copyRegion{};
+        copyRegion.srcOffset = octreeIndex;
+        copyRegion.dstOffset = rootNodeIndex * sizeof(uint32_t);
+        copyRegion.size = octreeSize;
+        vkCmdCopyBuffer(commandBuffers[0], stagingBufferProperties.pStagingBuffer, octreeGPUManager.buffer, 1,
+                        &copyRegion);
+    }
+
+    //There is always chunk information, so we will always copy that over.
+    auto chunkIndex = stagingBufferManager.allocateChunk(chunkSize);
+    if (chunkIndex == 0) {
+        spdlog::error("Ran out of memory in the staging buffer while copying chunk info!");
+        stagingBufferManager.freeChunk(farValueIndex);
+        stagingBufferManager.freeChunk(octreeIndex);
+        chunks[chunkIdx].loading = false;
+        return;
+    }
+    memcpy(dst + chunkIndex, &chunkGpu, chunkSize);
+
 
     vkEndCommandBuffer(commandBuffers[0]);
 
@@ -344,22 +375,21 @@ void DataManageThreat::loadChunkToGPU(ChunkLoadInfo job) {
     vkWaitForFences(device, 1, &transferFence, VK_TRUE, UINT64_MAX);
     vkResetFences(device, 1, &transferFence);
 
-    //Start copying grid over
-    vkResetCommandBuffer(commandBuffers[1], 0);
-    vkBeginCommandBuffer(commandBuffers[1], &beginInfo);
+    //Octree and Farvalues are now on the GPU, can be freed again on the staging buffer.
+    stagingBufferManager.freeChunk(octreeIndex);
+    stagingBufferManager.freeChunk(farValueIndex);
 
-    // Copy Grid
-    copyRegion.srcOffset = farValuesSize + octreeSize;
-    copyRegion.dstOffset = ((job.gridCoord.z * config.grid_size * config.grid_size) + (
-                                job.gridCoord.y * config.grid_size) + job.gridCoord.x) * sizeof(Chunk);
-    copyRegion.size = chunkSize;
-
-    vkCmdCopyBuffer(commandBuffers[1], stagingBufferProperties.pStagingBuffer, chunkBuffer, 1, &copyRegion);
-    vkEndCommandBuffer(commandBuffers[1]);
-    newChunk = CpuChunk(farValuesOffset, rootNodeIndex, job.resolution, job.chunkCoord);
-    newChunk.chunkSize = chunkOctreeGPU.size();
-    newChunk.offsetSize = chunkFarValues.size();
-    stagingBufferProperties.waitForTransfer = true;
+    //Once we are done transferring the chunk and far values, notify the main thread that it can queue the chunk transfer
+    {
+        std::lock_guard<std::mutex> lock(transferQueueMutex);
+        uint32_t chunk_idx = (job.gridCoord.z * config.grid_size * config.grid_size) +
+                             job.gridCoord.y * config.grid_size
+                             + job.gridCoord.x;
+        CpuChunk newChunk = CpuChunk(farValuesOffset, rootNodeIndex, job.resolution, job.chunkCoord);
+        newChunk.chunkSize = chunkOctreeGPU.size();
+        newChunk.offsetSize = chunkFarValues.size();
+        transferQueue.push({chunk_idx, chunkIndex, newChunk});
+    }
 }
 
 

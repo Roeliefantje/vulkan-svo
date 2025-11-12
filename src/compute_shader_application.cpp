@@ -796,6 +796,8 @@ void ComputeShaderApplication::createStagingBuffer(VkDeviceSize size) {
                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                  stagingBufferProperties.pStagingBuffer,
                  stagingBufferProperties.pStagingBufferMemory);
+
+    stagingBufferProperties.bufferSize = size;
 }
 
 void ComputeShaderApplication::createShaderStorageBuffer(std::vector<uint32_t> &dataVec,

@@ -45,7 +45,9 @@ Config::Config(int argc, char *argv[]) {
             ("d,debug", "Enable debugging") // a bool parameter
             ("voxelize", "path to scene to voxelize", cxxopts::value<std::string>())
             ("g, grid", "The grid size for the scene", cxxopts::value<uint32_t>())
+            ("gridheight", "The grid height for the scene", cxxopts::value<uint32_t>())
             ("s, seed", "Seed to use for chunk generation", cxxopts::value<uint32_t>())
+            ("r, res", "Max chunk resolution to use (must be a power of 2)", cxxopts::value<uint32_t>())
             ("t, test", "Which test scenario to run", cxxopts::value<uint32_t>())
             ("chunkgen", "Generate chunks needed for a certain camera position",
              cxxopts::value<bool>()->default_value("false"))
@@ -68,9 +70,18 @@ Config::Config(int argc, char *argv[]) {
         switch (auto test_scene = result["test"].as<uint32_t>()) {
             case 0:
                 camera_path = "./camera_positions/camera_location_test0.json";
+                scene_path = "./assets/san-miguel-low-poly.obj";
+                useHeightmapData = false;
                 spdlog::info("Test Scene 0 Benchmark!");
                 break;
+            case 1:
+                camera_path = "./camera_positions/camera_location_test1.json";
+                scene_path = "./assets/san-miguel-low-poly.obj";
+                useHeightmapData = false;
+                spdlog::info("Test Scene 1 Benchmark!");
+                break;
             case 2:
+                useHeightmapData = false;
                 cameraKeyFrames = std::vector<CameraKeyFrame>();
                 camera_keyframe_path = "./camera_positions/camera_path_test2.json";
                 read_keyframes();
@@ -87,6 +98,18 @@ Config::Config(int argc, char *argv[]) {
 
     if (result.count("voxelize")) {
         scene_path = result["voxelize"].as<std::string>();
+    }
+
+    if (result.count("grid")) {
+        grid_size = result["grid"].as<uint32_t>();
+    }
+
+    if (result.count("gridheight")) {
+        grid_height = result["gridheight"].as<uint32_t>();
+    }
+
+    if (result.count("res")) {
+        chunk_resolution = result["res"].as<uint32_t>();
     }
 
     //Parse the camera json

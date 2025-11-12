@@ -24,7 +24,14 @@ struct ChunkLoadInfo {
 namespace fs = std::filesystem;
 
 inline uint32_t calculateChunkResolution(uint32_t maxChunkResolution, int dist) {
-    return std::max(maxChunkResolution >> (dist), 1u);
+    int lodLevel;
+    if (dist < 2) lodLevel = 0;
+    else if (dist < 5) lodLevel = 1;
+    else if (dist < 10) lodLevel = 2;
+    else if (dist < 20) lodLevel = 3;
+    else lodLevel = 4;
+
+    return std::max(maxChunkResolution >> lodLevel, 1u);
 }
 
 class BufferManager {
@@ -47,12 +54,19 @@ private:
     //Buffer size in allowed elements, so if type is uin32_t, byte size would be bufferSize * sizeof(uint32_t)
     uint32_t bufferSize;
     std::vector<DataChunk> chunks;
+    std::mutex mut;
+};
+
+struct TransferInformation {
+    uint32_t chunk_idx;
+    size_t staging_offset;
+    CpuChunk newChunk;
 };
 
 class DataManageThreat {
 public:
     DataManageThreat(VkDevice &device, StagingBufferProperties &stagingBufferProperties, Config &config,
-                     BufferManager &octreeGPUManager,
+                     BufferManager &octreeGPUManager, BufferManager &stagingBufferManager,
                      VkBuffer &chunkBuffer, BufferManager &farValuesManager,
                      std::optional<SceneMetadata> objFile,
                      std::vector<CpuChunk> &chunks,
@@ -77,6 +91,7 @@ private:
     CPUCamera &camera;
     VkDevice &device;
     std::array<VkCommandBuffer, 2> commandBuffers;
+    BufferManager &stagingBufferManager;
     BufferManager &octreeGPUManager;
     BufferManager &farValuesManager;
     VkBuffer &chunkBuffer;
@@ -89,11 +104,16 @@ private:
     std::vector<TexturedTriangle> triangles;
     std::map<std::string, LoadedTexture> textures;
 
-    ChunkLoadInfo currentChunk;
-    CpuChunk newChunk;
     glm::ivec2 cameraChunk;
 
     std::optional<SceneMetadata> objSceneData;
+
+    void *gpuDataPointer;
+
+    std::queue<TransferInformation> transferQueue;
+    std::queue<TransferInformation> chunkDeleteQueue;
+    std::mutex transferQueueMutex;
+
     bool sceneLoaded = false;
 
     void loadObj();

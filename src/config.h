@@ -35,7 +35,7 @@ struct Config {
 
     VkDeviceSize staging_size = GIGABYTE << 1;
     uint32_t chunk_resolution = 1024;
-    uint32_t grid_size = 15;
+    uint32_t grid_size = 25;
     uint32_t grid_height = 5;
     uint32_t seed = 12345 * 6;
     std::optional<std::vector<CameraKeyFrame> > cameraKeyFrames;

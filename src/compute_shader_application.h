@@ -210,6 +210,7 @@ private:
     uint32_t totalSteps;
     uint32_t maxSteps;
 
+    BufferManager *stagingBufferManager;
     BufferManager *octreeGPUManager;
     BufferManager *farValuesGPUManager;
     DataManageThreat *dmThreat;
