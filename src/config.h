@@ -58,6 +58,8 @@ struct Config {
     Config(int argc, char *argv[]);
 
     void read_keyframes();
+
+    void generate_keyframes();
 };
 
 CameraKeyFrame interpolateCamera(const std::vector<CameraKeyFrame> &keyframes, const float currentTime);

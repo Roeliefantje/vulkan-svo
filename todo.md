@@ -8,4 +8,4 @@
 ### Not essential but nice to have:
 
 - Use multiple buffers
-- Load multiple chunks in the same frame
+- Load multiple chunks in the same frame - Done

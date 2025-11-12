@@ -6,10 +6,7 @@
 
 #include "spdlog/spdlog.h"
 
-std::vector<float> createNoise(int chunkResolution, uint32_t seed_value, glm::ivec2 offset,
-                               uint32_t maxChunkResolution) {
-    float scale = maxChunkResolution / chunkResolution;
-    spdlog::debug("Creating Heightmap");
+inline FastNoiseLite getFastNoise(int seed_value) {
     FastNoiseLite base;
     base.SetSeed((int) seed_value);
     base.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
@@ -18,19 +15,44 @@ std::vector<float> createNoise(int chunkResolution, uint32_t seed_value, glm::iv
     base.SetFractalGain(0.5f);
     base.SetFractalOctaves(6);
     base.SetFrequency(0.0005f);
+    return base;
+}
+
+std::vector<float> createNoise(int chunkResolution, uint32_t seed_value, glm::ivec2 offset,
+                               uint32_t maxChunkResolution) {
+    float scale = maxChunkResolution / chunkResolution;
+    spdlog::debug("Creating Heightmap");
+    FastNoiseLite base = getFastNoise(seed_value);
 
     int index = 0;
     std::vector<float> noiseData(chunkResolution * chunkResolution);
     for (int y = 0; y < chunkResolution; y++) {
         for (int x = 0; x < chunkResolution; x++) {
             //+ 100000 because negative values dont generate anything proper
-            float fx = float(x * scale + offset.x + 100000), fy = float(y * scale + offset.y + 100000);
+            float fx = static_cast<float>(x * scale + offset.x + 100000), fy = static_cast<float>(
+                y * scale + offset.y + 100000);
             float raw = base.GetNoise(fx, fy); // −1…+1
             float e = (raw + 1.0f) * 0.5f; //Make it always a positive height
             noiseData[index++] = e;
         }
     }
     spdlog::debug("Finished creating noise data");
+    return noiseData;
+}
+
+std::vector<float> createPathNoise(int pathLength, uint32_t seed_value, glm::ivec2 offset,
+                                   uint32_t maxChunkResolution, glm::vec2 direction) {
+    FastNoiseLite noise = getFastNoise(seed_value);
+    std::vector<float> noiseData(pathLength);
+    for (int i = 0; i < pathLength; i++) {
+        float fx = offset.x + 100000 + direction.x * i;
+        float fy = offset.y + 100000 + direction.y * i;
+        float raw = noise.GetNoise(fx, fy);
+        float e = (raw + 1.0f) * 0.5f; //Make it always a positive height
+        noiseData[i] = e;
+    }
+
+    spdlog::debug("Finished making path noise data");
     return noiseData;
 }
 

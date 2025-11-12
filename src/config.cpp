@@ -7,6 +7,7 @@
 #include <glm/gtx/rotate_vector.hpp>
 #include <spdlog/spdlog.h>
 
+#include "svo_generation.h"
 #include "structures.h"
 
 void Config::read_keyframes() {
@@ -32,6 +33,32 @@ void Config::read_keyframes() {
 
         cameraPosition = kfs[0].position;
         cameraDirection = kfs[0].direction;
+    }
+
+    cameraKeyFrames = kfs;
+}
+
+void Config::generate_keyframes() {
+    int totalHeight = grid_height * chunk_resolution;
+    const int pathLength = 100;
+    float duration = 60.0;
+    auto cameraPosI = glm::ivec2(cameraPosition.x, cameraPosition.y);
+    const glm::vec2 direction = glm::normalize(glm::vec2(cameraDirection.x, cameraDirection.y));
+    std::vector<float> noise = createPathNoise(100, seed, cameraPosI, chunk_resolution, direction);
+
+    auto kfs = std::vector<CameraKeyFrame>();
+    float currentTime = 0.0f;
+    auto currentCameraPos = glm::vec2(cameraPosition);
+    const float timeIncrement = duration / pathLength;
+    for (const auto &height: noise) {
+        CameraKeyFrame kf{};
+        kf.time = currentTime;
+        kf.position = glm::vec3(currentCameraPos.x, currentCameraPos.y, totalHeight * height);
+        kf.direction = cameraDirection;
+        kfs.push_back(kf);
+
+        currentTime += timeIncrement;
+        currentCameraPos += direction;
     }
 
     cameraKeyFrames = kfs;

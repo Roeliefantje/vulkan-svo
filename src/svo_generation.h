@@ -39,6 +39,9 @@ inline uint32_t getColor(float height, int x, int y) {
 std::vector<float> createNoise(int chunkResolution, uint32_t seed_value, glm::ivec2 offset,
                                uint32_t maxChunkResolution);
 
+std::vector<float> createPathNoise(int pathLength, uint32_t seed_value, glm::ivec2 offset,
+                                   uint32_t maxChunkResolution, glm::vec2 direction);
+
 std::vector<uint32_t> createDepthMap(std::vector<uint32_t> heightMap);
 
 struct Aabb {
