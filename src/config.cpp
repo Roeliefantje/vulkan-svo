@@ -53,7 +53,7 @@ void Config::generate_keyframes() {
     for (const auto &height: noise) {
         CameraKeyFrame kf{};
         kf.time = currentTime;
-        kf.position = glm::vec3(currentCameraPos.x, currentCameraPos.y, totalHeight * height);
+        kf.position = glm::vec3(currentCameraPos.x, currentCameraPos.y, totalHeight * height + 20);
         kf.direction = cameraDirection;
         kfs.push_back(kf);
 

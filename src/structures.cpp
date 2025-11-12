@@ -78,8 +78,8 @@ void CPUCamera::updatePosition(glm::vec3 posChange) {
 
 void CPUCamera::setPosition(glm::vec3 newPosition) {
     gpu_camera.position = positive_mod(newPosition, glm::vec3(maxChunkResolution));
-    glm::ivec3 new_chunk_coords = glm::ivec3(newPosition) / int(maxChunkResolution);
-    glm::ivec3 diff = chunk_coords - new_chunk_coords;
+    glm::ivec3 new_chunk_coords = glm::ivec3(glm::floor(newPosition / static_cast<float>(maxChunkResolution)));
+    glm::ivec3 diff = new_chunk_coords - chunk_coords;
 
     gpu_camera.camera_grid_pos += diff;
     glm::ivec2 gridxy = positive_mod(glm::ivec2(gpu_camera.camera_grid_pos.x, gpu_camera.camera_grid_pos.y),
