@@ -16,53 +16,47 @@ CONFIGURATIONS = [
     [512, 7, 5],
     [512, 9, 5],
     [512, 11, 5],
-    [512, 13, 5],
-    [512, 15, 5],
-    [512, 17, 5],
-    [512, 19, 5],
-    [512, 21, 5],
-    [512, 23, 5],
-    [512, 25, 5],
+    # [512, 13, 5],
+    # [512, 15, 5],
+    # [512, 17, 5],
+    # [512, 19, 5],
+    # [512, 21, 5],
+    # [512, 23, 5],
+    # [512, 25, 5],
     [1024, 1, 5],
     [1024, 3, 5],
     [1024, 5, 5],
     [1024, 7, 5],
     [1024, 9, 5],
     [1024, 11, 5],
-    [1024, 13, 5],
-    [1024, 15, 5],
-    [1024, 17, 5],
-    [1024, 19, 5],
-    [1024, 21, 5],
+    # [1024, 13, 5],
+    # [1024, 15, 5],
+    # [1024, 17, 5],
+    # [1024, 19, 5],
+    # [1024, 21, 5],
     [1024, 23, 5],
     [1024, 25, 5],
 ]
 
 
 def run_and_analyze(program_path, working_dir, args):
-    # Ensure the working directory exists
     working_dir = Path(working_dir)
     if not working_dir.exists():
         raise FileNotFoundError(f"Working directory not found: {working_dir}")
 
-    # Generate the chunks needed for testing
     chunkgen = subprocess.run(
         [program_path, "--chunkgen", *args],
         cwd=working_dir
     )
-
     if chunkgen.returncode != 0:
         print(f"Error while generating the chunks!:\n{chunkgen.stderr}")
 
-    # Compile regex patterns for performance
     fps_pattern = re.compile(r"FPS:\s*([\d.]+),\s*msPf:\s*([\d.]+)")
     steps_pattern = re.compile(r"Average Steps per ray:\s*([\d.]+)")
+    memory_pattern = re.compile(r"Memory used:\s*([\d.]+)\s*MB", re.IGNORECASE)
 
-    fps_values = []
-    mspf_values = []
-    steps_values = []
+    fps_values, mspf_values, steps_values, memory_usages = [], [], [], []
 
-    # Start the process
     process = subprocess.Popen(
         [program_path, *args],
         cwd=working_dir,
@@ -73,26 +67,30 @@ def run_and_analyze(program_path, working_dir, args):
     )
 
     print(f"Running {program_path} in {working_dir} for 60 seconds...\n")
-
     start_time = time.time()
+
     try:
         for line in process.stdout:
             line = line.strip()
-            # print(line)  # Optional: show live output
-            # Parse FPS and msPf
+
             if match := fps_pattern.search(line):
                 fps_values.append(float(match.group(1)))
                 mspf_values.append(float(match.group(2)))
-            # Parse average steps per ray
+
             elif match := steps_pattern.search(line):
                 steps_values.append(float(match.group(1)))
 
-            # Stop after 60 seconds
+            # Memory tracking
+            elif "Memory used" in line:
+                matches = memory_pattern.findall(line)
+                if matches:
+                    total_mem = sum(map(float, matches))
+                    memory_usages.append(total_mem)
+
             if time.time() - start_time > 60:
                 process.terminate()
                 break
 
-        # Wait a bit for graceful shutdown
         process.wait(timeout=5)
 
     except KeyboardInterrupt:
@@ -100,66 +98,48 @@ def run_and_analyze(program_path, working_dir, args):
     except subprocess.TimeoutExpired:
         process.kill()
 
-    # Compute averages
     avg_fps = mean(fps_values) if fps_values else 0
     avg_mspf = mean(mspf_values) if mspf_values else 0
     avg_steps = mean(steps_values) if steps_values else 0
+    avg_mem = mean(memory_usages) if memory_usages else 0
 
     print("\n--- AVERAGE RESULTS ---")
     print(f"Average FPS: {avg_fps:.3f}")
     print(f"Average msPf: {avg_mspf:.3f}")
     print(f"Average Steps per ray: {avg_steps:.3f}")
+    print(f"Average Total Memory Used: {avg_mem:.2f} MB")
 
-    return avg_fps, avg_mspf, avg_steps
+    return avg_fps, avg_mspf, avg_steps, avg_mem
 
 
-def store_results(gridsize, gridheight, maxchunkresolution, fps, mspf, steps, filename="static_scene.csv"):
-    # Ensure the 'results' directory exists
+def store_results(gridsize, gridheight, maxchunkresolution, fps, mspf, steps, memory_mb, filename="static_scene.csv"):
     os.makedirs("results", exist_ok=True)
-
-    # Full path to the CSV file
     filepath = os.path.join("results", filename)
-
-    # Check if the file exists (to know if we need to write the header)
     file_exists = os.path.isfile(filepath)
 
-    # Open the CSV file for appending
     with open(filepath, mode='a', newline='') as csvfile:
         writer = csv.writer(csvfile)
-
-        # Write header only if file is new
         if not file_exists:
-            writer.writerow(["gridsize", "gridheight", "maxchunkresolution", "fps", "mspf", "steps"])
-
-        # Write the data row
-        writer.writerow([gridsize, gridheight, maxchunkresolution, fps, mspf, steps])
+            writer.writerow(["gridsize", "gridheight", "maxchunkresolution", "fps", "mspf", "steps", "memory_mb"])
+        writer.writerow([gridsize, gridheight, maxchunkresolution, fps, mspf, steps, memory_mb])
 
     print(f"Results saved to {filepath}")
 
 
 def plot_combined_results(csv_path="results/static_scene.csv", output_dir="results/static_scene", location_nr=1):
-    # Ensure output directory exists
     os.makedirs(output_dir, exist_ok=True)
-
-    # Read CSV
     df = pd.read_csv(csv_path)
-
-    # Drop duplicates by configuration
     df = df.drop_duplicates(subset=["gridsize", "gridheight", "maxchunkresolution"], keep='first')
-
-    # Compute total resolution
     df["total_resolution"] = df["maxchunkresolution"] * df["gridsize"] * 0.5
-
-    # Group by maxchunkresolution
     grouped = df.groupby("maxchunkresolution")
 
-    # Plot 1: Average MSPF vs total_resolution
+    # MSPF vs total_resolution
     plt.figure()
     for maxchunk, data in grouped:
         avg_data = data.groupby("total_resolution", as_index=False).agg({"mspf": "mean"})
-        plt.plot(avg_data["total_resolution"], avg_data["mspf"], marker='o', label=f"Chunk Resolution = {maxchunk}")
-    plt.title(f"Average MSPF for location {location_nr}")
-    plt.xlabel("Total Resolution (Max Chunk Resolution * Grid Size * 0.5)")
+        plt.plot(avg_data["total_resolution"], avg_data["mspf"], marker='o', label=f"Chunk Res={maxchunk}")
+    plt.title(f"Average MSPF (location {location_nr})")
+    plt.xlabel("Total Resolution")
     plt.ylabel("Average MSPF")
     plt.grid(True)
     plt.legend()
@@ -167,21 +147,36 @@ def plot_combined_results(csv_path="results/static_scene.csv", output_dir="resul
     plt.savefig(os.path.join(output_dir, f"mspf_vs_total_resolution_location{location_nr}.png"))
     plt.close()
 
-    # Plot 2: Steps vs total_resolution
+    # Steps vs total_resolution
     plt.figure()
     for maxchunk, data in grouped:
         avg_data = data.groupby("total_resolution", as_index=False).agg({"steps": "mean"})
-        plt.plot(avg_data["total_resolution"], avg_data["steps"], marker='o', label=f"Chunk Resolution = {maxchunk}")
-    plt.title(f"Average steps per ray at location {location_nr}")
-    plt.xlabel("Total Resolution Max (Chunk Resolution * Grid Size * 0.5)")
-    plt.ylabel("Average steps per ray")
+        plt.plot(avg_data["total_resolution"], avg_data["steps"], marker='o', label=f"Chunk Res={maxchunk}")
+    plt.title(f"Average Steps per Ray (location {location_nr})")
+    plt.xlabel("Total Resolution")
+    plt.ylabel("Steps per Ray")
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, f"steps_vs_total_resolution_location{location_nr}.png"))
     plt.close()
 
-    print(f"Combined graphs saved to '{output_dir}'")
+    # NEW: Memory vs total_resolution
+    if "memory_mb" in df.columns:
+        plt.figure()
+        for maxchunk, data in grouped:
+            avg_data = data.groupby("total_resolution", as_index=False).agg({"memory_mb": "mean"})
+            plt.plot(avg_data["total_resolution"], avg_data["memory_mb"], marker='o', label=f"Chunk Res={maxchunk}")
+        plt.title(f"Average Total Memory Used (MB) (location {location_nr})")
+        plt.xlabel("Total Resolution")
+        plt.ylabel("Memory Used (MB)")
+        plt.grid(True)
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(os.path.join(output_dir, f"memory_vs_total_resolution_location{location_nr}.png"))
+        plt.close()
+
+    print(f"Combined graphs (including memory) saved to '{output_dir}'")
 
 
 def plot_results(csv_path="results/static_scene.csv", output_dir="results/static_scene"):
@@ -263,7 +258,7 @@ if __name__ == "__main__":
             args = ["--test", str(test), "--res", str(resolution),
                     "--grid", str(grid_size), "--gridheight", str(grid_height)]
 
-            fps, mspf, steps = run_and_analyze(program, working_directory, args)
-            store_results(grid_size, grid_height, resolution, fps, mspf, steps, filename=results_file)
+            fps, mspf, steps, memory_mb = run_and_analyze(program, working_directory, args)
+            store_results(grid_size, grid_height, resolution, fps, mspf, steps, memory_mb, filename=results_file)
 
         plot_combined_results(csv_path=f"results/{results_file}", location_nr=test + 1)

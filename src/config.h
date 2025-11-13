@@ -23,6 +23,7 @@ struct CameraKeyFrame {
 struct Config {
     //Whether we use the voxelizer or the heightmap data.
     bool useHeightmapData = true;
+    float voxelscale = 0.00155f;
 
     //Output screen size
     uint32_t width = 1920;
@@ -35,8 +36,11 @@ struct Config {
 
     VkDeviceSize staging_size = GIGABYTE << 1;
     uint32_t chunk_resolution = 1024;
-    uint32_t grid_size = 25;
-    uint32_t grid_height = 5;
+    uint32_t grid_size = 21;
+    uint32_t grid_height = useHeightmapData
+                               ? std::max(10u, static_cast<uint32_t>(std::ceil(
+                                              120 / (static_cast<float>(chunk_resolution) * voxelscale))))
+                               : 5;
     uint32_t seed = 12345 * 6;
     std::optional<std::vector<CameraKeyFrame> > cameraKeyFrames;
 
@@ -52,7 +56,7 @@ struct Config {
 
     bool chunkgen = false;
     bool allowUserInput = true;
-    bool printChunkDebug = true;
+    bool printChunkDebug = false;
     spdlog::level::level_enum loglevel = spdlog::level::debug;
 
     Config(int argc, char *argv[]);

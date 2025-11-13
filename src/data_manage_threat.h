@@ -23,16 +23,32 @@ struct ChunkLoadInfo {
 
 namespace fs = std::filesystem;
 
-inline uint32_t calculateChunkResolution(uint32_t maxChunkResolution, int dist) {
-    int lodLevel;
-    if (dist < 2) lodLevel = 0;
-    else if (dist < 5) lodLevel = 1;
-    else if (dist < 10) lodLevel = 2;
-    else if (dist < 20) lodLevel = 3;
-    else lodLevel = 4;
-
-    return std::max(maxChunkResolution >> lodLevel, 1u);
+// Computes discrete LOD level based on distance
+inline uint32_t computeLOD(float distance) {
+    distance = std::max(distance, 1.0f); // avoid log2(0)
+    return static_cast<uint32_t>(std::floor(std::log2(distance)));
 }
+
+// Computes chunk resolution (in voxels per edge)
+inline uint32_t calculateChunkResolution(uint32_t maxResolution, float distance) {
+    uint32_t lod = computeLOD(distance);
+    uint32_t resolution = maxResolution >> lod; // divide by 2^lod
+    return std::min(1024u, std::max(resolution, 8u)); // clamp to some minimum
+}
+
+// inline uint32_t calculateChunkResolution(uint32_t maxChunkResolution, float dist) {
+//     float distance = std::max(dist, 1.0f);
+//     uint32_t lodLevel = uint32_t
+//
+//     // int lodLevel;
+//     // if (dist < 2) lodLevel = 0;
+//     // else if (dist < 5) lodLevel = 1;
+//     // else if (dist < 10) lodLevel = 2;
+//     // else if (dist < 20) lodLevel = 3;
+//     // else lodLevel = 4;
+//     //
+//     // return std::max(maxChunkResolution >> lodLevel, 1u);
+// }
 
 class BufferManager {
 public:
@@ -141,7 +157,7 @@ private:
 
 
 //Check whether all currently loaded chunks are in the right resolution and queue them to be loaded if not
-void checkChunks(std::vector<CpuChunk> &chunks, CPUCamera &camera, uint32_t maxChunkResolution,
+void checkChunks(std::vector<CpuChunk> &chunks, CPUCamera &camera, uint32_t maxChunkResolution, float voxelScale,
                  DataManageThreat &dmThreat);
 
 #endif //DATA_MANAGE_THREAT_H

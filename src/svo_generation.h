@@ -36,8 +36,8 @@ inline uint32_t getColor(float height, int x, int y) {
     }
 }
 
-std::vector<float> createNoise(int chunkResolution, uint32_t seed_value, glm::ivec2 offset,
-                               uint32_t maxChunkResolution);
+std::vector<float> createNoise(uint32_t chunkResolution, uint32_t maxChunkResolution, uint32_t seed_value,
+                               glm::vec2 offset, float voxelSize);
 
 std::vector<float> createPathNoise(int pathLength, uint32_t seed_value, glm::ivec2 offset,
                                    uint32_t maxChunkResolution, glm::vec2 direction);
@@ -57,9 +57,10 @@ std::optional<OctreeNode> createHollowNode(int size, Aabb aabb, std::vector<uint
                                            std::vector<uint32_t> &depthMap, uint32_t &nodeCount);
 
 
-std::optional<OctreeNode> createChunkOctree(int chunkResolution, uint32_t seed_value, glm::ivec3 chunk_coords,
-                                            int maxChunkResolution,
-                                            int grid_height,
+std::optional<OctreeNode> createChunkOctree(uint32_t chunkResolution, uint32_t seed_value, glm::ivec3 chunk_coords,
+                                            uint32_t maxChunkResolution,
+                                            float voxelSize,
+                                            uint32_t grid_height,
                                             uint32_t &nodeCount);
 
 // OctreeNode createHollowOctree(int size, uint32_t seed_value, uint32_t &nodeCount);

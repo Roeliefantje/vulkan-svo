@@ -45,15 +45,16 @@ inline int positive_mod(const int a, const int b) {
     return (a % b + b) % b;
 }
 
-inline uint32_t calculateChunkResolution(uint32_t maxChunkResolution, int dist) {
-    int lodLevel;
-    if (dist < 2) lodLevel = 0;
-    else if (dist < 5) lodLevel = 1;
-    else if (dist < 10) lodLevel = 2;
-    else if (dist < 20) lodLevel = 3;
-    else lodLevel = 4;
+// Computes discrete LOD level based on distance
+inline uint32_t computeLOD(float distance) {
+    distance = std::max(distance, 1.0f); // avoid log2(0)
+    return static_cast<uint32_t>(std::floor(std::log2(distance)));
+}
 
-    return std::max(maxChunkResolution >> lodLevel, 1u);
+inline uint32_t calculateChunkResolution(uint32_t maxChunkResolution, int distance) {
+    uint32_t lod = computeLOD(distance);
+    uint32_t resolution = maxChunkResolution >> lod; // divide by 2^lod
+    return std::min(1024u, std::max(resolution, 8u)); // clamp to some minimum
 }
 
 inline bool sceneInChunk(const Aabb &scene, const Aabb &chunk, const float &scale) {
@@ -73,7 +74,7 @@ void ChunkGenerationApplication::generateChunk(glm::ivec3 gridCoord, uint32_t re
     auto chunkOctreeGPU = std::vector<uint32_t>();
     if (!loadChunk(directory, config.chunk_resolution, resolution, chunkCoord, nodeAmount, chunkOctreeGPU,
                    chunkFarValues)) {
-        spdlog::debug("Chunk not yet created, generating the chunk");
+        // spdlog::debug("Chunk not yet created, generating the chunk");
         auto aabb = Aabb{};
         aabb.aa = glm::ivec3(chunkCoord.x * config.chunk_resolution, chunkCoord.y * config.chunk_resolution,
                              chunkCoord.z * config.chunk_resolution);
@@ -83,7 +84,8 @@ void ChunkGenerationApplication::generateChunk(glm::ivec3 gridCoord, uint32_t re
 
         std::optional<OctreeNode> node = std::nullopt;
         if (config.useHeightmapData) {
-            node = createChunkOctree(resolution, config.seed, chunkCoord, config.chunk_resolution, config.grid_height,
+            node = createChunkOctree(resolution, config.seed, chunkCoord, config.chunk_resolution, config.voxelscale,
+                                     config.grid_height,
                                      nodeAmount);
         } else if (sceneInChunk(objSceneMetaData->sceneAabb, aabb, objSceneMetaData->scale)) {
             std::vector<uint32_t> allIndices(triangles.value().size());
@@ -116,8 +118,11 @@ void ChunkGenerationApplication::generateChunksForCameraPosition() {
                     positive_mod(chunkX, camera.gridSize), positive_mod(chunkY, camera.gridSize), chunkZ
                 };
                 glm::ivec3 dist = glm::ivec3(chunkX, chunkY, chunkZ) - center;
-                int single_axis_dist = std::max(dist.x, std::max(dist.y, dist.z));
-                uint32_t octreeResolution = calculateChunkResolution(config.chunk_resolution, single_axis_dist);
+                glm::vec3 worldDiff = glm::vec3(dist) * (
+                                          static_cast<float>(config.chunk_resolution) * config.voxelscale);
+                float distance = glm::length(worldDiff) - (
+                                     static_cast<float>(config.chunk_resolution) * config.voxelscale);;
+                uint32_t octreeResolution = calculateChunkResolution(config.chunk_resolution, distance);
 
                 //The cpu chunks location, so not the buffer location we store it in, which is gridCoord, but the coords of the chunk itself.
                 glm::ivec3 chunkCoord = camera.chunk_coords + dist;

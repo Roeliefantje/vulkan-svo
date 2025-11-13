@@ -280,10 +280,10 @@ void main()
                     vec3 normal = -1 * rdsign * vec3(mask);
 
                     collisions += 1;
-                    rayDir = normalize(vec3(0.5, 3, 2));
+                    rayDir = normalize(vec3(0.5, 3, 14));
                     intensity = clamp(dot(normal, rayDir) + 0.2f, 0.0f, 1.0f);
 
-                    if (intensity <= 0.2f) {
+                    if (intensity <= 0.4f) {
                         break;
                     }
                     //Update values we use for the traversal
@@ -292,7 +292,7 @@ void main()
                     ird = 1.0/max(abs(rayDir), 0.001);
 //                    break;
                 } else {
-                    intensity = 0.2f;
+                    intensity = 0.4f;
                     break;
                 }
 

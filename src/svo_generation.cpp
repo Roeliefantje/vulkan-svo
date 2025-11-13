@@ -6,48 +6,109 @@
 
 #include "spdlog/spdlog.h"
 
-inline FastNoiseLite getFastNoise(int seed_value) {
-    FastNoiseLite base;
-    base.SetSeed((int) seed_value);
-    base.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-    base.SetFractalType(FastNoiseLite::FractalType_FBm);
-    base.SetFractalLacunarity(2.0f);
-    base.SetFractalGain(0.5f);
-    base.SetFractalOctaves(6);
-    base.SetFrequency(0.0005f);
-    return base;
-}
+// LOD-aware noise generator
+struct LODNoise {
+    FastNoiseLite noiseBase;
+    int maxOctaves; // max octaves at highest resolution
+    float baseFrequency; // base frequency in world units (meters)
 
-std::vector<float> createNoise(int chunkResolution, uint32_t seed_value, glm::ivec2 offset,
-                               uint32_t maxChunkResolution) {
-    float scale = maxChunkResolution / chunkResolution;
-    spdlog::debug("Creating Heightmap");
-    FastNoiseLite base = getFastNoise(seed_value);
+    LODNoise(int seed, float baseFreq = 0.001f, int octaves = 8) {
+        baseFrequency = baseFreq;
+        maxOctaves = octaves;
 
+        noiseBase.SetSeed(seed);
+        noiseBase.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+        noiseBase.SetFractalType(FastNoiseLite::FractalType_FBm);
+        noiseBase.SetFractalLacunarity(2.0f);
+        noiseBase.SetFractalGain(0.5f);
+        noiseBase.SetFractalOctaves(maxOctaves);
+        noiseBase.SetFrequency(baseFrequency);
+    }
+
+    // Sample noise at a given world position and voxel size (LOD)
+    float Sample(float x, float y, float voxelSize) {
+        // Compute maximum frequency allowed for this LOD (Nyquist)
+        // We don’t want to sample features smaller than 2x voxel size
+        float maxFreq = 1.0f / (2.0f * voxelSize);
+
+        // Compute effective octaves for this LOD
+        // Each octave doubles frequency: f_i = baseFreq * 2^i
+        int effectiveOctaves = maxOctaves;
+        for (int i = maxOctaves - 1; i >= 0; i--) {
+            float octaveFreq = baseFrequency * powf(2.0f, (float) i);
+            if (octaveFreq > maxFreq) effectiveOctaves--;
+        }
+
+        noiseBase.SetFractalOctaves(effectiveOctaves);
+
+        // Sample at voxel center
+        float sx = x + voxelSize / 2.0f;
+        float sy = y + voxelSize / 2.0f;
+
+        return (noiseBase.GetNoise(sx + 10000, sy + 10000) + 1.0f) / 2.0f;
+    }
+};
+
+// inline FastNoiseLite getFastNoise(int seed_value) {
+//     FastNoiseLite base;
+//     base.SetSeed((int) seed_value);
+//     base.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+//     base.SetFractalType(FastNoiseLite::FractalType_FBm);
+//     base.SetFractalLacunarity(2.0f);
+//     base.SetFractalGain(0.5f);
+//     base.SetFractalOctaves(8);
+//     base.SetFrequency(0.001f);
+//     return base;
+// }
+
+std::vector<float> createNoise(uint32_t chunkResolution, uint32_t maxChunkResolution, uint32_t seed_value,
+                               glm::vec2 offset, float voxelSize) {
+    LODNoise terrainNoise(seed_value);
+    const float chunkScale = maxChunkResolution / chunkResolution;
+    const float chunkVoxelSize = voxelSize * chunkScale;
     int index = 0;
     std::vector<float> noiseData(chunkResolution * chunkResolution);
-    for (int y = 0; y < chunkResolution; y++) {
-        for (int x = 0; x < chunkResolution; x++) {
-            //+ 100000 because negative values dont generate anything proper
-            float fx = static_cast<float>(x * scale + offset.x + 100000), fy = static_cast<float>(
-                y * scale + offset.y + 100000);
-            float raw = base.GetNoise(fx, fy); // −1…+1
-            float e = (raw + 1.0f) * 0.5f; //Make it always a positive height
-            noiseData[index++] = e;
+    for (int voxel_y = 0; voxel_y < chunkResolution; voxel_y++) {
+        const float fy = offset.y + voxel_y * chunkVoxelSize;
+        for (int voxel_x = 0; voxel_x < chunkResolution; voxel_x++) {
+            const float fx = offset.x + voxel_x * chunkVoxelSize;
+            noiseData[index++] = terrainNoise.Sample(fx, fy, chunkVoxelSize);
         }
     }
-    spdlog::debug("Finished creating noise data");
     return noiseData;
 }
 
+// std::vector<float> createNoise(int chunkResolution, uint32_t seed_value, glm::ivec2 offset,
+//                                uint32_t maxChunkResolution) {
+//     float scale = maxChunkResolution / chunkResolution;
+//     spdlog::debug("Creating Heightmap");
+//     FastNoiseLite base = getFastNoise(seed_value);
+//
+//     int index = 0;
+//     std::vector<float> noiseData(chunkResolution * chunkResolution);
+//     for (int y = 0; y < chunkResolution; y++) {
+//         for (int x = 0; x < chunkResolution; x++) {
+//             //+ 100000 because negative values dont generate anything proper
+//             float fx = static_cast<float>(x * scale + offset.x + 100000), fy = static_cast<float>(
+//                 y * scale + offset.y + 100000);
+//             float raw = base.GetNoise(fx, fy); // −1…+1
+//             float e = (raw + 1.0f) * 0.5f; //Make it always a positive height
+//             noiseData[index++] = e;
+//         }
+//     }
+//     spdlog::debug("Finished creating noise data");
+//     return noiseData;
+// }
+
 std::vector<float> createPathNoise(int pathLength, uint32_t seed_value, glm::ivec2 offset,
                                    uint32_t maxChunkResolution, glm::vec2 direction) {
-    FastNoiseLite noise = getFastNoise(seed_value);
+    LODNoise terrainNoise(seed_value);
+    // FastNoiseLite noise = getFastNoise(seed_value);
     std::vector<float> noiseData(pathLength);
     for (int i = 0; i < pathLength; i++) {
         float fx = offset.x + 100000 + direction.x * i;
         float fy = offset.y + 100000 + direction.y * i;
-        float raw = noise.GetNoise(fx, fy);
+        float raw = terrainNoise.Sample(fx, fy, 0.00155);
         float e = (raw + 1.0f) * 0.5f; //Make it always a positive height
         noiseData[i] = e;
     }
@@ -221,12 +282,13 @@ std::optional<OctreeNode> createHollowNode(int size, Aabb aabb, std::vector<uint
     return node;
 }
 
-std::optional<OctreeNode> createChunkOctree(int chunkResolution, uint32_t seed_value, glm::ivec3 chunk_coords,
-                                            int maxChunkResolution,
-                                            int grid_height,
+std::optional<OctreeNode> createChunkOctree(uint32_t chunkResolution, uint32_t seed_value, glm::ivec3 chunk_coords,
+                                            uint32_t maxChunkResolution,
+                                            float voxelSize,
+                                            uint32_t grid_height,
                                             uint32_t &nodeCount) {
-    glm::vec2 offset = maxChunkResolution * chunk_coords;
-    auto noise = createNoise(chunkResolution, seed_value, offset, maxChunkResolution);
+    glm::vec2 offset = static_cast<float>(maxChunkResolution) * voxelSize * glm::vec2(chunk_coords.x, chunk_coords.y);
+    auto noise = createNoise(chunkResolution, maxChunkResolution, seed_value, offset, voxelSize);
     auto aabb = Aabb{};
     aabb.aa = glm::ivec3(0, 0, chunk_coords.z * maxChunkResolution);
     aabb.bb = glm::ivec3(chunkResolution, chunkResolution, aabb.aa.z + maxChunkResolution);
@@ -238,28 +300,6 @@ std::optional<OctreeNode> createChunkOctree(int chunkResolution, uint32_t seed_v
         return *node;
     }
 
-    //Todo!: dont return leaf node if thing is empty
     return std::nullopt;
 }
-
-// OctreeNode createHollowOctree(int size, uint32_t seed_value, uint32_t &nodeCount) {
-//     auto heightMap = createNoise(size, seed_value, glm::vec2(0), 1);
-//     auto depthMap = createDepthMap(heightMap);
-//     assert(heightMap.size() == size * size);
-//     assert(depthMap.size() == size * size);
-//
-//     auto aabb = Aabb{};
-//     aabb.aa = glm::ivec3(0, 0, 0);
-//     aabb.bb = glm::ivec3(size, size, size);
-//
-//     std::cout << "Creating hollow nodes" << std::endl;
-//     auto node = createHollowNode(size, aabb, heightMap, depthMap, nodeCount);
-//     std::cout << "Finished creating hollow nodes" << std::endl;
-//     if (node) {
-//         return *node;
-//     }
-//
-//     //Todo!: dont return leaf node if thing is empty
-//     return OctreeNode();
-// }
 

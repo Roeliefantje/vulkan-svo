@@ -26,6 +26,10 @@ BufferManager::BufferManager(VkBuffer &buffer, VkDeviceSize bufferSize, const st
     this->chunks.emplace_back(1, bufferSize - 1, false);
 }
 
+inline double bytesToMB(std::size_t bytes) {
+    return static_cast<double>(bytes) / (1024.0 * 1024.0);
+}
+
 void BufferManager::printBufferInfo() {
     size_t occupied_memory = 0;
     size_t free_memory = 0;
@@ -38,7 +42,9 @@ void BufferManager::printBufferInfo() {
     }
     size_t totalSize = occupied_memory + free_memory;
     float percentage_free = occupied_memory / static_cast<float>(totalSize) * 100.0f;
-    spdlog::info("{} Memory used: {}, Memory Free: {}, Percentage used {:.2f}%", name, occupied_memory, free_memory,
+    spdlog::info("{} Memory used: {:.2f} MB, Memory Free: {:.2f} MB, Percentage used {:.2f}%", name,
+                 bytesToMB(occupied_memory),
+                 bytesToMB(free_memory),
                  percentage_free);
 }
 
@@ -431,8 +437,9 @@ void DataManageThreat::loadChunkToGPU(ChunkLoadInfo job) {
 bool DataManageThreat::checkChunkResolution(const ChunkLoadInfo &job) {
     auto cameraChunkCoords = camera.chunk_coords;
     glm::ivec3 diff = job.chunkCoord - cameraChunkCoords;
-    int dist = std::max(abs(diff.x), std::max(abs(diff.y), abs(diff.z)));
-    uint32_t octreeResolution = calculateChunkResolution(config.chunk_resolution, dist);
+    glm::vec3 worldDiff = glm::vec3(diff) * (static_cast<float>(config.chunk_resolution) * config.voxelscale);
+    float distance = glm::length(worldDiff) - (static_cast<float>(config.chunk_resolution) * config.voxelscale);
+    uint32_t octreeResolution = calculateChunkResolution(config.chunk_resolution, distance);
 
     return octreeResolution == job.resolution;
 }
@@ -459,7 +466,7 @@ void DataManageThreat::loadChunkData(ChunkLoadInfo &job, std::vector<uint32_t> &
             sceneLoaded = true;
             spdlog::debug("Finished loading scene");
         }
-        spdlog::debug("Chunk not yet created, generating the chunk");
+        // spdlog::debug("Chunk not yet created, generating the chunk");
         auto aabb = Aabb{};
         aabb.aa = glm::ivec3(job.chunkCoord.x * config.chunk_resolution, job.chunkCoord.y * config.chunk_resolution,
                              job.chunkCoord.z * config.chunk_resolution);
@@ -472,6 +479,7 @@ void DataManageThreat::loadChunkData(ChunkLoadInfo &job, std::vector<uint32_t> &
         if (config.useHeightmapData) {
             // uint32_t scale = config.chunk_resolution / job.resolution;
             node = createChunkOctree(job.resolution, config.seed, job.chunkCoord, config.chunk_resolution,
+                                     config.voxelscale,
                                      config.grid_height, nodeAmount);
         } else if (sceneInChunk(objSceneData->sceneAabb, aabb, objSceneData->scale)) {
             std::vector<uint32_t> allIndices(triangles.size());
@@ -499,7 +507,7 @@ inline int positive_mod(int a, int b) {
 }
 
 
-void checkChunks(std::vector<CpuChunk> &chunks, CPUCamera &camera, uint32_t maxChunkResolution,
+void checkChunks(std::vector<CpuChunk> &chunks, CPUCamera &camera, uint32_t maxChunkResolution, float voxelScale,
                  DataManageThreat &dmThreat) {
     auto center = camera.gpu_camera.camera_grid_pos;
     auto processOffset = [&](int dx, int dy, int dz) {
@@ -520,8 +528,9 @@ void checkChunks(std::vector<CpuChunk> &chunks, CPUCamera &camera, uint32_t maxC
         };
 
         auto dist = glm::ivec3(abs(dx), abs(dy), abs(dz));
-        uint32_t octreeResolution = calculateChunkResolution(maxChunkResolution,
-                                                             glm::max(dist.x, glm::max(dist.y, dist.z)));
+        glm::vec3 worldDiff = glm::vec3(dist) * (static_cast<float>(maxChunkResolution) * voxelScale);
+        float distance = glm::length(worldDiff) - (static_cast<float>(maxChunkResolution) * voxelScale);;
+        uint32_t octreeResolution = calculateChunkResolution(maxChunkResolution, distance);
 
         CpuChunk &chunk = chunks[gridCoord.z * camera.gridSize * camera.gridSize +
                                  gridCoord.y * camera.gridSize

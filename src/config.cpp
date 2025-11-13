@@ -44,7 +44,7 @@ void Config::generate_keyframes() {
     float duration = 60.0;
     auto cameraPosI = glm::ivec2(cameraPosition.x, cameraPosition.y);
     const glm::vec2 direction = glm::normalize(glm::vec2(cameraDirection.x, cameraDirection.y));
-    std::vector<float> noise = createPathNoise(100, seed, cameraPosI, chunk_resolution, direction);
+    std::vector<float> noise = createPathNoise(1000, seed, cameraPosI, chunk_resolution, direction);
 
     auto kfs = std::vector<CameraKeyFrame>();
     float currentTime = 0.0f;
@@ -53,8 +53,7 @@ void Config::generate_keyframes() {
     for (const auto &height: noise) {
         CameraKeyFrame kf{};
         kf.time = currentTime;
-        kf.position = glm::vec3(currentCameraPos.x, currentCameraPos.y, totalHeight * height + 20);
-        spdlog::debug("Position: {}, {}, {}", kf.position.x, kf.position.y, kf.position.z);
+        kf.position = glm::vec3(currentCameraPos.x, currentCameraPos.y, totalHeight * height + 100);
         kf.direction = cameraDirection;
         kfs.push_back(kf);
 
@@ -89,6 +88,8 @@ Config::Config(int argc, char *argv[]) {
         std::cout << options.help() << std::endl;
         exit(0);
     }
+
+
     chunkgen = result["chunkgen"].as<bool>();
     if (result.count("test")) {
         printChunkDebug = false;
@@ -129,6 +130,26 @@ Config::Config(int argc, char *argv[]) {
         camera_path = result["camera"].as<std::string>();
     }
 
+    //Parse the camera json
+    std::ifstream f(camera_path);
+    json data = json::parse(f);
+    if (data.contains("position")) {
+        cameraPosition.x = data["position"]["x"];
+        cameraPosition.y = data["position"]["y"];
+        cameraPosition.z = data["position"]["z"];
+    }
+    if (data.contains("direction")) {
+        cameraDirection.x = data["direction"]["x"];
+        cameraDirection.y = data["direction"]["y"];
+        cameraDirection.z = data["direction"]["z"];
+        cameraDirection = glm::normalize(cameraDirection);
+    }
+
+    if (data.contains("fov")) {
+        fov = glm::radians(data["fov"].get<float>());
+    }
+
+
     if (result.count("voxelize")) {
         scene_path = result["voxelize"].as<std::string>();
     }
@@ -145,27 +166,14 @@ Config::Config(int argc, char *argv[]) {
         chunk_resolution = result["res"].as<uint32_t>();
     }
 
-    //Parse the camera json
-    std::ifstream f(camera_path);
-    json data = json::parse(f);
-    if (data.contains("position")) {
-        cameraPosition.x = data["position"]["x"];
-        cameraPosition.y = data["position"]["y"];
-        cameraPosition.z = data["position"]["z"];
-    }
-    if (data.contains("direction")) {
-        cameraDirection.x = data["direction"]["x"];
-        cameraDirection.y = data["direction"]["y"];
-        cameraDirection.z = data["direction"]["z"];
-    }
-
-    if (data.contains("fov")) {
-        fov = glm::radians(data["fov"].get<float>());
-    }
 
     if (grid_height > grid_size / 2) {
         //Todo!: Fix chunkload logic to properly account for any gridheight :)
         spdlog::error("Grid Height is too high compared to grid Size, might not load every chunk properly!");
+    }
+
+    if (useHeightmapData) {
+        cameraPosition /= voxelscale;
     }
 }
 
