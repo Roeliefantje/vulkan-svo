@@ -36,7 +36,7 @@ struct Config {
 
     VkDeviceSize staging_size = GIGABYTE << 1;
     uint32_t chunk_resolution = 1024;
-    uint32_t grid_size = 21;
+    uint32_t grid_size = 11;
     uint32_t grid_height = useHeightmapData
                                ? std::max(10u, static_cast<uint32_t>(std::ceil(
                                               120 / (static_cast<float>(chunk_resolution) * voxelscale))))
