@@ -21,7 +21,7 @@ void SceneMetadata::loadMetaData(Config &config) {
     fs::path jsonPath = filePath.replace_extension(".json");
     if (!fs::exists(jsonPath)) {
         spdlog::debug("Json metadata file does not exist yet, loading scene for meta data.");
-        auto directory = filePath.parent_path().string();;
+        auto directory = filePath.parent_path().string();
         loadSceneMetaData(objFile, directory, sceneAabb, numTriangles);
         saveMetaData();
     } else {

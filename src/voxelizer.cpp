@@ -181,14 +181,15 @@ int loadObject(std::string inputFile, std::string path, int resolution, int grid
                std::vector<TexturedTriangle> &triangles, float &scale);
 
 
-LoadedTexture &loadImage(const std::string &tex_name, std::map<std::string, LoadedTexture> &loadedTextures) {
+LoadedTexture &loadImage(const std::string &tex_name, std::map<std::string, LoadedTexture> &loadedTextures, const std::string &objFile) {
     if (loadedTextures.contains(tex_name)) {
         return loadedTextures[tex_name];
     }
-
-    const std::string sub_folder = "./assets/";
+    std::filesystem::path objPath{objFile};
+    auto directory = objPath.parent_path().string();
+    // const std::string sub_folder = "./assets/";
     int texWidth, texHeight, channels;
-    unsigned char *imageData = stbi_load((sub_folder + tex_name).c_str(), &texWidth, &texHeight, &channels, 3);
+    unsigned char *imageData = stbi_load((directory + tex_name).c_str(), &texWidth, &texHeight, &channels, 3);
 
     loadedTextures[tex_name] = LoadedTexture{imageData, texWidth, texHeight, channels};;
     return loadedTextures[tex_name];
@@ -216,7 +217,7 @@ glm::vec2 getTextureUV(glm::vec3 &midpoint, const TexturedTriangle &triangle) {
 std::optional<OctreeNode> createNode(Aabb aabb, std::vector<TexturedTriangle> &globalTriangles,
                                      std::vector<uint32_t> &parentTriIndices,
                                      std::map<std::string, LoadedTexture> &loadedTextures, uint32_t &nodeCount,
-                                     uint32_t &maxDepth, uint32_t currentDepth) {
+                                     uint32_t &maxDepth, uint32_t currentDepth, SceneMetadata &metadata) {
     auto node = OctreeNode();
 
     // std::vector<std::shared_ptr<TexturedTriangle> > triangles;
@@ -264,7 +265,7 @@ std::optional<OctreeNode> createNode(Aabb aabb, std::vector<TexturedTriangle> &g
 
                     auto child = createNode(childaabb, globalTriangles, triangleIndices, loadedTextures, nodeCount,
                                             maxDepth,
-                                            currentDepth + 1);
+                                            currentDepth + 1, metadata);
                     if (child) {
                         int childIndex = z * 4 + y * 2 + x;
                         node.childMask |= 1u << (7 - childIndex);
@@ -276,7 +277,7 @@ std::optional<OctreeNode> createNode(Aabb aabb, std::vector<TexturedTriangle> &g
     } else {
         //Do color stuff
         const auto &tri = globalTriangles[triangleIndices[0]];
-        auto texture = loadImage(tri.diffuse_texname, loadedTextures);
+        auto texture = loadImage(tri.diffuse_texname, loadedTextures, metadata.objFile);
         if (!texture.imageData) {
             uint8_t r = tri.diffuse.r * 255;
             uint8_t g = tri.diffuse.g * 255;

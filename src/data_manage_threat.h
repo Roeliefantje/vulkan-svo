@@ -157,7 +157,7 @@ private:
 
 
 //Check whether all currently loaded chunks are in the right resolution and queue them to be loaded if not
-void checkChunks(std::vector<CpuChunk> &chunks, CPUCamera &camera, uint32_t maxChunkResolution, float voxelScale,
+void checkChunks(std::vector<CpuChunk> &chunks, CPUCamera &camera, uint32_t maxChunkResolution, float voxelScale, float scaleDistance,
                  DataManageThreat &dmThreat);
 
 #endif //DATA_MANAGE_THREAT_H

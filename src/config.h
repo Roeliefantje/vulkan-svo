@@ -23,7 +23,8 @@ struct CameraKeyFrame {
 struct Config {
     //Whether we use the voxelizer or the heightmap data.
     bool useHeightmapData = true;
-    float voxelscale = 0.00155f;
+    float voxelscale = 0.0155f;
+    float scaleDistance = 10.0f; //At what distance would the voxelScale be equivalent to a pixel? TODO: calculate this automagically
 
     //Output screen size
     uint32_t width = 1920;
@@ -36,21 +37,21 @@ struct Config {
 
     VkDeviceSize staging_size = GIGABYTE << 1;
     uint32_t chunk_resolution = 1024;
-    uint32_t grid_size = 11;
+    uint32_t grid_size = 31;
     uint32_t grid_height = useHeightmapData
-                               ? std::max(10u, static_cast<uint32_t>(std::ceil(
-                                              120 / (static_cast<float>(chunk_resolution) * voxelscale))))
+                               ? std::min(15u, static_cast<uint32_t>(std::ceil(
+                                              1000 / (static_cast<float>(chunk_resolution) * voxelscale))))
                                : 5;
     uint32_t seed = 12345 * 6;
     std::optional<std::vector<CameraKeyFrame> > cameraKeyFrames;
 
     //MouseSensitivity
     float mouseSensitivity = 0.01f;
-    //The default camera positions dont really get used, its rather just a fallback.
-    glm::vec3 cameraPosition = glm::vec3(100 + chunk_resolution, 100 + chunk_resolution, 712.5);
+    //The default camera positions don't really get used, its rather just a fallback.
+    glm::vec3 cameraPosition = glm::vec3(0, 0, 712.5);
     glm::vec3 cameraDirection = glm::vec3(0.5, 0.5, 0);
-    float fov = 0.52359; //30 degrees in radians
-    std::string scene_path = "./assets/san-miguel-low-poly.obj";
+    float fov = 0.52359 * 3; //30 degrees in radians
+    std::string scene_path = "./assets/San_Miguel/san-miguel-low-poly.obj";
     std::string camera_path = "./camera-hm.json";
     std::string camera_keyframe_path = "./camera_path.json";
 
@@ -63,7 +64,7 @@ struct Config {
 
     void read_keyframes();
 
-    void generate_keyframes();
+    void generate_keyframes(float distance, float height);
 };
 
 CameraKeyFrame interpolateCamera(const std::vector<CameraKeyFrame> &keyframes, const float currentTime);

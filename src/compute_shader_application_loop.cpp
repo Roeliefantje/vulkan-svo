@@ -14,7 +14,7 @@ void ComputeShaderApplication::mainLoop() {
             if (objSceneMetaData) {
                 camera.setPosition(kf.position * objSceneMetaData->scale);
             } else {
-                spdlog::info("Position:, {}, {}, {}", kf.position.x, kf.position.y, kf.position.z);
+                // spdlog::info("Position:, {}, {}, {}", kf.position.x, kf.position.y, kf.position.z);
                 camera.setPosition(kf.position);
             }
             camera.gpu_camera.direction = glm::normalize(kf.direction);
@@ -22,7 +22,7 @@ void ComputeShaderApplication::mainLoop() {
         if (config.allowUserInput) {
             processInput();
         }
-        checkChunks(cpuGridValues, camera, config.chunk_resolution, config.voxelscale, *dmThreat);
+        checkChunks(cpuGridValues, camera, config.chunk_resolution, config.voxelscale, config.scaleDistance, *dmThreat);
         glfwPollEvents();
         drawFrame();
         double currentTime = glfwGetTime();

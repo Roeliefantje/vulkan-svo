@@ -38,27 +38,27 @@ void Config::read_keyframes() {
     cameraKeyFrames = kfs;
 }
 
-void Config::generate_keyframes() {
-    int totalHeight = grid_height * chunk_resolution;
-    const int pathLength = 100;
+void Config::generate_keyframes(float distance, float cameraHeight) {
+    uint32_t totalHeight = grid_height * chunk_resolution;
     float duration = 60.0;
-    auto cameraPosI = glm::ivec2(cameraPosition.x, cameraPosition.y);
+    int keyFrames = 100;
+    auto cameraPos = glm::vec2(cameraPosition.x / voxelscale, cameraPosition.y / voxelscale);
     const glm::vec2 direction = glm::normalize(glm::vec2(cameraDirection.x, cameraDirection.y));
-    std::vector<float> noise = createPathNoise(1000, seed, cameraPosI, chunk_resolution, direction);
+    const std::vector<float> noise = createPathNoise(keyFrames, distance, voxelscale, seed, cameraPos, direction);
+    // std::vector<float> noise = createPathNoise(pathLength, seed, cameraPosI, chunk_resolution, direction);
 
     auto kfs = std::vector<CameraKeyFrame>();
     float currentTime = 0.0f;
-    auto currentCameraPos = glm::vec2(cameraPosition);
-    const float timeIncrement = duration / pathLength;
-    for (const auto &height: noise) {
+    const float timeIncrement = duration / keyFrames;
+    for (const auto &noiseHeight: noise) {
         CameraKeyFrame kf{};
         kf.time = currentTime;
-        kf.position = glm::vec3(currentCameraPos.x, currentCameraPos.y, totalHeight * height + 100);
+        kf.position = glm::vec3(cameraPos.x, cameraPos.y, totalHeight * noiseHeight + (cameraHeight / voxelscale));
         kf.direction = cameraDirection;
         kfs.push_back(kf);
 
         currentTime += timeIncrement;
-        currentCameraPos += direction;
+        cameraPos += direction * ((distance / voxelscale) / static_cast<float>(keyFrames));
     }
 
     cameraKeyFrames = kfs;
@@ -99,26 +99,28 @@ Config::Config(int argc, char *argv[]) {
         switch (auto test_scene = result["test"].as<uint32_t>()) {
             case 0:
                 camera_path = "./camera_positions/camera_location_test0.json";
-                scene_path = "./assets/san-miguel-low-poly.obj";
+                scene_path = "./assets/San_Miguel/san-miguel-low-poly.obj";
                 useHeightmapData = false;
                 spdlog::info("Test Scene 0 Benchmark!");
                 break;
             case 1:
                 camera_path = "./camera_positions/camera_location_test1.json";
-                scene_path = "./assets/san-miguel-low-poly.obj";
+                scene_path = "./assets/San_Miguel/san-miguel-low-poly.obj";
                 useHeightmapData = false;
                 spdlog::info("Test Scene 1 Benchmark!");
                 break;
             case 2:
                 useHeightmapData = false;
+                scene_path = "./assets/San_Miguel/san-miguel-low-poly.obj";
                 cameraKeyFrames = std::vector<CameraKeyFrame>();
                 camera_keyframe_path = "./camera_positions/camera_path_test2.json";
                 read_keyframes();
                 break;
-            case 3:
+            case 4:
                 useHeightmapData = true;
+                allowUserInput = true;
                 cameraKeyFrames = std::vector<CameraKeyFrame>();
-                generate_keyframes();
+                generate_keyframes(90.0f, 2.0f);
                 break;
             default:
                 std::cout << "Unknown test scene Benchmark!" << std::endl;
@@ -130,23 +132,26 @@ Config::Config(int argc, char *argv[]) {
         camera_path = result["camera"].as<std::string>();
     }
 
-    //Parse the camera json
-    std::ifstream f(camera_path);
-    json data = json::parse(f);
-    if (data.contains("position")) {
-        cameraPosition.x = data["position"]["x"];
-        cameraPosition.y = data["position"]["y"];
-        cameraPosition.z = data["position"]["z"];
-    }
-    if (data.contains("direction")) {
-        cameraDirection.x = data["direction"]["x"];
-        cameraDirection.y = data["direction"]["y"];
-        cameraDirection.z = data["direction"]["z"];
-        cameraDirection = glm::normalize(cameraDirection);
-    }
+    if (!cameraKeyFrames.has_value())
+    {
+        //Parse the camera json
+        std::ifstream f(camera_path);
+        json data = json::parse(f);
+        if (data.contains("position")) {
+            cameraPosition.x = data["position"]["x"];
+            cameraPosition.y = data["position"]["y"];
+            cameraPosition.z = data["position"]["z"];
+        }
+        if (data.contains("direction")) {
+            cameraDirection.x = data["direction"]["x"];
+            cameraDirection.y = data["direction"]["y"];
+            cameraDirection.z = data["direction"]["z"];
+            cameraDirection = glm::normalize(cameraDirection);
+        }
 
-    if (data.contains("fov")) {
-        fov = glm::radians(data["fov"].get<float>());
+        if (data.contains("fov")) {
+            fov = glm::radians(data["fov"].get<float>());
+        }
     }
 
 

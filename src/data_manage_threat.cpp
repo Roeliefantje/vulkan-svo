@@ -439,7 +439,7 @@ bool DataManageThreat::checkChunkResolution(const ChunkLoadInfo &job) {
     glm::ivec3 diff = job.chunkCoord - cameraChunkCoords;
     glm::vec3 worldDiff = glm::vec3(diff) * (static_cast<float>(config.chunk_resolution) * config.voxelscale);
     float distance = glm::length(worldDiff) - (static_cast<float>(config.chunk_resolution) * config.voxelscale);
-    uint32_t octreeResolution = calculateChunkResolution(config.chunk_resolution, distance);
+    uint32_t octreeResolution = calculateChunkResolution(config.chunk_resolution, distance / config.scaleDistance);
 
     return octreeResolution == job.resolution;
 }
@@ -484,7 +484,7 @@ void DataManageThreat::loadChunkData(ChunkLoadInfo &job, std::vector<uint32_t> &
         } else if (sceneInChunk(objSceneData->sceneAabb, aabb, objSceneData->scale)) {
             std::vector<uint32_t> allIndices(triangles.size());
             std::iota(allIndices.begin(), allIndices.end(), 0);
-            node = createNode(aabb, triangles, allIndices, textures, nodeAmount, maxDepth, 0);
+            node = createNode(aabb, triangles, allIndices, textures, nodeAmount, maxDepth, 0, objSceneData.value());
         }
 
 
@@ -507,7 +507,7 @@ inline int positive_mod(int a, int b) {
 }
 
 
-void checkChunks(std::vector<CpuChunk> &chunks, CPUCamera &camera, uint32_t maxChunkResolution, float voxelScale,
+void checkChunks(std::vector<CpuChunk> &chunks, CPUCamera &camera, uint32_t maxChunkResolution, float voxelScale, float scaleDistance,
                  DataManageThreat &dmThreat) {
     auto center = camera.gpu_camera.camera_grid_pos;
     auto processOffset = [&](int dx, int dy, int dz) {
@@ -530,7 +530,7 @@ void checkChunks(std::vector<CpuChunk> &chunks, CPUCamera &camera, uint32_t maxC
         auto dist = glm::ivec3(abs(dx), abs(dy), abs(dz));
         glm::vec3 worldDiff = glm::vec3(dist) * (static_cast<float>(maxChunkResolution) * voxelScale);
         float distance = glm::length(worldDiff) - (static_cast<float>(maxChunkResolution) * voxelScale);;
-        uint32_t octreeResolution = calculateChunkResolution(maxChunkResolution, distance);
+        uint32_t octreeResolution = calculateChunkResolution(maxChunkResolution, distance / scaleDistance);
 
         CpuChunk &chunk = chunks[gridCoord.z * camera.gridSize * camera.gridSize +
                                  gridCoord.y * camera.gridSize

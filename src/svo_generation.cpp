@@ -12,7 +12,7 @@ struct LODNoise {
     int maxOctaves; // max octaves at highest resolution
     float baseFrequency; // base frequency in world units (meters)
 
-    LODNoise(int seed, float baseFreq = 0.001f, int octaves = 8) {
+    LODNoise(int seed, float baseFreq = 0.001f, int octaves = 6) {
         baseFrequency = baseFreq;
         maxOctaves = octaves;
 
@@ -34,16 +34,16 @@ struct LODNoise {
         // Compute effective octaves for this LOD
         // Each octave doubles frequency: f_i = baseFreq * 2^i
         int effectiveOctaves = maxOctaves;
-        for (int i = maxOctaves - 1; i >= 0; i--) {
-            float octaveFreq = baseFrequency * powf(2.0f, (float) i);
-            if (octaveFreq > maxFreq) effectiveOctaves--;
-        }
+        // for (int i = maxOctaves - 1; i >= 0; i--) {
+        //     float octaveFreq = baseFrequency * powf(2.0f, (float) i);
+        //     if (octaveFreq > maxFreq) effectiveOctaves--;
+        // }
 
         noiseBase.SetFractalOctaves(effectiveOctaves);
 
         // Sample at voxel center
-        float sx = x + voxelSize / 2.0f;
-        float sy = y + voxelSize / 2.0f;
+        float sx = x;
+        float sy = y;
 
         return (noiseBase.GetNoise(sx + 10000, sy + 10000) + 1.0f) / 2.0f;
     }
@@ -78,39 +78,17 @@ std::vector<float> createNoise(uint32_t chunkResolution, uint32_t maxChunkResolu
     return noiseData;
 }
 
-// std::vector<float> createNoise(int chunkResolution, uint32_t seed_value, glm::ivec2 offset,
-//                                uint32_t maxChunkResolution) {
-//     float scale = maxChunkResolution / chunkResolution;
-//     spdlog::debug("Creating Heightmap");
-//     FastNoiseLite base = getFastNoise(seed_value);
-//
-//     int index = 0;
-//     std::vector<float> noiseData(chunkResolution * chunkResolution);
-//     for (int y = 0; y < chunkResolution; y++) {
-//         for (int x = 0; x < chunkResolution; x++) {
-//             //+ 100000 because negative values dont generate anything proper
-//             float fx = static_cast<float>(x * scale + offset.x + 100000), fy = static_cast<float>(
-//                 y * scale + offset.y + 100000);
-//             float raw = base.GetNoise(fx, fy); // −1…+1
-//             float e = (raw + 1.0f) * 0.5f; //Make it always a positive height
-//             noiseData[index++] = e;
-//         }
-//     }
-//     spdlog::debug("Finished creating noise data");
-//     return noiseData;
-// }
-
-std::vector<float> createPathNoise(int pathLength, uint32_t seed_value, glm::ivec2 offset,
-                                   uint32_t maxChunkResolution, glm::vec2 direction) {
+std::vector<float> createPathNoise(int keyFrames, float distance, float voxelScale, uint32_t seed_value, glm::vec2 offset,
+                                   glm::vec2 direction) {
     LODNoise terrainNoise(seed_value);
     // FastNoiseLite noise = getFastNoise(seed_value);
-    std::vector<float> noiseData(pathLength);
-    for (int i = 0; i < pathLength; i++) {
-        float fx = offset.x + 100000 + direction.x * i;
-        float fy = offset.y + 100000 + direction.y * i;
-        float raw = terrainNoise.Sample(fx, fy, 0.00155);
-        float e = (raw + 1.0f) * 0.5f; //Make it always a positive height
-        noiseData[i] = e;
+    std::vector<float> noiseData(keyFrames);
+    float stepSize = distance / static_cast<float>(keyFrames);
+    for (int i = 0; i < keyFrames; i++) {
+        float fx = offset.x + direction.x * i * stepSize;
+        float fy = offset.x + direction.x * i * stepSize;
+        // float e = (raw + 1.0f) * 0.5f; //Make it always a positive height
+        noiseData[i] = terrainNoise.Sample(fx, fy, voxelScale);;
     }
 
     spdlog::debug("Finished making path noise data");

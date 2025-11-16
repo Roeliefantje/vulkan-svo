@@ -39,8 +39,8 @@ inline uint32_t getColor(float height, int x, int y) {
 std::vector<float> createNoise(uint32_t chunkResolution, uint32_t maxChunkResolution, uint32_t seed_value,
                                glm::vec2 offset, float voxelSize);
 
-std::vector<float> createPathNoise(int pathLength, uint32_t seed_value, glm::ivec2 offset,
-                                   uint32_t maxChunkResolution, glm::vec2 direction);
+std::vector<float> createPathNoise(int keyFrames, float distance, float voxelScale, uint32_t seed_value, glm::vec2 offset,
+                                   glm::vec2 direction);
 
 std::vector<uint32_t> createDepthMap(std::vector<uint32_t> heightMap);
 

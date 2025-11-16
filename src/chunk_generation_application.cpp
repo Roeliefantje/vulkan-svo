@@ -13,7 +13,7 @@ namespace fs = std::filesystem;
 
 ChunkGenerationApplication::ChunkGenerationApplication(Config config) : config(config) {
     if (!config.useHeightmapData) {
-        objSceneMetaData = SceneMetadata("./assets/san-miguel-low-poly.obj", config);
+        objSceneMetaData = SceneMetadata(config.scene_path, config);
         std::cout << "ObjFile to be loaded: " << objSceneMetaData->objFile << std::endl;
         objFile = objSceneMetaData->objFile;
     } else {
@@ -51,7 +51,7 @@ inline uint32_t computeLOD(float distance) {
     return static_cast<uint32_t>(std::floor(std::log2(distance)));
 }
 
-inline uint32_t calculateChunkResolution(uint32_t maxChunkResolution, int distance) {
+inline uint32_t calculateChunkResolution(uint32_t maxChunkResolution, float distance) {
     uint32_t lod = computeLOD(distance);
     uint32_t resolution = maxChunkResolution >> lod; // divide by 2^lod
     return std::min(1024u, std::max(resolution, 8u)); // clamp to some minimum
@@ -90,7 +90,7 @@ void ChunkGenerationApplication::generateChunk(glm::ivec3 gridCoord, uint32_t re
         } else if (sceneInChunk(objSceneMetaData->sceneAabb, aabb, objSceneMetaData->scale)) {
             std::vector<uint32_t> allIndices(triangles.value().size());
             std::iota(allIndices.begin(), allIndices.end(), 0);
-            node = createNode(aabb, triangles.value(), allIndices, textures.value(), nodeAmount, maxDepth, 0);
+            node = createNode(aabb, triangles.value(), allIndices, textures.value(), nodeAmount, maxDepth, 0, objSceneMetaData.value());
         }
 
 
@@ -111,6 +111,7 @@ void ChunkGenerationApplication::generateChunk(glm::ivec3 gridCoord, uint32_t re
 void ChunkGenerationApplication::generateChunksForCameraPosition() {
     auto center = camera.gpu_camera.camera_grid_pos;
     glm::ivec3 start = center - int((camera.gridSize - 1) / 2);
+    spdlog::info("Generating {} Chunks!", camera.gridHeight * camera.gridSize * camera.gridSize);
     for (int chunkZ = 0; chunkZ < camera.gridHeight; chunkZ++) {
         for (int chunkY = start.y; chunkY < camera.gridSize; chunkY++) {
             for (int chunkX = start.x; chunkX < camera.gridSize; chunkX++) {
@@ -122,7 +123,7 @@ void ChunkGenerationApplication::generateChunksForCameraPosition() {
                                           static_cast<float>(config.chunk_resolution) * config.voxelscale);
                 float distance = glm::length(worldDiff) - (
                                      static_cast<float>(config.chunk_resolution) * config.voxelscale);;
-                uint32_t octreeResolution = calculateChunkResolution(config.chunk_resolution, distance);
+                uint32_t octreeResolution = calculateChunkResolution(config.chunk_resolution, distance / config.scaleDistance);
 
                 //The cpu chunks location, so not the buffer location we store it in, which is gridCoord, but the coords of the chunk itself.
                 glm::ivec3 chunkCoord = camera.chunk_coords + dist;
@@ -134,6 +135,7 @@ void ChunkGenerationApplication::generateChunksForCameraPosition() {
 
 void ChunkGenerationApplication::genererateChunks() {
     if (config.cameraKeyFrames) {
+        std::vector<std::string> computed_chunks = {};
         const auto start = config.cameraKeyFrames.value().front().time;
         const auto end = config.cameraKeyFrames.value().back().time;
         constexpr float timeBetweenFrames = (1.0 / 60.0);
@@ -144,6 +146,18 @@ void ChunkGenerationApplication::genererateChunks() {
             } else {
                 camera.setPosition(kf.position);
             }
+            const std::string key = std::format("{}, {}, {}", camera.chunk_coords.x, camera.chunk_coords.y, camera.chunk_coords.z);
+            bool already_computed = false;
+            for (const auto &computed_chunk : computed_chunks)
+            {
+                if (computed_chunk == key)
+                {
+                    already_computed = true;
+                    break;
+                }
+            }
+            if (!already_computed) {break;}
+            computed_chunks.push_back(key);
             camera.gpu_camera.direction = glm::normalize(kf.direction);
             generateChunksForCameraPosition();
         }
