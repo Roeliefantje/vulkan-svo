@@ -42,8 +42,8 @@ struct LODNoise {
         noiseBase.SetFractalOctaves(effectiveOctaves);
 
         // Sample at voxel center
-        float sx = x;
-        float sy = y;
+        float sx = x + voxelSize * 0.5;
+        float sy = y + voxelSize * 0.5;
 
         return (noiseBase.GetNoise(sx + 10000, sy + 10000) + 1.0f) / 2.0f;
     }

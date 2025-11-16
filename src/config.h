@@ -39,8 +39,8 @@ struct Config {
     uint32_t chunk_resolution = 1024;
     uint32_t grid_size = 31;
     uint32_t grid_height = useHeightmapData
-                               ? std::min(15u, static_cast<uint32_t>(std::ceil(
-                                              1000 / (static_cast<float>(chunk_resolution) * voxelscale))))
+                               ? std::min(40u, static_cast<uint32_t>(std::ceil(
+                                              400 / (static_cast<float>(chunk_resolution) * voxelscale))))
                                : 5;
     uint32_t seed = 12345 * 6;
     std::optional<std::vector<CameraKeyFrame> > cameraKeyFrames;

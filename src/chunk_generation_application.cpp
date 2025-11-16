@@ -141,7 +141,7 @@ void ChunkGenerationApplication::genererateChunks() {
         constexpr float timeBetweenFrames = (1.0 / 60.0);
         for (float t = start; t < (end + timeBetweenFrames); t += timeBetweenFrames) {
             auto kf = interpolateCamera(config.cameraKeyFrames.value(), t);
-            if (objSceneMetaData) {
+            if (!config.useHeightmapData) {
                 camera.setPosition(kf.position * objSceneMetaData->scale);
             } else {
                 camera.setPosition(kf.position);
@@ -156,8 +156,9 @@ void ChunkGenerationApplication::genererateChunks() {
                     break;
                 }
             }
-            if (!already_computed) {break;}
+            if (already_computed) {continue;}
             computed_chunks.push_back(key);
+            spdlog::info("Generating Chunks around Camera chunk: {}", key);
             camera.gpu_camera.direction = glm::normalize(kf.direction);
             generateChunksForCameraPosition();
         }
