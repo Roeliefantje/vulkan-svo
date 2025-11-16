@@ -14,7 +14,10 @@ CONFIGURATIONS = [
     # [512, 5, 5],
     # [1024, 1, 5],
     # [1024, 3, 5],
-    [1024, 5, 5],
+    [1024, 11, 5],
+    [1024, 15, 5],
+    [1024, 21, 5],
+    [1024, 25, 5],
 ]
 
 
@@ -22,6 +25,11 @@ def run_and_record(program_path, working_dir, args, duration=60, out_csv="result
     """Run the program and record per-second averages for FPS, msPf, steps, and memory."""
     working_dir = Path(working_dir)
     os.makedirs("results", exist_ok=True)
+
+    chunkgen = subprocess.run(
+        [program_path, "--chunkgen", *args],
+        cwd=working_dir
+    )
 
     # Regex patterns
     fps_pattern = re.compile(r"FPS:\s*([\d.]+),\s*msPf:\s*([\d.]+)")
@@ -165,15 +173,16 @@ if __name__ == "__main__":
     program = "../cmake-build-release-mingw/clion_vulkan.exe"
     working_directory = "C:\\Users\\roeld\\Documents\\git\\Uni\\UU\\_Thesis\\clion-vulkan"
 
-    csv_file = "results/time_series.csv"
-    # Clear previous results if any
-    if os.path.exists(csv_file):
-        os.remove(csv_file)
+    for i in [2, 3]:
+        csv_file = f"results/time_series_{i}.csv"
+        # Clear previous results if any
+        if os.path.exists(csv_file):
+            os.remove(csv_file)
 
-    for config in CONFIGURATIONS:
-        resolution, grid_size, grid_height = config
-        args = ["--test", "2", "--res", str(resolution),
-                "--grid", str(grid_size), "--gridheight", str(grid_height)]
-        run_and_record(program, working_directory, args, duration=60, out_csv=csv_file)
+        for config in CONFIGURATIONS:
+            resolution, grid_size, grid_height = config
+            args = ["--test", f"{i}", "--res", str(resolution),
+                    "--grid", str(grid_size), "--gridheight", str(grid_height)]
+            run_and_record(program, working_directory, args, duration=60, out_csv=csv_file)
 
-    plot_time_series(csv_file)
+        plot_time_series(csv_file, output_dir=f"results/.time_series_plots_{i}")
