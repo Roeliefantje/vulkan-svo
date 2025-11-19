@@ -22,9 +22,9 @@ struct CameraKeyFrame {
 
 struct Config {
     //Whether we use the voxelizer or the heightmap data.
-    bool useHeightmapData = true;
-    float voxelscale = 0.0155f;
-    float scaleDistance = 10.0f; //At what distance would the voxelScale be equivalent to a pixel? TODO: calculate this automagically
+    bool useHeightmapData = false;
+    float voxelscale = 0.00155f;
+    float scaleDistance = 1.0f; //At what distance would the voxelScale be equivalent to a pixel? TODO: calculate this automagically
 
     //Output screen size
     uint32_t width = 1920;
@@ -40,9 +40,9 @@ struct Config {
     uint32_t grid_size = 31;
     uint32_t grid_height = useHeightmapData
                                ? std::min(40u, static_cast<uint32_t>(std::ceil(
-                                              400 / (static_cast<float>(chunk_resolution) * voxelscale))))
-                               : 5;
-    uint32_t seed = 12345 * 6;
+                                              4000 / (static_cast<float>(chunk_resolution) * voxelscale))))
+                               : 15;
+    uint32_t seed = 12345 * 9;
     std::optional<std::vector<CameraKeyFrame> > cameraKeyFrames;
 
     //MouseSensitivity

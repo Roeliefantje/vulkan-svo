@@ -12,7 +12,7 @@ struct LODNoise {
     int maxOctaves; // max octaves at highest resolution
     float baseFrequency; // base frequency in world units (meters)
 
-    LODNoise(int seed, float baseFreq = 0.001f, int octaves = 6) {
+    LODNoise(int seed, float baseFreq = 0.0001f, int octaves = 6) {
         baseFrequency = baseFreq;
         maxOctaves = octaves;
 

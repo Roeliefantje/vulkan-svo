@@ -277,6 +277,9 @@ void main()
                     float green = ((currentNode.color >> 8) & 0xFFu) / float(0xFF);
                     float blue = (currentNode.color & 0xFFu) / float(0xFF);
                     color = vec3(red, green, blue);
+                    float percentage_level = (level / 10.0f);
+                    color = heatmap(percentage_level);
+                    break;
                     vec3 normal = -1 * rdsign * vec3(mask);
 
                     collisions += 1;
@@ -290,7 +293,7 @@ void main()
                     rdsign = sign(rayDir);
                     irdsign = ivec3(rdsign);
                     ird = 1.0/max(abs(rayDir), 0.001);
-//                    break;
+                    break;
                 } else {
                     intensity = 0.4f;
                     break;

@@ -114,13 +114,40 @@ Config::Config(int argc, char *argv[]) {
                 scene_path = "./assets/San_Miguel/san-miguel-low-poly.obj";
                 cameraKeyFrames = std::vector<CameraKeyFrame>();
                 camera_keyframe_path = "./camera_positions/camera_path_test2.json";
+                grid_height = 15;
+                read_keyframes();
+                break;
+            case 3:
+                useHeightmapData = false;
+                scene_path = "./assets/San_Miguel/san-miguel-low-poly.obj";
+                camera_keyframe_path = "./camera_positions/camera_path_test3.json";
+                cameraKeyFrames = std::vector<CameraKeyFrame>();
+                grid_height = 15;
                 read_keyframes();
                 break;
             case 4:
                 useHeightmapData = true;
                 allowUserInput = true;
                 cameraKeyFrames = std::vector<CameraKeyFrame>();
+                voxelscale = 0.0155f;
+                scaleDistance = 10.0f;
+                grid_size = 31;
                 generate_keyframes(90.0f, 2.0f);
+
+                break;
+            case 5:
+                useHeightmapData = true;
+                allowUserInput = true;
+                cameraKeyFrames = std::vector<CameraKeyFrame>();
+                cameraDirection = glm::normalize(glm::vec3(0.1, 0.1, -0.6));
+                voxelscale = 1.64f * 4;
+                scaleDistance = 4000.0f;
+                grid_size = 31;
+                grid_height = useHeightmapData
+                               ? std::min(40u, static_cast<uint32_t>(std::ceil(
+                                              4000 / (static_cast<float>(chunk_resolution) * voxelscale))))
+                               : 5;
+                generate_keyframes(90000.0f, 9000.0f);
                 break;
             default:
                 std::cout << "Unknown test scene Benchmark!" << std::endl;

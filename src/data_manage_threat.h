@@ -33,7 +33,7 @@ inline uint32_t computeLOD(float distance) {
 inline uint32_t calculateChunkResolution(uint32_t maxResolution, float distance) {
     uint32_t lod = computeLOD(distance);
     uint32_t resolution = maxResolution >> lod; // divide by 2^lod
-    return std::min(1024u, std::max(resolution, 8u)); // clamp to some minimum
+    return std::max(resolution, 8u); // clamp to some minimum
 }
 
 // inline uint32_t calculateChunkResolution(uint32_t maxChunkResolution, float dist) {

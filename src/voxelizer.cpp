@@ -123,7 +123,7 @@ int loadObject(std::string inputFile, std::string path, int chunkResolution, int
     };
     glm::vec3 offset = bbMin;
     scale = std::min(
-        (chunkResolution * gridSize * 0.5f) / static_cast<float>(std::max(sceneSizeI.x, sceneSizeI.y)),
+        (chunkResolution * ((gridSize + 1) * 0.5f)) / static_cast<float>(std::max(sceneSizeI.x, sceneSizeI.y)),
         (chunkResolution * gridHeight) / static_cast<float>(sceneSizeI.z)
     );
     // float scale = resolution / std::max({sceneSize.x, sceneSize.y, sceneSize.z});
@@ -187,9 +187,13 @@ LoadedTexture &loadImage(const std::string &tex_name, std::map<std::string, Load
     }
     std::filesystem::path objPath{objFile};
     auto directory = objPath.parent_path().string();
+    std::filesystem::path combined = directory / std::filesystem::path(tex_name);
+    std::string combinedPath = combined.string();
+    std::replace(combinedPath.begin(), combinedPath.end(), '\\', '/');
     // const std::string sub_folder = "./assets/";
     int texWidth, texHeight, channels;
-    unsigned char *imageData = stbi_load((directory + tex_name).c_str(), &texWidth, &texHeight, &channels, 3);
+    // spdlog::info("File name: {}", combinedPath);
+    unsigned char *imageData = stbi_load(combinedPath.c_str(), &texWidth, &texHeight, &channels, 3);
 
     loadedTextures[tex_name] = LoadedTexture{imageData, texWidth, texHeight, channels};;
     return loadedTextures[tex_name];

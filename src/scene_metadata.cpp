@@ -39,7 +39,7 @@ void SceneMetadata::loadMetaData(Config &config) {
 
 
     scale = std::min(
-        (config.chunk_resolution * config.grid_size * 0.5f) / std::max(float(sceneAabb.bb.x), float(sceneAabb.bb.y)),
+        (config.chunk_resolution * ((config.grid_size + 1) * 0.5f)) / std::max(float(sceneAabb.bb.x), float(sceneAabb.bb.y)),
         (config.chunk_resolution * config.grid_height) / (float) sceneAabb.bb.z
     );
 }

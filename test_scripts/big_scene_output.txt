@@ -1,0 +1,475 @@
+[20:07:32.534] [debug] [thread 72228] Finished making path noise data
+[20:07:36.284] [info] [thread 72228] FPS: 90.98138175200103, msPf: 10.991259758241759
+[20:07:36.284] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:07:36.284] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.41 MB, Memory Free: 2178.59 MB, Percentage used 29.08%
+[20:07:36.284] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:07:36.284] [info] [thread 72228] Average Steps per ray: 74.203735
+[20:07:36.284] [info] [thread 72228] Max Steps per ray: 2000
+[20:07:37.291] [info] [thread 72228] FPS: 87.36508854686022, msPf: 11.446219727272727
+[20:07:37.291] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:07:37.291] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.41 MB, Memory Free: 2178.59 MB, Percentage used 29.08%
+[20:07:37.291] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:07:37.291] [info] [thread 72228] Average Steps per ray: 74.865616
+[20:07:37.291] [info] [thread 72228] Max Steps per ray: 547
+[20:07:38.300] [info] [thread 72228] FPS: 86.28141986251639, msPf: 11.589980804597705
+[20:07:38.300] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:07:38.300] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.41 MB, Memory Free: 2178.59 MB, Percentage used 29.08%
+[20:07:38.300] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:07:38.300] [info] [thread 72228] Average Steps per ray: 74.71326
+[20:07:38.300] [info] [thread 72228] Max Steps per ray: 2000
+[20:07:39.305] [info] [thread 72228] FPS: 94.53659409457879, msPf: 10.577914400000001
+[20:07:39.305] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:07:39.305] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.41 MB, Memory Free: 2178.59 MB, Percentage used 29.08%
+[20:07:39.305] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:07:39.305] [info] [thread 72228] Average Steps per ray: 74.43406
+[20:07:39.305] [info] [thread 72228] Max Steps per ray: 447
+[20:07:40.307] [info] [thread 72228] FPS: 98.79597130227324, msPf: 10.121870222222215
+[20:07:40.307] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:07:40.307] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.41 MB, Memory Free: 2178.59 MB, Percentage used 29.08%
+[20:07:40.307] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:07:40.307] [info] [thread 72228] Average Steps per ray: 74.487885
+[20:07:40.307] [info] [thread 72228] Max Steps per ray: 2000
+[20:07:41.312] [info] [thread 72228] FPS: 99.43148418242353, msPf: 10.057176640000005
+[20:07:41.312] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:07:41.312] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.41 MB, Memory Free: 2178.59 MB, Percentage used 29.08%
+[20:07:41.312] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:07:41.312] [info] [thread 72228] Average Steps per ray: 74.71078
+[20:07:41.312] [info] [thread 72228] Max Steps per ray: 2000
+[20:07:42.319] [info] [thread 72228] FPS: 96.31371240445877, msPf: 10.3827375670103
+[20:07:42.319] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:07:42.319] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.49 MB, Memory Free: 2178.51 MB, Percentage used 29.08%
+[20:07:42.319] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:07:42.319] [info] [thread 72228] Average Steps per ray: 76.04234
+[20:07:42.319] [info] [thread 72228] Max Steps per ray: 2000
+[20:07:43.320] [info] [thread 72228] FPS: 96.90834331362714, msPf: 10.319028948453617
+[20:07:43.320] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:07:43.320] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.49 MB, Memory Free: 2178.51 MB, Percentage used 29.08%
+[20:07:43.320] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:07:43.320] [info] [thread 72228] Average Steps per ray: 75.68803
+[20:07:43.320] [info] [thread 72228] Max Steps per ray: 2000
+[20:07:44.328] [info] [thread 72228] FPS: 100.23694356074643, msPf: 9.976361653465338
+[20:07:44.328] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:07:44.328] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.49 MB, Memory Free: 2178.51 MB, Percentage used 29.08%
+[20:07:44.328] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:07:44.328] [info] [thread 72228] Average Steps per ray: 74.76065
+[20:07:44.328] [info] [thread 72228] Max Steps per ray: 2000
+[20:07:45.330] [info] [thread 72228] FPS: 101.82219746784845, msPf: 9.821041235294118
+[20:07:45.330] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:07:45.330] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.49 MB, Memory Free: 2178.51 MB, Percentage used 29.08%
+[20:07:45.330] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:07:45.330] [info] [thread 72228] Average Steps per ray: 73.386734
+[20:07:45.330] [info] [thread 72228] Max Steps per ray: 2000
+[20:07:46.335] [info] [thread 72228] FPS: 103.42897000119993, msPf: 9.66847102884616
+[20:07:46.335] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:07:46.335] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.49 MB, Memory Free: 2178.51 MB, Percentage used 29.08%
+[20:07:46.335] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:07:46.335] [info] [thread 72228] Average Steps per ray: 72.67957
+[20:07:46.335] [info] [thread 72228] Max Steps per ray: 2000
+[20:07:47.342] [info] [thread 72228] FPS: 98.37526561309294, msPf: 10.1651567979798
+[20:07:47.342] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:07:47.342] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.49 MB, Memory Free: 2178.51 MB, Percentage used 29.08%
+[20:07:47.342] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:07:47.342] [info] [thread 72228] Average Steps per ray: 72.05843
+[20:07:47.342] [info] [thread 72228] Max Steps per ray: 2000
+[20:07:48.343] [info] [thread 72228] FPS: 99.83772954498583, msPf: 10.016253420000005
+[20:07:48.343] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:07:48.343] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.59 MB, Memory Free: 2178.41 MB, Percentage used 29.09%
+[20:07:48.343] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:07:48.343] [info] [thread 72228] Average Steps per ray: 71.749695
+[20:07:48.343] [info] [thread 72228] Max Steps per ray: 2000
+[20:07:49.345] [info] [thread 72228] FPS: 94.86853848424613, msPf: 10.540902347368407
+[20:07:49.345] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:07:49.345] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.59 MB, Memory Free: 2178.41 MB, Percentage used 29.09%
+[20:07:49.345] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:07:49.345] [info] [thread 72228] Average Steps per ray: 71.36106
+[20:07:49.345] [info] [thread 72228] Max Steps per ray: 2000
+[20:07:50.346] [info] [thread 72228] FPS: 103.86842031609066, msPf: 9.627565307692333
+[20:07:50.346] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:07:50.346] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.59 MB, Memory Free: 2178.41 MB, Percentage used 29.09%
+[20:07:50.346] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:07:50.346] [info] [thread 72228] Average Steps per ray: 72.35399
+[20:07:50.346] [info] [thread 72228] Max Steps per ray: 2000
+[20:07:51.351] [info] [thread 72228] FPS: 102.49166256943002, msPf: 9.756891194174734
+[20:07:51.351] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:07:51.351] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.59 MB, Memory Free: 2178.41 MB, Percentage used 29.09%
+[20:07:51.351] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:07:51.351] [info] [thread 72228] Average Steps per ray: 73.12043
+[20:07:51.351] [info] [thread 72228] Max Steps per ray: 554
+[20:07:52.353] [info] [thread 72228] FPS: 103.76352603706741, msPf: 9.63729778846153
+[20:07:52.353] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:07:52.353] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.59 MB, Memory Free: 2178.41 MB, Percentage used 29.09%
+[20:07:52.353] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:07:52.353] [info] [thread 72228] Average Steps per ray: 73.7997
+[20:07:52.353] [info] [thread 72228] Max Steps per ray: 2000
+[20:07:53.356] [info] [thread 72228] FPS: 104.71513169914384, msPf: 9.54971820952383
+[20:07:53.356] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:07:53.356] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.59 MB, Memory Free: 2178.41 MB, Percentage used 29.09%
+[20:07:53.356] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:07:53.356] [info] [thread 72228] Average Steps per ray: 72.46385
+[20:07:53.356] [info] [thread 72228] Max Steps per ray: 2000
+[20:07:54.361] [info] [thread 72228] FPS: 105.48545870462686, msPf: 9.479979632075462
+[20:07:54.361] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:07:54.361] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.05 MB, Memory Free: 2178.95 MB, Percentage used 29.07%
+[20:07:54.361] [info] [thread 72228] Staging Buffer Memory used: 0.39 MB, Memory Free: 2047.61 MB, Percentage used 0.02%
+[20:07:54.361] [info] [thread 72228] Average Steps per ray: 72.63861
+[20:07:54.361] [info] [thread 72228] Max Steps per ray: 2000
+[20:07:55.368] [info] [thread 72228] FPS: 101.26918334321483, msPf: 9.874672303921578
+[20:07:55.368] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:07:55.368] [info] [thread 72228] Octree Nodes Buffer Memory used: 892.92 MB, Memory Free: 2179.08 MB, Percentage used 29.07%
+[20:07:55.368] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:07:55.368] [info] [thread 72228] Average Steps per ray: 72.501396
+[20:07:55.368] [info] [thread 72228] Max Steps per ray: 2000
+[20:07:56.373] [info] [thread 72228] FPS: 104.44476006214138, msPf: 9.574439152380943
+[20:07:56.373] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:07:56.373] [info] [thread 72228] Octree Nodes Buffer Memory used: 837.95 MB, Memory Free: 2234.05 MB, Percentage used 27.28%
+[20:07:56.373] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:07:56.373] [info] [thread 72228] Average Steps per ray: 69.360016
+[20:07:56.373] [info] [thread 72228] Max Steps per ray: 2000
+[20:07:57.379] [info] [thread 72228] FPS: 110.35192071559248, msPf: 9.061917486486506
+[20:07:57.379] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:07:57.379] [info] [thread 72228] Octree Nodes Buffer Memory used: 837.95 MB, Memory Free: 2234.05 MB, Percentage used 27.28%
+[20:07:57.379] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:07:57.379] [info] [thread 72228] Average Steps per ray: 69.83017
+[20:07:57.379] [info] [thread 72228] Max Steps per ray: 2000
+[20:07:58.388] [info] [thread 72228] FPS: 110.02924705258506, msPf: 9.088492621621604
+[20:07:58.388] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:07:58.388] [info] [thread 72228] Octree Nodes Buffer Memory used: 837.95 MB, Memory Free: 2234.05 MB, Percentage used 27.28%
+[20:07:58.388] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:07:58.388] [info] [thread 72228] Average Steps per ray: 69.88177
+[20:07:58.388] [info] [thread 72228] Max Steps per ray: 371
+[20:07:59.394] [info] [thread 72228] FPS: 101.38404982294477, msPf: 9.86348446078433
+[20:07:59.394] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:07:59.394] [info] [thread 72228] Octree Nodes Buffer Memory used: 892.92 MB, Memory Free: 2179.08 MB, Percentage used 29.07%
+[20:07:59.394] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:07:59.394] [info] [thread 72228] Average Steps per ray: 72.95246
+[20:07:59.394] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:00.397] [info] [thread 72228] FPS: 101.67944902945023, msPf: 9.8348290588235
+[20:08:00.397] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:00.397] [info] [thread 72228] Octree Nodes Buffer Memory used: 892.92 MB, Memory Free: 2179.08 MB, Percentage used 29.07%
+[20:08:00.397] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:00.397] [info] [thread 72228] Average Steps per ray: 72.68461
+[20:08:00.397] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:01.404] [info] [thread 72228] FPS: 93.39320816949747, msPf: 10.707416734042587
+[20:08:01.404] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:01.404] [info] [thread 72228] Octree Nodes Buffer Memory used: 891.91 MB, Memory Free: 2180.09 MB, Percentage used 29.03%
+[20:08:01.404] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:01.404] [info] [thread 72228] Average Steps per ray: 73.49754
+[20:08:01.404] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:02.407] [info] [thread 72228] FPS: 92.72313437686203, msPf: 10.784795043010735
+[20:08:02.407] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:02.407] [info] [thread 72228] Octree Nodes Buffer Memory used: 891.91 MB, Memory Free: 2180.09 MB, Percentage used 29.03%
+[20:08:02.407] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:02.407] [info] [thread 72228] Average Steps per ray: 73.86099
+[20:08:02.407] [info] [thread 72228] Max Steps per ray: 438
+[20:08:03.415] [info] [thread 72228] FPS: 99.12576016001707, msPf: 10.088195020000015
+[20:08:03.416] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:03.416] [info] [thread 72228] Octree Nodes Buffer Memory used: 891.91 MB, Memory Free: 2180.09 MB, Percentage used 29.03%
+[20:08:03.416] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:03.416] [info] [thread 72228] Average Steps per ray: 74.7815
+[20:08:03.416] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:04.427] [info] [thread 72228] FPS: 99.88561494962592, msPf: 10.011451603960367
+[20:08:04.427] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:04.427] [info] [thread 72228] Octree Nodes Buffer Memory used: 891.91 MB, Memory Free: 2180.09 MB, Percentage used 29.03%
+[20:08:04.427] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:04.427] [info] [thread 72228] Average Steps per ray: 75.04841
+[20:08:04.427] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:05.430] [info] [thread 72228] FPS: 100.6647452265149, msPf: 9.933964445544555
+[20:08:05.430] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:05.430] [info] [thread 72228] Octree Nodes Buffer Memory used: 891.91 MB, Memory Free: 2180.09 MB, Percentage used 29.03%
+[20:08:05.430] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:05.430] [info] [thread 72228] Average Steps per ray: 74.18799
+[20:08:05.430] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:06.437] [info] [thread 72228] FPS: 103.25927670345801, msPf: 9.684359913461522
+[20:08:06.437] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:06.437] [info] [thread 72228] Octree Nodes Buffer Memory used: 891.91 MB, Memory Free: 2180.09 MB, Percentage used 29.03%
+[20:08:06.437] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:06.437] [info] [thread 72228] Average Steps per ray: 73.13692
+[20:08:06.437] [info] [thread 72228] Max Steps per ray: 406
+[20:08:07.437] [info] [thread 72228] FPS: 98.99582316822867, msPf: 10.101436282828304
+[20:08:07.437] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:07.437] [info] [thread 72228] Octree Nodes Buffer Memory used: 892.02 MB, Memory Free: 2179.98 MB, Percentage used 29.04%
+[20:08:07.437] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:07.437] [info] [thread 72228] Average Steps per ray: 72.79892
+[20:08:07.437] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:08.441] [info] [thread 72228] FPS: 97.64127639813, msPf: 10.241570336734677
+[20:08:08.441] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:08.441] [info] [thread 72228] Octree Nodes Buffer Memory used: 892.02 MB, Memory Free: 2179.98 MB, Percentage used 29.04%
+[20:08:08.441] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:08.441] [info] [thread 72228] Average Steps per ray: 72.92882
+[20:08:08.441] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:09.449] [info] [thread 72228] FPS: 104.12357716953935, msPf: 9.603972771428595
+[20:08:09.449] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:09.449] [info] [thread 72228] Octree Nodes Buffer Memory used: 892.02 MB, Memory Free: 2179.98 MB, Percentage used 29.04%
+[20:08:09.449] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:09.449] [info] [thread 72228] Average Steps per ray: 73.3119
+[20:08:09.449] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:10.450] [info] [thread 72228] FPS: 105.8995136458933, msPf: 9.44291400000003
+[20:08:10.450] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:10.450] [info] [thread 72228] Octree Nodes Buffer Memory used: 892.02 MB, Memory Free: 2179.98 MB, Percentage used 29.04%
+[20:08:10.450] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:10.450] [info] [thread 72228] Average Steps per ray: 73.03546
+[20:08:10.450] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:11.454] [info] [thread 72228] FPS: 104.5885098951472, msPf: 9.561279733333299
+[20:08:11.454] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:11.454] [info] [thread 72228] Octree Nodes Buffer Memory used: 892.02 MB, Memory Free: 2179.98 MB, Percentage used 29.04%
+[20:08:11.454] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:11.454] [info] [thread 72228] Average Steps per ray: 72.912994
+[20:08:11.454] [info] [thread 72228] Max Steps per ray: 401
+[20:08:12.457] [info] [thread 72228] FPS: 104.72074360161461, msPf: 9.549206447619053
+[20:08:12.457] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:12.457] [info] [thread 72228] Octree Nodes Buffer Memory used: 892.02 MB, Memory Free: 2179.98 MB, Percentage used 29.04%
+[20:08:12.457] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:12.457] [info] [thread 72228] Average Steps per ray: 73.18771
+[20:08:12.457] [info] [thread 72228] Max Steps per ray: 417
+[20:08:13.464] [info] [thread 72228] FPS: 102.2902569043734, msPf: 9.77610214563109
+[20:08:13.464] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:13.464] [info] [thread 72228] Octree Nodes Buffer Memory used: 892.71 MB, Memory Free: 2179.29 MB, Percentage used 29.06%
+[20:08:13.464] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:13.464] [info] [thread 72228] Average Steps per ray: 74.09231
+[20:08:13.464] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:14.467] [info] [thread 72228] FPS: 97.68142541336958, msPf: 10.237360846938776
+[20:08:14.467] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:14.467] [info] [thread 72228] Octree Nodes Buffer Memory used: 892.71 MB, Memory Free: 2179.29 MB, Percentage used 29.06%
+[20:08:14.467] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:14.467] [info] [thread 72228] Average Steps per ray: 74.64629
+[20:08:14.467] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:15.468] [info] [thread 72228] FPS: 100.902752248147, msPf: 9.91053244554451
+[20:08:15.468] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:15.468] [info] [thread 72228] Octree Nodes Buffer Memory used: 892.71 MB, Memory Free: 2179.29 MB, Percentage used 29.06%
+[20:08:15.468] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:15.468] [info] [thread 72228] Average Steps per ray: 74.957886
+[20:08:15.468] [info] [thread 72228] Max Steps per ray: 519
+[20:08:16.476] [info] [thread 72228] FPS: 102.21502601093495, msPf: 9.783297417475785
+[20:08:16.476] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:16.476] [info] [thread 72228] Octree Nodes Buffer Memory used: 892.71 MB, Memory Free: 2179.29 MB, Percentage used 29.06%
+[20:08:16.476] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:16.476] [info] [thread 72228] Average Steps per ray: 74.51131
+[20:08:16.476] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:17.479] [info] [thread 72228] FPS: 102.67987444205326, msPf: 9.739006844660135
+[20:08:17.479] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:17.479] [info] [thread 72228] Octree Nodes Buffer Memory used: 892.71 MB, Memory Free: 2179.29 MB, Percentage used 29.06%
+[20:08:17.479] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:17.479] [info] [thread 72228] Average Steps per ray: 73.66263
+[20:08:17.479] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:18.485] [info] [thread 72228] FPS: 104.31488445719752, msPf: 9.586359657142888
+[20:08:18.485] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:18.485] [info] [thread 72228] Octree Nodes Buffer Memory used: 892.71 MB, Memory Free: 2179.29 MB, Percentage used 29.06%
+[20:08:18.485] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:18.485] [info] [thread 72228] Average Steps per ray: 72.46753
+[20:08:18.485] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:19.493] [info] [thread 72228] FPS: 104.25210312682378, msPf: 9.592132628571429
+[20:08:19.493] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:19.493] [info] [thread 72228] Octree Nodes Buffer Memory used: 892.71 MB, Memory Free: 2179.29 MB, Percentage used 29.06%
+[20:08:19.493] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:19.493] [info] [thread 72228] Average Steps per ray: 72.753006
+[20:08:19.493] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:20.498] [info] [thread 72228] FPS: 93.51724602072973, msPf: 10.69321480851064
+[20:08:20.498] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:20.498] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.28 MB, Memory Free: 2178.72 MB, Percentage used 29.08%
+[20:08:20.498] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:20.498] [info] [thread 72228] Average Steps per ray: 73.45427
+[20:08:20.498] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:21.506] [info] [thread 72228] FPS: 96.18506472901822, msPf: 10.396624494845387
+[20:08:21.506] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:21.506] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.28 MB, Memory Free: 2178.72 MB, Percentage used 29.08%
+[20:08:21.506] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:21.506] [info] [thread 72228] Average Steps per ray: 72.52341
+[20:08:21.506] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:22.514] [info] [thread 72228] FPS: 102.21603571519594, msPf: 9.783200776699022
+[20:08:22.514] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:22.514] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.28 MB, Memory Free: 2178.72 MB, Percentage used 29.08%
+[20:08:22.514] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:22.514] [info] [thread 72228] Average Steps per ray: 72.017654
+[20:08:22.514] [info] [thread 72228] Max Steps per ray: 425
+[20:08:23.520] [info] [thread 72228] FPS: 102.39058536580389, msPf: 9.7665229320388
+[20:08:23.520] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:23.520] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.28 MB, Memory Free: 2178.72 MB, Percentage used 29.08%
+[20:08:23.520] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:23.520] [info] [thread 72228] Average Steps per ray: 71.9359
+[20:08:23.520] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:24.528] [info] [thread 72228] FPS: 105.18364407353603, msPf: 9.50718154716982
+[20:08:24.528] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:24.528] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.28 MB, Memory Free: 2178.72 MB, Percentage used 29.08%
+[20:08:24.528] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:24.528] [info] [thread 72228] Average Steps per ray: 72.05752
+[20:08:24.528] [info] [thread 72228] Max Steps per ray: 424
+[20:08:25.536] [info] [thread 72228] FPS: 106.12036637296795, msPf: 9.423261850467282
+[20:08:25.536] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:25.536] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.28 MB, Memory Free: 2178.72 MB, Percentage used 29.08%
+[20:08:25.536] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:25.536] [info] [thread 72228] Average Steps per ray: 71.52725
+[20:08:25.536] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:26.538] [info] [thread 72228] FPS: 101.79728018366146, msPf: 9.823445166666652
+[20:08:26.538] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:26.538] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.91 MB, Memory Free: 2178.09 MB, Percentage used 29.10%
+[20:08:26.538] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:26.538] [info] [thread 72228] Average Steps per ray: 72.07755
+[20:08:26.538] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:27.539] [info] [thread 72228] FPS: 101.91295634780874, msPf: 9.81229507843142
+[20:08:27.539] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:27.539] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.91 MB, Memory Free: 2178.09 MB, Percentage used 29.10%
+[20:08:27.539] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:27.539] [info] [thread 72228] Average Steps per ray: 72.134155
+[20:08:27.539] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:28.546] [info] [thread 72228] FPS: 103.28226827921739, msPf: 9.682204086538459
+[20:08:28.546] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:28.546] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.91 MB, Memory Free: 2178.09 MB, Percentage used 29.10%
+[20:08:28.546] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:28.546] [info] [thread 72228] Average Steps per ray: 73.330894
+[20:08:28.546] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:29.552] [info] [thread 72228] FPS: 101.3855461049992, msPf: 9.86333889215685
+[20:08:29.552] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:29.552] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.91 MB, Memory Free: 2178.09 MB, Percentage used 29.10%
+[20:08:29.552] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:29.552] [info] [thread 72228] Average Steps per ray: 74.320496
+[20:08:29.552] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:30.556] [info] [thread 72228] FPS: 98.5691952494881, msPf: 10.145157393939394
+[20:08:30.556] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:30.556] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.91 MB, Memory Free: 2178.09 MB, Percentage used 29.10%
+[20:08:30.556] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:30.556] [info] [thread 72228] Average Steps per ray: 73.87762
+[20:08:30.556] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:31.561] [info] [thread 72228] FPS: 98.53554914184046, msPf: 10.148621575757545
+[20:08:31.561] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:31.561] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.91 MB, Memory Free: 2178.09 MB, Percentage used 29.10%
+[20:08:31.561] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:31.561] [info] [thread 72228] Average Steps per ray: 73.936905
+[20:08:31.561] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:32.570] [info] [thread 72228] FPS: 99.079329898591, msPf: 10.092922520000016
+[20:08:32.570] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:32.570] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.90 MB, Memory Free: 2178.10 MB, Percentage used 29.10%
+[20:08:32.570] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:32.570] [info] [thread 72228] Average Steps per ray: 74.11272
+[20:08:32.570] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:33.578] [info] [thread 72228] FPS: 99.17066675435187, msPf: 10.083626870000018
+[20:08:33.578] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:33.578] [info] [thread 72228] Octree Nodes Buffer Memory used: 893.90 MB, Memory Free: 2178.10 MB, Percentage used 29.10%
+[20:08:33.578] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:33.578] [info] [thread 72228] Average Steps per ray: 74.020645
+[20:08:33.578] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:34.583] [info] [thread 72228] FPS: 98.54398004590738, msPf: 10.147753313131288
+[20:08:34.583] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:34.583] [info] [thread 72228] Octree Nodes Buffer Memory used: 838.62 MB, Memory Free: 2233.38 MB, Percentage used 27.30%
+[20:08:34.583] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:34.583] [info] [thread 72228] Average Steps per ray: 70.92614
+[20:08:34.583] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:35.585] [info] [thread 72228] FPS: 106.83238532903808, msPf: 9.360457476635508
+[20:08:35.585] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:35.585] [info] [thread 72228] Octree Nodes Buffer Memory used: 838.62 MB, Memory Free: 2233.38 MB, Percentage used 27.30%
+[20:08:35.585] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:35.585] [info] [thread 72228] Average Steps per ray: 70.867455
+[20:08:35.585] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:36.586] [info] [thread 72228] FPS: 107.81348590379108, msPf: 9.275277499999994
+[20:08:36.586] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:36.586] [info] [thread 72228] Octree Nodes Buffer Memory used: 838.62 MB, Memory Free: 2233.38 MB, Percentage used 27.30%
+[20:08:36.586] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:36.586] [info] [thread 72228] Average Steps per ray: 70.87004
+[20:08:36.586] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:37.592] [info] [thread 72228] FPS: 108.34831974489346, msPf: 9.229492458715594
+[20:08:37.592] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:37.592] [info] [thread 72228] Octree Nodes Buffer Memory used: 838.62 MB, Memory Free: 2233.38 MB, Percentage used 27.30%
+[20:08:37.592] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:37.592] [info] [thread 72228] Average Steps per ray: 70.87004
+[20:08:37.592] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:38.596] [info] [thread 72228] FPS: 108.64871621020727, msPf: 9.203974376146864
+[20:08:38.596] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:38.596] [info] [thread 72228] Octree Nodes Buffer Memory used: 838.62 MB, Memory Free: 2233.38 MB, Percentage used 27.30%
+[20:08:38.596] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:38.596] [info] [thread 72228] Average Steps per ray: 70.87004
+[20:08:38.596] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:39.599] [info] [thread 72228] FPS: 108.59515206055104, msPf: 9.208514201834856
+[20:08:39.599] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:39.599] [info] [thread 72228] Octree Nodes Buffer Memory used: 838.62 MB, Memory Free: 2233.38 MB, Percentage used 27.30%
+[20:08:39.599] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:39.599] [info] [thread 72228] Average Steps per ray: 70.87004
+[20:08:39.599] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:40.600] [info] [thread 72228] FPS: 108.90335763578804, msPf: 9.182453339449452
+[20:08:40.600] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:40.600] [info] [thread 72228] Octree Nodes Buffer Memory used: 838.62 MB, Memory Free: 2233.38 MB, Percentage used 27.30%
+[20:08:40.600] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:40.600] [info] [thread 72228] Average Steps per ray: 70.87004
+[20:08:40.600] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:41.602] [info] [thread 72228] FPS: 108.78093901185552, msPf: 9.192786981651397
+[20:08:41.602] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:41.602] [info] [thread 72228] Octree Nodes Buffer Memory used: 838.62 MB, Memory Free: 2233.38 MB, Percentage used 27.30%
+[20:08:41.602] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:41.602] [info] [thread 72228] Average Steps per ray: 70.87004
+[20:08:41.602] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:42.606] [info] [thread 72228] FPS: 108.63513022988006, msPf: 9.205125431192702
+[20:08:42.606] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:42.606] [info] [thread 72228] Octree Nodes Buffer Memory used: 838.62 MB, Memory Free: 2233.38 MB, Percentage used 27.30%
+[20:08:42.606] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:42.606] [info] [thread 72228] Average Steps per ray: 70.87004
+[20:08:42.606] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:43.614] [info] [thread 72228] FPS: 109.10036017559796, msPf: 9.165872581818167
+[20:08:43.614] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:43.614] [info] [thread 72228] Octree Nodes Buffer Memory used: 838.62 MB, Memory Free: 2233.38 MB, Percentage used 27.30%
+[20:08:43.614] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:43.614] [info] [thread 72228] Average Steps per ray: 70.87004
+[20:08:43.614] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:44.615] [info] [thread 72228] FPS: 108.8922004239145, msPf: 9.183394183486293
+[20:08:44.615] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:44.615] [info] [thread 72228] Octree Nodes Buffer Memory used: 838.62 MB, Memory Free: 2233.38 MB, Percentage used 27.30%
+[20:08:44.615] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:44.615] [info] [thread 72228] Average Steps per ray: 70.87004
+[20:08:44.615] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:45.619] [info] [thread 72228] FPS: 108.53767260416292, msPf: 9.213390853210957
+[20:08:45.619] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:45.619] [info] [thread 72228] Octree Nodes Buffer Memory used: 838.62 MB, Memory Free: 2233.38 MB, Percentage used 27.30%
+[20:08:45.619] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:45.619] [info] [thread 72228] Average Steps per ray: 70.87004
+[20:08:45.619] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:46.628] [info] [thread 72228] FPS: 109.05910240928284, msPf: 9.169340090909115
+[20:08:46.628] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:46.628] [info] [thread 72228] Octree Nodes Buffer Memory used: 838.62 MB, Memory Free: 2233.38 MB, Percentage used 27.30%
+[20:08:46.628] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:46.628] [info] [thread 72228] Average Steps per ray: 70.87004
+[20:08:46.628] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:47.636] [info] [thread 72228] FPS: 106.1652263288295, msPf: 9.419280065420505
+[20:08:47.636] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:47.636] [info] [thread 72228] Octree Nodes Buffer Memory used: 838.62 MB, Memory Free: 2233.38 MB, Percentage used 27.30%
+[20:08:47.636] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:47.636] [info] [thread 72228] Average Steps per ray: 70.867455
+[20:08:47.636] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:48.644] [info] [thread 72228] FPS: 104.13344933601269, msPf: 9.603062285714259
+[20:08:48.644] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:48.644] [info] [thread 72228] Octree Nodes Buffer Memory used: 838.62 MB, Memory Free: 2233.38 MB, Percentage used 27.30%
+[20:08:48.644] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:48.644] [info] [thread 72228] Average Steps per ray: 70.867455
+[20:08:48.644] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:49.649] [info] [thread 72228] FPS: 106.41692665407469, msPf: 9.397001317757095
+[20:08:49.649] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:49.649] [info] [thread 72228] Octree Nodes Buffer Memory used: 838.62 MB, Memory Free: 2233.38 MB, Percentage used 27.30%
+[20:08:49.649] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:49.649] [info] [thread 72228] Average Steps per ray: 70.87004
+[20:08:49.649] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:50.656] [info] [thread 72228] FPS: 108.23965936411288, msPf: 9.238757825687989
+[20:08:50.656] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:50.656] [info] [thread 72228] Octree Nodes Buffer Memory used: 838.62 MB, Memory Free: 2233.38 MB, Percentage used 27.30%
+[20:08:50.656] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:50.656] [info] [thread 72228] Average Steps per ray: 70.87004
+[20:08:50.656] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:51.659] [info] [thread 72228] FPS: 108.75704383328356, msPf: 9.194806743119328
+[20:08:51.659] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:51.659] [info] [thread 72228] Octree Nodes Buffer Memory used: 838.62 MB, Memory Free: 2233.38 MB, Percentage used 27.30%
+[20:08:51.659] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:51.659] [info] [thread 72228] Average Steps per ray: 70.87004
+[20:08:51.659] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:52.659] [info] [thread 72228] FPS: 108.9354709844078, msPf: 9.179746422018338
+[20:08:52.659] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:52.659] [info] [thread 72228] Octree Nodes Buffer Memory used: 838.62 MB, Memory Free: 2233.38 MB, Percentage used 27.30%
+[20:08:52.659] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:52.659] [info] [thread 72228] Average Steps per ray: 70.87004
+[20:08:52.659] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:53.662] [info] [thread 72228] FPS: 108.65993460884971, msPf: 9.2030241284404
+[20:08:53.662] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:53.662] [info] [thread 72228] Octree Nodes Buffer Memory used: 838.62 MB, Memory Free: 2233.38 MB, Percentage used 27.30%
+[20:08:53.662] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:53.662] [info] [thread 72228] Average Steps per ray: 70.87004
+[20:08:53.662] [info] [thread 72228] Max Steps per ray: 2000
+[20:08:54.667] [info] [thread 72228] FPS: 108.4787228539222, msPf: 9.218397614678809
+[20:08:54.667] [info] [thread 72228] Far Values Buffer Memory used: 0.00 MB, Memory Free: 1024.00 MB, Percentage used 0.00%
+[20:08:54.667] [info] [thread 72228] Octree Nodes Buffer Memory used: 838.62 MB, Memory Free: 2233.38 MB, Percentage used 27.30%
+[20:08:54.667] [info] [thread 72228] Staging Buffer Memory used: 0.00 MB, Memory Free: 2048.00 MB, Percentage used 0.00%
+[20:08:54.667] [info] [thread 72228] Average Steps per ray: 70.87004
+[20:08:54.667] [info] [thread 72228] Max Steps per ray: 2000

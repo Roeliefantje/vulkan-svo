@@ -543,7 +543,7 @@ void checkChunks(std::vector<CpuChunk> &chunks, CPUCamera &camera, uint32_t maxC
 
     int rd = int((camera.gridSize - 1) / 2);
 
-    for (int chunk_distance = 0; chunk_distance <= std::max(rd, int(camera.gridHeight));
+    for (int chunk_distance = 0; chunk_distance <= std::max(rd, std::max(int(camera.gridHeight), center.z));
          chunk_distance++) {
         for (int dz = -chunk_distance; dz <= chunk_distance; ++dz) {
             if (dz > int(camera.gridHeight)) {
