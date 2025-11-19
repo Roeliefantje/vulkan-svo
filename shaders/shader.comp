@@ -2,6 +2,8 @@
 #extension GL_EXT_nonuniform_qualifier : require
 //Look at: https://www.shadertoy.com/view/4sVfWw
 #define DEBUG_VALUES 1
+//#define NO_SHADOW
+//#define SHOWLOD
 //#define SHOWSTEPS
 
 struct Particle {
@@ -135,7 +137,7 @@ void main()
     vec2 normalized_coord = (vec2(pixelCoord) + 0.5) / camera.resolution * 2.0 - 1.0;
     normalized_coord.y = -normalized_coord.y;
 
-    vec3 forward = camera.direction;
+    vec3 forward = normalize(camera.direction);
     vec3 right = normalize(cross(forward, camera.up));
     vec3 up = normalize(cross(right, forward));
 
@@ -278,8 +280,12 @@ void main()
                     float blue = (currentNode.color & 0xFFu) / float(0xFF);
                     color = vec3(red, green, blue);
                     float percentage_level = (level / 10.0f);
-                    color = heatmap(percentage_level);
-                    break;
+
+                    #ifdef SHOWLOD
+                        color = heatmap(percentage_level);
+                        break;
+                    #endif
+
                     vec3 normal = -1 * rdsign * vec3(mask);
 
                     collisions += 1;
@@ -293,7 +299,11 @@ void main()
                     rdsign = sign(rayDir);
                     irdsign = ivec3(rdsign);
                     ird = 1.0/max(abs(rayDir), 0.001);
-                    break;
+
+
+                    #ifdef NO_SHADOW
+                        break;
+                    #endif
                 } else {
                     intensity = 0.4f;
                     break;

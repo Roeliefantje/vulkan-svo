@@ -129,9 +129,14 @@ Config::Config(int argc, char *argv[]) {
                 useHeightmapData = true;
                 allowUserInput = true;
                 cameraKeyFrames = std::vector<CameraKeyFrame>();
-                voxelscale = 0.0155f;
-                scaleDistance = 10.0f;
+                voxelscale = 0.155f;
+                scaleDistance = 100.0f;
+                grid_height = useHeightmapData
+                           ? std::min(40u, static_cast<uint32_t>(std::ceil(
+                                          4000 / (static_cast<float>(chunk_resolution) * voxelscale))))
+                           : 5;
                 grid_size = 31;
+                seed = 67421;
                 generate_keyframes(90.0f, 2.0f);
 
                 break;
@@ -139,10 +144,11 @@ Config::Config(int argc, char *argv[]) {
                 useHeightmapData = true;
                 allowUserInput = true;
                 cameraKeyFrames = std::vector<CameraKeyFrame>();
-                cameraDirection = glm::normalize(glm::vec3(0.1, 0.1, -0.6));
+                cameraDirection = glm::normalize(glm::vec3(0.81449175, 0.33608463, -0.47292367));
                 voxelscale = 1.64f * 4;
                 scaleDistance = 4000.0f;
-                grid_size = 31;
+                grid_size = 5;
+                seed = 67420;
                 grid_height = useHeightmapData
                                ? std::min(40u, static_cast<uint32_t>(std::ceil(
                                               4000 / (static_cast<float>(chunk_resolution) * voxelscale))))

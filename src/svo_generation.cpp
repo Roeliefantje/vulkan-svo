@@ -7,45 +7,83 @@
 #include "spdlog/spdlog.h"
 
 // LOD-aware noise generator
-struct LODNoise {
-    FastNoiseLite noiseBase;
-    int maxOctaves; // max octaves at highest resolution
-    float baseFrequency; // base frequency in world units (meters)
+struct LayeredTerrainNoise {
+    // --- MACRO LAYER: For large-scale terrain shape (mountains, hills) ---
+    FastNoiseLite macroNoise;
+    float macroBaseFrequency;
+    int maxMacroOctaves;
 
-    LODNoise(int seed, float baseFreq = 0.0001f, int octaves = 6) {
-        baseFrequency = baseFreq;
-        maxOctaves = octaves;
+    // --- DETAIL LAYER: For small-scale surface features (pebbles, wrinkles) ---
+    FastNoiseLite detailNoise;
+    float detailBaseFrequency;
+    int maxDetailOctaves;
 
-        noiseBase.SetSeed(seed);
-        noiseBase.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-        noiseBase.SetFractalType(FastNoiseLite::FractalType_FBm);
-        noiseBase.SetFractalLacunarity(2.0f);
-        noiseBase.SetFractalGain(0.5f);
-        noiseBase.SetFractalOctaves(maxOctaves);
-        noiseBase.SetFrequency(baseFrequency);
+    // --- SCALING ---
+    float detailAmplitude = 0.0002f; // How much the detail layer affects the final height
+
+    LayeredTerrainNoise(int seed) {
+        // 1. MACRO LAYER SETUP (Low Frequency for Large Shapes)
+        macroBaseFrequency = 0.0002f; // Very low to generate features kilometers wide
+        maxMacroOctaves = 6;
+        macroNoise.SetSeed(seed);
+        macroNoise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+        macroNoise.SetFractalType(FastNoiseLite::FractalType_FBm);
+        macroNoise.SetFractalOctaves(maxMacroOctaves);
+        macroNoise.SetFrequency(macroBaseFrequency);
+        // Note: Lacunarity and Gain default to 2.0 and 0.5, which is standard.
+
+        // 2. DETAIL LAYER SETUP (High Frequency for Fine Features)
+        detailBaseFrequency = 1.0f; // High to generate features centimeters wide
+        maxDetailOctaves = 8;
+        detailNoise.SetSeed(seed + 1); // Use a different seed for independent features
+        detailNoise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+        detailNoise.SetFractalType(FastNoiseLite::FractalType_FBm);
+        detailNoise.SetFractalOctaves(maxDetailOctaves);
+        detailNoise.SetFrequency(detailBaseFrequency);
     }
 
-    // Sample noise at a given world position and voxel size (LOD)
-    float Sample(float x, float y, float voxelSize) {
-        // Compute maximum frequency allowed for this LOD (Nyquist)
-        // We don’t want to sample features smaller than 2x voxel size
+    // Function to calculate effective octaves based on LOD
+    static int calculateEffectiveOctaves(float baseFreq, int maxOctaves, float voxelSize) {
+        // Nyquist limit: Max frequency we can sample without aliasing
         float maxFreq = 1.0f / (2.0f * voxelSize);
+        int effectiveOctaves = 0;
 
-        // Compute effective octaves for this LOD
-        // Each octave doubles frequency: f_i = baseFreq * 2^i
-        int effectiveOctaves = maxOctaves;
-        // for (int i = maxOctaves - 1; i >= 0; i--) {
-        //     float octaveFreq = baseFrequency * powf(2.0f, (float) i);
-        //     if (octaveFreq > maxFreq) effectiveOctaves--;
-        // }
+        // Determine how many octaves are valid (frequency <= maxFreq)
+        for (int i = 0; i < maxOctaves; i++) {
+            // Frequency of the current octave
+            float octaveFreq = baseFreq * std::pow(2.0f, (float)i);
 
-        noiseBase.SetFractalOctaves(effectiveOctaves);
+            if (octaveFreq <= maxFreq) {
+                effectiveOctaves++;
+            } else {
+                // All remaining octaves will be too high frequency, so we stop.
+                break;
+            }
+        }
+        // Ensure at least 1 octave is always calculated if maxOctaves > 0
+        return std::max(1, effectiveOctaves);
+    }
 
-        // Sample at voxel center
-        float sx = x + voxelSize * 0.5;
-        float sy = y + voxelSize * 0.5;
+    // Sample combined noise at a given world position (x, y) and voxel size (LOD)
+    float Sample(float x, float y, float voxelSize) {
+        // 1. LOD Culling for MACRO Layer
+        int effectiveMacroOctaves = calculateEffectiveOctaves(macroBaseFrequency, maxMacroOctaves, voxelSize);
+        macroNoise.SetFractalOctaves(effectiveMacroOctaves);
+        float macroValue = macroNoise.GetNoise(x, y);
 
-        return (noiseBase.GetNoise(sx + 10000, sy + 10000) + 1.0f) / 2.0f;
+        // 2. LOD Culling for DETAIL Layer
+        int effectiveDetailOctaves = calculateEffectiveOctaves(detailBaseFrequency, maxDetailOctaves, voxelSize);
+        detailNoise.SetFractalOctaves(effectiveDetailOctaves);
+        float detailValue = detailNoise.GetNoise(x, y);
+
+        // 3. Combine Layers
+        // We use a small offset (10000) to ensure the noise doesn't look flat near the origin (0,0)
+        float totalNoise = macroNoise.GetNoise(x + 10000, y + 10000) +
+                           (detailNoise.GetNoise(x + 10000, y + 10000) * detailAmplitude);
+
+        // Normalize the combined result from approximately [-1.5, 1.5] to [0.0, 1.0]
+        // (Assuming base noise is [-1, 1], and detail is [-0.5, 0.5])
+        return (totalNoise + 1.0f + detailAmplitude) / (2.0f + detailAmplitude);
     }
 };
 
@@ -63,7 +101,7 @@ struct LODNoise {
 
 std::vector<float> createNoise(uint32_t chunkResolution, uint32_t maxChunkResolution, uint32_t seed_value,
                                glm::vec2 offset, float voxelSize) {
-    LODNoise terrainNoise(seed_value);
+    LayeredTerrainNoise terrainNoise(seed_value);
     const float chunkScale = maxChunkResolution / chunkResolution;
     const float chunkVoxelSize = voxelSize * chunkScale;
     int index = 0;
@@ -80,7 +118,7 @@ std::vector<float> createNoise(uint32_t chunkResolution, uint32_t maxChunkResolu
 
 std::vector<float> createPathNoise(int keyFrames, float distance, float voxelScale, uint32_t seed_value, glm::vec2 offset,
                                    glm::vec2 direction) {
-    LODNoise terrainNoise(seed_value);
+    LayeredTerrainNoise terrainNoise(seed_value);
     // FastNoiseLite noise = getFastNoise(seed_value);
     std::vector<float> noiseData(keyFrames);
     float stepSize = distance / static_cast<float>(keyFrames);

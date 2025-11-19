@@ -429,6 +429,8 @@ void DataManageThreat::loadChunkToGPU(ChunkLoadInfo job) {
         CpuChunk newChunk = CpuChunk(farValuesOffset, rootNodeIndex, job.resolution, job.chunkCoord);
         newChunk.chunkSize = chunkOctreeGPU.size();
         newChunk.offsetSize = chunkFarValues.size();
+        //Only use isEmpty flag if using heightmap data.
+        newChunk.isEmpty = config.useHeightmapData ? rootNodeIndex == 0 : false;
         transferQueue.push({chunk_idx, chunkIndex, newChunk});
     }
 }
@@ -535,7 +537,11 @@ void checkChunks(std::vector<CpuChunk> &chunks, CPUCamera &camera, uint32_t maxC
         CpuChunk &chunk = chunks[gridCoord.z * camera.gridSize * camera.gridSize +
                                  gridCoord.y * camera.gridSize
                                  + gridCoord.x];
-        if (!chunk.loading && (chunk.chunk_coords != chunkCoord || chunk.resolution != octreeResolution)) {
+        CpuChunk &chunkBelow = chunks[std::max(0, gridCoord.z - 1) * camera.gridSize * camera.gridSize +
+                                 gridCoord.y * camera.gridSize
+                                 + gridCoord.x];
+
+        if (!chunkBelow.isEmpty && !chunk.loading && (chunk.chunk_coords != chunkCoord || chunk.resolution != octreeResolution)) {
             dmThreat.pushWork(ChunkLoadInfo{gridCoord, octreeResolution, chunkCoord});
             chunk.loading = true;
         }
@@ -562,6 +568,7 @@ void checkChunks(std::vector<CpuChunk> &chunks, CPUCamera &camera, uint32_t maxC
                         abs(dy) != chunk_distance &&
                         abs(dz) != chunk_distance)
                         continue;
+
 
                     processOffset(dx, dy, dz);
                 }

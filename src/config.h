@@ -50,7 +50,7 @@ struct Config {
     //The default camera positions don't really get used, its rather just a fallback.
     glm::vec3 cameraPosition = glm::vec3(0, 0, 712.5);
     glm::vec3 cameraDirection = glm::vec3(0.5, 0.5, 0);
-    float fov = 0.52359 * 3; //30 degrees in radians
+    float fov = 1.3962634; //80 degrees in radians
     std::string scene_path = "./assets/San_Miguel/san-miguel-low-poly.obj";
     std::string camera_path = "./camera-hm.json";
     std::string camera_keyframe_path = "./camera_path.json";

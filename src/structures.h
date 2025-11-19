@@ -49,6 +49,7 @@ struct CpuChunk {
     uint32_t chunkSize = 0;
     uint32_t offsetSize = 0;
     glm::ivec3 chunk_coords = glm::ivec3{0, 0, 0};
+    bool isEmpty = false;
     bool loading = false;
 
     CpuChunk() = default;
