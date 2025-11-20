@@ -13,18 +13,21 @@ import matplotlib.pyplot as plt
 from experiment_one_configurations import CONFIGURATIONS as TEST_ONE_CONFIGURATIONS
 from experiment_two_configurations import CONFIGURATIONS as TEST_TWO_CONFIGURATIONS
 from experiment_three_configurations import FLYING_CONFIGURATIONS, WALKING_CONFIGURATIONS
+import numpy as np
 
 PROGRAM = "./cmake-build-release/clion_vulkan"  # or "./your_script.sh", etc.
 WORKING_DIRECTORY = "/home/roeliefantje/Documents/git/uni/vulkan-svo"
 CSV_KEYS = ["elapsed_seconds"] + sorted(["fps", "mspf", "steps", "far_values_memory", "octree_memory", "staging_memory", "grid_memory"])
 
 def main():
-    run_experiment_one()
+    # run_experiment_one()
     create_graphs_experiment_one()
-    run_experiment_two()
+    # run_experiment_two()
     create_graphs_experiment_two()
-    run_experiment_three()
+    # run_experiment_three()
     create_graphs_experiment_three()
+    # run_comparison_experiments()
+    create_graphs_comparison()
 
 def run_experiment_one():
     for test in [0, 1]:
@@ -33,7 +36,7 @@ def run_experiment_one():
             args = ["--test", str(test), "--res", str(resolution),
                     "--grid", str(grid_size), "--gridheight", str(grid_height)]
             print(f"Running program, Grid Size: {grid_size}, Chunk Resolution: {resolution}, test: {test}")
-            run_program(PROGRAM, WORKING_DIRECTORY, args, f"./exp1_results/location_{test + 1}_{resolution}_{grid_size}.csv")
+            run_program(PROGRAM, WORKING_DIRECTORY, args, f"./exp1_results/location_{test + 1}_{resolution}_{grid_size}.csv", duration=10)
 
 def run_experiment_two():
     for test in [2, 3]:
@@ -55,6 +58,20 @@ def run_experiment_three():
             name = "walking" if test == 4 else "flying"
             run_program(PROGRAM, WORKING_DIRECTORY, args, f"./exp3_results/path_{name}_{resolution}_{grid_size}.csv")
 
+def run_comparison_experiments():
+    comparison_configs = [
+        [512, 1, 5],
+        [2048, 1, 5],
+        [2048, 3, 5],
+    ]
+    for config in comparison_configs:
+        grid_size, grid_height, resolution = config[1], config[2], config[0]
+        args = ["--test", str(0), "--res", str(resolution),
+                "--grid", str(grid_size), "--gridheight", str(grid_height)]
+        print(f"Running program, Grid Size: {grid_size}, Chunk Resolution: {resolution}, test: {0}")
+        run_program(PROGRAM, WORKING_DIRECTORY, args, f"./compare_results/{resolution}_{grid_size}.csv", duration=10)
+
+
 def create_graphs_experiment_one():
     print("Creating experiment one graphs")
     csv_files = glob.glob(os.path.join("./exp1_results/", "*.csv"))
@@ -71,7 +88,7 @@ def create_graphs_experiment_one():
         match = file_pattern.search(csv_file)
         location = f"Location {match.group(1)}"
         chunk_resolution = int(match.group(2))
-        total_resolution = chunk_resolution * (int(match.group(3)) + 1 / 2)
+        total_resolution = chunk_resolution * ((int(match.group(3)) + 1) / 2)
         averages[location][chunk_resolution] = averages[location].get(chunk_resolution, []) + [{
             "x": total_resolution,
             **get_average_from_file(csv_file)
@@ -99,9 +116,9 @@ def create_graphs_experiment_one():
                     "x": value["x"]
                 })
 
-        plot_values(group_memory, f"Average GPU Memory Consumption for {loc}", "Total voxel resolution","Average Memory used (MB)", f"./exp1_figures/{loc.replace(' ', '_')}_memory.png")
-        plot_values(group_steps, f"Average steps per ray for {loc}", "Total voxel resolution","Average steps per ray", f"./exp1_figures/{loc.replace(' ', '_')}_steps.png")
-        plot_values(group_mspf, f"Average milliseconds per frame for {loc}", "Total voxel resolution","average milliseconds per frame", f"./exp1_figures/{loc.replace(' ', '_')}_mspf.png")
+        plot_values(group_memory, f"Average GPU Memory Consumption for {loc}", "Total voxel resolution","Average Memory used (MB)", f"./exp1_figures/{loc.replace(' ', '_')}_memory.png", marker=None)
+        plot_values(group_steps, f"Average steps per ray for {loc}", "Total voxel resolution","Average steps per ray", f"./exp1_figures/{loc.replace(' ', '_')}_steps.png", marker=None)
+        plot_values(group_mspf, f"Average milliseconds per frame for {loc}", "Total voxel resolution","Average milliseconds per frame", f"./exp1_figures/{loc.replace(' ', '_')}_mspf.png", marker=None)
 
 def create_graphs_experiment_two():
     print("Creating experiment two graphs")
@@ -119,7 +136,7 @@ def create_graphs_experiment_two():
         match = file_pattern.search(csv_file)
         location = f"Path {match.group(1)}"
         chunk_resolution = int(match.group(2))
-        total_resolution = chunk_resolution * (int(match.group(3)) + 1 / 2)
+        total_resolution = chunk_resolution * ((int(match.group(3)) + 1) / 2)
         values = get_csv_file_rows(csv_file)
         group = f"Scene res: {int(total_resolution)}"
         path_values[location][group] = values
@@ -130,7 +147,7 @@ def create_graphs_experiment_two():
         mspf_over_time = {}
         for group, values in groups.items():
             for value in values:
-                if value.get("far_values_memory") and value.get("octree_memory") and value.get("staging_memory") and value.get("grid_memory"):
+                if value.get("far_values_memory") is not None and value.get("octree_memory") is not None and value.get("staging_memory") is not None and value.get("grid_memory") is not None:
                     memory_over_time.setdefault(group, []).append({
                         "y": float(value["far_values_memory"]) + float(value["octree_memory"]) + float(value["staging_memory"]) + float(value["grid_memory"]),
                         "x": float(value["elapsed_seconds"])
@@ -167,7 +184,7 @@ def create_graphs_experiment_three():
         match = file_pattern.search(csv_file)
         location = f"{match.group(1)} configuration"
         chunk_resolution = int(match.group(2))
-        total_resolution = chunk_resolution * (int(match.group(3)) + 1 / 2)
+        total_resolution = chunk_resolution * ((int(match.group(3)) + 1) / 2)
         values = get_csv_file_rows(csv_file)
         group = f"Scene res: {total_resolution}"
         path_values[location][group] = values
@@ -178,7 +195,7 @@ def create_graphs_experiment_three():
         mspf_over_time = {}
         for group, values in groups.items():
             for value in values:
-                if value.get("far_values_memory") and value.get("octree_memory") and value.get("staging_memory") and value.get("grid_memory"):
+                if value.get("far_values_memory") is not None and value.get("octree_memory") is not None and value.get("staging_memory") is not None and value.get("grid_memory") is not None:
                     memory_over_time.setdefault(group, []).append({
                         "y": float(value["far_values_memory"]) + float(value["octree_memory"]) + float(value["staging_memory"]) + float(value["grid_memory"]),
                         "x": float(value["elapsed_seconds"])
@@ -198,10 +215,60 @@ def create_graphs_experiment_three():
         plot_values(steps_over_time, f"Average steps per ray for the {path}", "Time in seconds","Average steps per ray", f"./exp3_figures/{path.replace(' ', '_')}_steps.png", marker=None)
         plot_values(mspf_over_time, f"Average milliseconds per frame for the {path}", "Time in seconds","Average milliseconds per frame", f"./exp3_figures/{path.replace(' ', '_')}_mspf.png", marker=None)
 
+def create_graphs_comparison():
+    print("Creating comparison graphs")
+    csv_files_ours = glob.glob(os.path.join("./compare_results/", "*.csv"))
+    files_theres = glob.glob(os.path.join("./results_illinois-voxel-sandbox/", "*.txt"))
+    averages = {
+        "ours": {},
+        "Arbore et al.": {}
+    }
+
+    file_pattern_ours = re.compile(
+        r"(\d+)_(\d+)\.csv"
+    )
+    file_pattern_arbore = re.compile(
+        r"(\d+)\.txt"
+    )
+
+    for csv_file in csv_files_ours:
+        match = file_pattern_ours.search(csv_file)
+        chunk_resolution = int(match.group(1))
+        total_resolution = chunk_resolution * ((int(match.group(2)) + 1) / 2)
+        averages["ours"][total_resolution] = get_average_from_file(csv_file)
+
+    for txt_file in files_theres:
+        match = file_pattern_arbore.search(txt_file)
+        total_resolution = int(match.group(1))
+        averages["Arbore et al."][total_resolution] = get_average_from_arbore(txt_file)
+
+    avg_memory = {}
+    avg_mspf = {}
+    for group, values in averages.items():
+        for resolution, value in values.items():
+            if value.get("far_values_memory") is not None and value.get("octree_memory") is not None and value.get("staging_memory") is not None and value.get("grid_memory") is not None:
+                avg_memory.setdefault(group, []).append({
+                    "y": float(value["far_values_memory"]) + float(value["octree_memory"]) + float(value["staging_memory"]) + float(value["grid_memory"]),
+                    "x": int(resolution)
+                })
+            if value.get("total_memory"):
+                avg_memory.setdefault(group, []).append({
+                    "y": float(value["total_memory"]),
+                    "x": int(resolution)
+                })
+            if value.get("mspf"):
+                avg_mspf.setdefault(group, []).append({
+                    "y": float(value["mspf"]),
+                    "x": int(resolution)
+                })
+
+    plot_values(avg_memory, f"Average GPU Memory Consumption comparison", "Total voxel resolution","Average Memory used (MB)", f"./compare_figures/memory.png")
+    plot_values(avg_mspf, f"Average GPU Memory Consumption comparison", "Total voxel resolution","Average milliseconds per frame", f"./compare_figures/mspf.png")
 
 def plot_values(groups: dict, title, xlabel, ylabel, output_file, marker: str|None="o"):
     plt.figure()
     for group_name, values in groups.items():
+        values = sorted(values, key=lambda v: v["x"])
         x = [v["x"] for v in values]
         y = [v["y"] for v in values]
         if marker:
@@ -262,7 +329,29 @@ def get_average_from_file(file_path):
                 for key in sums.keys()}
     return averages
 
-def run_program(program_path, working_dir, args, output_file):
+def get_average_from_arbore(file_path):
+    fps_values = []
+    mem_values = []
+
+    with open(file_path, "r") as f:
+        for line in f:
+            m = re.search(r"INFO:\s*([0-9]+)\s*FPS", line)
+            if m:
+                fps_values.append(float(m.group(1)))
+
+            m2 = re.search(r"\s([0-9]+)\s*BYTES", line)
+            if m2:
+                mem_values.append(int(m2.group(1)) / (1024 * 1024))  # bytes → MB
+
+    # Convert FPS to ms per frame
+    ms_values = [1000.0 / fps for fps in fps_values]
+
+    return {
+        "mspf": np.mean(ms_values),
+        "total_memory": np.mean(mem_values)
+    }
+
+def run_program(program_path, working_dir, args, output_file, duration=65):
     working_dir = Path(working_dir)
     if not working_dir.exists():
         raise FileNotFoundError(f"Working directory not found: {working_dir}")
@@ -351,7 +440,7 @@ def run_program(program_path, working_dir, args, output_file):
                 delta_seconds = round((ts - start_ts).total_seconds(), 1)
                 output_lines[delta_seconds]["staging_memory"] = float(match.group(2))
 
-            if time.time() - start_time > 65:
+            if time.time() - start_time > duration:
                 process.terminate()
                 break
 
