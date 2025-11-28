@@ -17,7 +17,7 @@ void ComputeShaderApplication::mainLoop() {
                 // spdlog::info("Position:, {}, {}, {}", kf.position.x, kf.position.y, kf.position.z);
                 camera.setPosition(kf.position);
             }
-            // camera.gpu_camera.direction = glm::normalize(kf.direction);
+            camera.gpu_camera.direction = glm::normalize(kf.direction);
         }
         if (config.allowUserInput) {
             processInput();

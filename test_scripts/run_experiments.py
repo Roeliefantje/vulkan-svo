@@ -22,12 +22,12 @@ CSV_KEYS = ["elapsed_seconds"] + sorted(["fps", "mspf", "steps", "far_values_mem
 def main():
     # run_experiment_one()
     create_graphs_experiment_one()
-    # run_experiment_two()
+    run_experiment_two()
     create_graphs_experiment_two()
     # run_experiment_three()
-    create_graphs_experiment_three()
+    # create_graphs_experiment_three()
     # run_comparison_experiments()
-    create_graphs_comparison()
+    # create_graphs_comparison()
 
 def run_experiment_one():
     for test in [0, 1]:
@@ -36,7 +36,7 @@ def run_experiment_one():
             args = ["--test", str(test), "--res", str(resolution),
                     "--grid", str(grid_size), "--gridheight", str(grid_height)]
             print(f"Running program, Grid Size: {grid_size}, Chunk Resolution: {resolution}, test: {test}")
-            run_program(PROGRAM, WORKING_DIRECTORY, args, f"./exp1_results/location_{test + 1}_{resolution}_{grid_size}.csv", duration=10)
+            run_program(PROGRAM, WORKING_DIRECTORY, args, f"./exp1_results/location_{test + 1}_{resolution}_{grid_size}.csv", duration=20)
 
 def run_experiment_two():
     for test in [2, 3]:
@@ -310,7 +310,7 @@ def get_average_from_file(file_path):
             except (ValueError, KeyError):
                 continue  # skip invalid rows
 
-            if elapsed < 5:  # skip first 5 seconds
+            if elapsed < 2:  # skip first 5 seconds
                 continue
 
             for key, value in row.items():

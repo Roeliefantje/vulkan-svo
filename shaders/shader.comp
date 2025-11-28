@@ -58,6 +58,7 @@ layout(binding = 2, rgba8) uniform writeonly image2D outputImage;
 
 
 int MAX_RAY_STEPS = 2000;
+int MAX_HEATMAP_RAY_STEPS = 500;
 #define MAX_DEPTH 16
 #define MAX_DISTANCE 300000.0
 
@@ -279,9 +280,10 @@ void main()
                     float green = ((currentNode.color >> 8) & 0xFFu) / float(0xFF);
                     float blue = (currentNode.color & 0xFFu) / float(0xFF);
                     color = vec3(red, green, blue);
-                    float percentage_level = (level / 10.0f);
+
 
                     #ifdef SHOWLOD
+                        float percentage_level = (level / 10.0f);
                         color = heatmap(percentage_level);
                         break;
                     #endif
@@ -363,7 +365,7 @@ void main()
     }
 
     #ifdef SHOWSTEPS
-        float t = clamp(steps / float(MAX_RAY_STEPS), 0.0, 1.0);
+        float t = clamp(steps / float(MAX_HEATMAP_RAY_STEPS), 0.0, 1.0);
         color = heatmap(t);
         intensity = 1.0;
     #endif

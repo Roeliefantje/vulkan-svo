@@ -37,11 +37,14 @@ void SceneMetadata::loadMetaData(Config &config) {
         numTriangles = data["numTriangles"];
     }
 
+    scale = (config.chunk_resolution * ((config.grid_size + 1) * 0.5f)) / std::max(float(sceneAabb.bb.x), float(sceneAabb.bb.y));
+    config.grid_height = static_cast<uint32_t>(std::ceil((scale * float(sceneAabb.bb.z)) / float(config.chunk_resolution)));
 
-    scale = std::min(
-        (config.chunk_resolution * ((config.grid_size + 1) * 0.5f)) / std::max(float(sceneAabb.bb.x), float(sceneAabb.bb.y)),
-        (config.chunk_resolution * config.grid_height) / (float) sceneAabb.bb.z
-    );
+    // scale = std::min(
+    //     (config.chunk_resolution * ((config.grid_size + 1) * 0.5f)) / std::max(float(sceneAabb.bb.x), float(sceneAabb.bb.y)),
+    //     (config.chunk_resolution * config.grid_height) / (float) sceneAabb.bb.z
+    // );
+    // spdlog::info("Scale: {}, VoxelScale: {}", scale, 1.0f / scale);
 }
 
 void SceneMetadata::saveMetaData() {

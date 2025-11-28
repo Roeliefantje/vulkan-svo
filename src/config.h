@@ -24,7 +24,7 @@ struct Config {
     //Whether we use the voxelizer or the heightmap data.
     bool useHeightmapData = false;
     float voxelscale = 0.00155f;
-    float scaleDistance = 1.0f; //At what distance would the voxelScale be equivalent to a pixel? TODO: calculate this automagically
+    float scaleDistance = 1.0f; //At what distance would the voxelScale be equivalent to a pixel?
 
     //Output screen size
     uint32_t width = 1920;
@@ -37,7 +37,7 @@ struct Config {
 
     VkDeviceSize staging_size = GIGABYTE << 1;
     uint32_t chunk_resolution = 1024;
-    uint32_t grid_size = 31;
+    uint32_t grid_size = 91;
     uint32_t grid_height = useHeightmapData
                                ? std::min(40u, static_cast<uint32_t>(std::ceil(
                                               4000 / (static_cast<float>(chunk_resolution) * voxelscale))))
@@ -67,6 +67,6 @@ struct Config {
     void generate_keyframes(float distance, float height);
 };
 
-CameraKeyFrame interpolateCamera(const std::vector<CameraKeyFrame> &keyframes, const float currentTime);
+CameraKeyFrame interpolateCamera(const std::vector<CameraKeyFrame> &keyframes, float currentTime);
 
 #endif //CONFIG_H

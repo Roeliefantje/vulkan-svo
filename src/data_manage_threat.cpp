@@ -462,6 +462,7 @@ void DataManageThreat::loadChunkData(ChunkLoadInfo &job, std::vector<uint32_t> &
     uint32_t nodeAmount = 0;
     if (!loadChunk(directory, config.chunk_resolution, job.resolution, job.chunkCoord, nodeAmount, chunkOctreeGPU,
                    chunkFarValues)) {
+        spdlog::info("Chunk not yet available, loading chunk!");
         if (!config.useHeightmapData && !sceneLoaded) {
             spdlog::debug("Loading scene");
             loadObj();

@@ -127,33 +127,35 @@ Config::Config(int argc, char *argv[]) {
                 break;
             case 4:
                 useHeightmapData = true;
-                allowUserInput = true;
+                // allowUserInput = true;
                 cameraKeyFrames = std::vector<CameraKeyFrame>();
+                chunk_resolution = 1024 << 2;
                 voxelscale = 0.155f;
                 scaleDistance = 100.0f;
                 grid_height = useHeightmapData
                            ? std::min(40u, static_cast<uint32_t>(std::ceil(
                                           4000 / (static_cast<float>(chunk_resolution) * voxelscale))))
                            : 5;
+                ;
                 grid_size = 31;
                 seed = 67421;
                 generate_keyframes(90.0f, 2.0f);
-
                 break;
             case 5:
                 useHeightmapData = true;
-                allowUserInput = true;
+                // allowUserInput = true;
                 cameraKeyFrames = std::vector<CameraKeyFrame>();
-                cameraDirection = glm::normalize(glm::vec3(0.81449175, 0.33608463, -0.47292367));
+                cameraDirection = glm::normalize(glm::vec3(0.5, 0.5, -0.47292367));
+                chunk_resolution = 1024;
                 voxelscale = 1.64f * 4;
                 scaleDistance = 4000.0f;
-                grid_size = 5;
+                grid_size = 61;
                 seed = 67420;
                 grid_height = useHeightmapData
                                ? std::min(40u, static_cast<uint32_t>(std::ceil(
                                               4000 / (static_cast<float>(chunk_resolution) * voxelscale))))
                                : 5;
-                generate_keyframes(90000.0f, 9000.0f);
+                generate_keyframes(14000.0f, 9000.0f);
                 break;
             default:
                 std::cout << "Unknown test scene Benchmark!" << std::endl;
@@ -205,13 +207,14 @@ Config::Config(int argc, char *argv[]) {
     }
 
 
-    if (grid_height > grid_size / 2) {
-        //Todo!: Fix chunkload logic to properly account for any gridheight :)
-        spdlog::error("Grid Height is too high compared to grid Size, might not load every chunk properly!");
-    }
-
     if (useHeightmapData) {
         cameraPosition /= voxelscale;
+    }
+
+    spdlog::info("Grid size: {}", grid_size);
+    if (useHeightmapData)
+    {
+        spdlog::info("Grid height: {}", grid_height);
     }
 }
 
@@ -229,7 +232,7 @@ CameraKeyFrame interpolateCamera(const std::vector<CameraKeyFrame> &keyframes, c
         if (currentTime >= kf1.time && currentTime <= kf2.time) {
             float t = (currentTime - kf1.time) / (kf2.time - kf1.time);
             glm::vec3 position = glm::mix(kf1.position, kf2.position, t);
-            glm::vec3 direction = glm::slerp(kf1.direction, kf2.direction, t);
+            glm::vec3 direction = kf1.direction != kf2.direction ? glm::slerp(kf1.direction, kf2.direction, t) : kf1.direction;
             return {currentTime, position, direction};
         }
     }

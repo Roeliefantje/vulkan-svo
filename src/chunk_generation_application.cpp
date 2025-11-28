@@ -16,6 +16,11 @@ ChunkGenerationApplication::ChunkGenerationApplication(Config config) : config(c
         objSceneMetaData = SceneMetadata(config.scene_path, config);
         std::cout << "ObjFile to be loaded: " << objSceneMetaData->objFile << std::endl;
         objFile = objSceneMetaData->objFile;
+        config.voxelscale = 1.0f / objSceneMetaData->scale;
+        config.scaleDistance = config.voxelscale / 0.00155f; //0.00155f is the size of a voxel for sub-pixel resolution at 1 meter with 80 fov.
+        spdlog::info("Grid Height: {}", config.grid_height);
+        spdlog::info("Voxel Scale: {}", config.voxelscale);
+        spdlog::info("Scale Distance: {}", config.scaleDistance);
     } else {
         objFile = std::format("./assets/{}.obj", config.seed);
     }
@@ -111,10 +116,11 @@ void ChunkGenerationApplication::generateChunk(glm::ivec3 gridCoord, uint32_t re
 void ChunkGenerationApplication::generateChunksForCameraPosition() {
     auto center = camera.gpu_camera.camera_grid_pos;
     glm::ivec3 start = center - int((camera.gridSize - 1) / 2);
+    glm::ivec3 end = center + int((camera.gridSize - 1) / 2);
     spdlog::info("Generating {} Chunks!", camera.gridHeight * camera.gridSize * camera.gridSize);
     for (int chunkZ = 0; chunkZ < camera.gridHeight; chunkZ++) {
-        for (int chunkY = start.y; chunkY < camera.gridSize; chunkY++) {
-            for (int chunkX = start.x; chunkX < camera.gridSize; chunkX++) {
+        for (int chunkY = start.y; chunkY < end.y; chunkY++) {
+            for (int chunkX = start.x; chunkX < end.x; chunkX++) {
                 auto gridCoord = glm::ivec3{
                     positive_mod(chunkX, camera.gridSize), positive_mod(chunkY, camera.gridSize), chunkZ
                 };
@@ -122,7 +128,7 @@ void ChunkGenerationApplication::generateChunksForCameraPosition() {
                 glm::vec3 worldDiff = glm::vec3(dist) * (
                                           static_cast<float>(config.chunk_resolution) * config.voxelscale);
                 float distance = glm::length(worldDiff) - (
-                                     static_cast<float>(config.chunk_resolution) * config.voxelscale);;
+                                     static_cast<float>(config.chunk_resolution) * config.voxelscale);
                 uint32_t octreeResolution = calculateChunkResolution(config.chunk_resolution, distance / config.scaleDistance);
 
                 //The cpu chunks location, so not the buffer location we store it in, which is gridCoord, but the coords of the chunk itself.
