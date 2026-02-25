@@ -7,6 +7,7 @@ Chunks are represented using an sparse voxel octree, when a lower level of detai
 
 # Preview
 
+[![Walking setup](/preview/walking-config.png)]([https://youtu.be/T-D1KVIuvjA](https://youtu.be/cJkdcKC7RkE?si=iXuXVSWO7silDvx4))
 
 ## Chunk generation program
 The chunk generation is currently not fast enough to support the high amount of voxels needed for sub-pixel voxel resolutions, to ensure we can still test the graphics engine in these setups,
