@@ -18,7 +18,7 @@ The program also features voxelizer functionality in order to render any arbitra
 
 [![Flying setup](/preview/flying-config.png)](https://www.youtube.com/watch?v=XxxMiX9JfBA)
 
-[![Walking setup](/preview/first-location-sm.png)](https://www.youtube.com/watch?v=XxxMiX9JfBA)
+[![San Miguel](/preview/first-location-sm.png)](https://www.youtube.com/watch?v=XxxMiX9JfBA)
 
 
 # Setting up and Installing the software
