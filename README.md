@@ -18,11 +18,44 @@ The program also features voxelizer functionality in order to render any arbitra
 
 [![Flying setup](/preview/flying-config.png)](https://www.youtube.com/watch?v=XxxMiX9JfBA)
 
-[![San Miguel](/preview/first-location-sm.png)](https://www.youtube.com/watch?v=XxxMiX9JfBA)
+[![San Miguel](/preview/first-location-sm.png)](https://www.youtube.com/watch?v=0aeLWl_htV8)
 
 
-# Setting up and Installing the software
-To setup the software Cmake is used, required system libraries are Vulkan, Glfw and glm.
+# Requirements
+- CMake 3.16 or higher
+- A C++17-compatible compiler
+- Vulkan SDK
+- GLFW
+- GLM
+
+
+## Getting Started
+
+### Cloning the Repository
+
+```
+git clone <repository-url>
+cd <project-name>
+```
+
+### Building the Project
+
+This project uses an out-of-source build.
+```
+mkdir build
+cd build
+cmake ..
+cmake --build .
+```
+
+After a successful build, the executable will be located in the build directory.
+
+### Running the Application
+
+From the root directory:
+```
+./build/<executable-name>
+```
 
 # Running the experiments
 To run the experiments, first ensure the program is build and executes properly, once this is the case setup the python environment using uv.
