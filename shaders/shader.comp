@@ -4,7 +4,7 @@
 #define DEBUG_VALUES 1
 //#define NO_SHADOW
 //#define SHOWLOD
-//#define SHOWSTEPS
+#define SHOWSTEPS
 
 struct Particle {
     vec2 position;

@@ -21,11 +21,11 @@ CSV_KEYS = ["elapsed_seconds"] + sorted(["fps", "mspf", "steps", "far_values_mem
 
 def main():
     # run_experiment_one()
-    create_graphs_experiment_one()
-    run_experiment_two()
-    create_graphs_experiment_two()
-    # run_experiment_three()
-    # create_graphs_experiment_three()
+    # create_graphs_experiment_one()
+    # run_experiment_two()
+    # create_graphs_experiment_two()
+    run_experiment_three()
+    create_graphs_experiment_three()
     # run_comparison_experiments()
     # create_graphs_comparison()
 
@@ -36,7 +36,7 @@ def run_experiment_one():
             args = ["--test", str(test), "--res", str(resolution),
                     "--grid", str(grid_size), "--gridheight", str(grid_height)]
             print(f"Running program, Grid Size: {grid_size}, Chunk Resolution: {resolution}, test: {test}")
-            run_program(PROGRAM, WORKING_DIRECTORY, args, f"./exp1_results/location_{test + 1}_{resolution}_{grid_size}.csv", duration=20)
+            run_program(PROGRAM, WORKING_DIRECTORY, args, f"./exp1_results/location_{test + 1}_{resolution}_{grid_size}.csv", duration=45)
 
 def run_experiment_two():
     for test in [2, 3]:
@@ -281,6 +281,7 @@ def plot_values(groups: dict, title, xlabel, ylabel, output_file, marker: str|No
     plt.grid(True)
     if len(groups.items()) > 1:
         plt.legend()
+    plt.xlim(left=0)
     plt.tight_layout()
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     plt.savefig(output_file)
@@ -351,7 +352,7 @@ def get_average_from_arbore(file_path):
         "total_memory": np.mean(mem_values)
     }
 
-def run_program(program_path, working_dir, args, output_file, duration=65):
+def run_program(program_path, working_dir, args, output_file, duration=70):
     working_dir = Path(working_dir)
     if not working_dir.exists():
         raise FileNotFoundError(f"Working directory not found: {working_dir}")
@@ -365,7 +366,7 @@ def run_program(program_path, working_dir, args, output_file, duration=65):
         return
 
     grid_height_pattern = re.compile(
-        r"Grid height:\s*(\d+)",
+        r"Grid Height:\s*(\d+)",
         re.IGNORECASE
     )
     grid_size_pattern = re.compile(

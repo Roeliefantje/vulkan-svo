@@ -37,7 +37,7 @@ struct Config {
 
     VkDeviceSize staging_size = GIGABYTE << 1;
     uint32_t chunk_resolution = 1024;
-    uint32_t grid_size = 91;
+    uint32_t grid_size = 87;
     uint32_t grid_height = useHeightmapData
                                ? std::min(40u, static_cast<uint32_t>(std::ceil(
                                               4000 / (static_cast<float>(chunk_resolution) * voxelscale))))
@@ -52,7 +52,7 @@ struct Config {
     glm::vec3 cameraDirection = glm::vec3(0.5, 0.5, 0);
     float fov = 1.3962634; //80 degrees in radians
     std::string scene_path = "./assets/San_Miguel/san-miguel-low-poly.obj";
-    std::string camera_path = "./camera-hm.json";
+    std::string camera_path = "./camera.json";
     std::string camera_keyframe_path = "./camera_path.json";
 
     bool chunkgen = false;
